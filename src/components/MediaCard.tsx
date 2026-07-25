@@ -73,22 +73,22 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
 
         {/* Type Badge (Movie / TV) */}
-        <div className="absolute top-2.5 left-2.5 flex items-center gap-1 bg-slate-950/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-200 border border-slate-700/50">
-          {isTv ? <Tv className="w-3 h-3 text-amber-400" /> : <Film className="w-3 h-3 text-blue-400" />}
+        <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-slate-950/80 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-medium text-slate-200 border border-slate-700/50">
+          {isTv ? <Tv className="w-2.5 h-2.5 text-amber-400" /> : <Film className="w-2.5 h-2.5 text-blue-400" />}
           <span>{isTv ? 'Dizi' : 'Film'}</span>
         </div>
 
         {/* Rating Badge */}
         {media.vote_average > 0 && (
-          <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-slate-950/90 backdrop-blur-md px-2 py-0.5 rounded-md text-[11px] font-bold text-amber-400 border border-amber-500/30 shadow">
-            <Star className="w-3 h-3 fill-amber-400" />
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-slate-950/90 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-bold text-amber-400 border border-amber-500/30 shadow">
+            <Star className="w-2.5 h-2.5 fill-amber-400" />
             <span>{media.vote_average.toFixed(1)}</span>
           </div>
         )}
 
         {/* Current Watch Status Badge */}
         {userWatchStatus && (
-          <div className="absolute bottom-2.5 left-2.5">
+          <div className="absolute bottom-1.5 left-1.5">
             {getStatusBadge()}
           </div>
         )}
@@ -99,13 +99,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       {/* Info Section */}
       <div 
         onClick={() => onSelect(media)}
-        className="p-3.5 flex flex-col justify-between flex-1 cursor-pointer"
+        className="p-2.5 flex flex-col justify-between cursor-pointer"
       >
         <div>
-          <h3 className="font-bold text-sm text-slate-100 line-clamp-1 group-hover:text-amber-400 transition-colors">
+          <h3 className="font-bold text-xs sm:text-sm text-slate-100 line-clamp-1 group-hover:text-amber-400 transition-colors">
             {title}
           </h3>
-          <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5">
             {year && <span>{year}</span>}
             {media.genres && media.genres.length > 0 && (
               <>
@@ -115,10 +115,6 @@ export const MediaCard: React.FC<MediaCardProps> = ({
             )}
           </div>
         </div>
-
-        <p className="text-xs text-slate-400 line-clamp-2 mt-2 leading-relaxed">
-          {media.overview || 'Açıklama bulunmuyor.'}
-        </p>
       </div>
 
     </motion.div>

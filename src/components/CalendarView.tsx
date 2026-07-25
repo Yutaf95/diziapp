@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tv, Sparkles, Clock, Star, Play, Info, Flame, Eye, Filter } from 'lucide-react';
-import { WatchStatus, TMDBMedia } from '../types';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tv, Sparkles, Clock, Star, Play, Info, Flame, Eye, Filter, Loader2, CheckCircle2 } from 'lucide-react';
+import { WatchStatus, TMDBMedia, EpisodeProgress } from '../types';
+import { getDetails, getSeasonDetails, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
 import { EmptyState } from './EmptyState';
 
 interface CalendarViewProps {
   watchingList: WatchStatus[];
+  episodeProgress?: EpisodeProgress[];
   onSelectMedia?: (media: TMDBMedia) => void;
+  onToggleEpisode?: (showId: number, seasonNum: number, epNum: number) => void;
 }
 
 export interface UpcomingEpisode {
@@ -128,19 +131,181 @@ const UPCOMING_EPISODES_DATA: UpcomingEpisode[] = [
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   watchingList,
-  onSelectMedia
+  episodeProgress = [],
+  onSelectMedia,
+  onToggleEpisode
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timeline'>('calendar');
   const [filterWatchingOnly, setFilterWatchingOnly] = useState(true);
   const [selectedDayEpisodes, setSelectedDayEpisodes] = useState<UpcomingEpisode[] | null>(null);
 
-  const watchingIds = watchingList.map(w => w.media_id);
-  const watchingTitles = watchingList.map(w => (w.title || '').toLowerCase());
+  const [liveEpisodes, setLiveEpisodes] = useState<UpcomingEpisode[]>([]);
+  const [loadingLive, setLoadingLive] = useState<boolean>(true);
+
+  // Live TMDB Schedule Fetch for user's watched TV shows
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchLiveSchedule() {
+      setLoadingLive(true);
+      const tvWatching = watchingList.filter(item => item.media_type === 'tv' || item.status === 'watching');
+      
+      const fetchedList: UpcomingEpisode[] = [];
+
+      await Promise.all(
+        tvWatching.map(async (item) => {
+          try {
+            const details = await getDetails(item.media_id, 'tv');
+            if (!details) return;
+
+            const networkName = (details as any).networks?.[0]?.name || 'TV';
+            const poster = getPosterUrl(details.poster_path || item.poster_path || null);
+            const backdrop = getBackdropUrl(details.backdrop_path || details.poster_path || null);
+
+            // Calculate user's next unwatched episode from episodeProgress
+            const watchedForShow = episodeProgress.filter(e => e.show_id === item.media_id && e.is_watched);
+            let nextSeason = 1;
+            let nextEp = 1;
+
+            if (watchedForShow.length > 0) {
+              let maxS = 1;
+              let maxE = 0;
+              watchedForShow.forEach(e => {
+                if (e.season_number > maxS || (e.season_number === maxS && e.episode_number > maxE)) {
+                  maxS = e.season_number;
+                  maxE = e.episode_number;
+                }
+              });
+
+              try {
+                const sDetails = await getSeasonDetails(item.media_id, maxS);
+                const totalEpsInSeason = sDetails?.episodes?.length || 10;
+
+                if (maxE < totalEpsInSeason) {
+                  nextSeason = maxS;
+                  nextEp = maxE + 1;
+                } else {
+                  nextSeason = maxS + 1;
+                  nextEp = 1;
+                }
+              } catch (e) {
+                nextSeason = maxS;
+                nextEp = maxE + 1;
+              }
+            }
+
+            // Fetch season details for target next episode
+            let targetEpisodeData: any = null;
+            let targetSeasonData: any = null;
+            try {
+              targetSeasonData = await getSeasonDetails(item.media_id, nextSeason);
+              targetEpisodeData = targetSeasonData?.episodes?.find((e: any) => e.episode_number === nextEp);
+            } catch (e) {}
+
+            const epName = targetEpisodeData?.name 
+              ? (nextEp === 1 ? `${nextSeason}. Sezon Prömiyeri (${targetEpisodeData.name})` : targetEpisodeData.name)
+              : `${nextSeason}. Sezon ${nextEp}. Bölüm`;
+
+            const airDate = targetEpisodeData?.air_date || (details as any).next_episode_to_air?.air_date || (details as any).last_episode_to_air?.air_date || new Date().toISOString().split('T')[0];
+
+            fetchedList.push({
+              id: item.media_id * 10000 + nextSeason * 100 + nextEp,
+              showId: item.media_id,
+              showName: details.title || details.name || item.title || 'Dizi',
+              posterPath: targetSeasonData?.poster_path ? getPosterUrl(targetSeasonData.poster_path) : poster,
+              backdropPath: backdrop,
+              seasonNumber: nextSeason,
+              episodeNumber: nextEp,
+              episodeName: epName,
+              airDate: airDate,
+              network: networkName,
+              networkColor: 'bg-[#14171D] text-slate-100 border-[#232833]',
+              overview: targetEpisodeData?.overview || `${details.title || item.title} dizisinin sıradaki izlenecek bölümü.`,
+              voteAverage: targetEpisodeData?.vote_average || details.vote_average || 8.5,
+              mediaType: 'tv'
+            });
+
+            // Also check TMDB next_episode_to_air if future broadcast announced
+            const tmdbNext = (details as any).next_episode_to_air;
+            if (tmdbNext && tmdbNext.air_date && !(tmdbNext.season_number === nextSeason && tmdbNext.episode_number === nextEp)) {
+              fetchedList.push({
+                id: tmdbNext.id || (item.media_id * 1000 + tmdbNext.episode_number),
+                showId: item.media_id,
+                showName: details.title || details.name || item.title || 'Dizi',
+                posterPath: poster,
+                backdropPath: backdrop,
+                seasonNumber: tmdbNext.season_number,
+                episodeNumber: tmdbNext.episode_number,
+                episodeName: tmdbNext.name || `${tmdbNext.season_number}. Sezon ${tmdbNext.episode_number}. Bölüm`,
+                airDate: tmdbNext.air_date,
+                network: networkName,
+                networkColor: 'bg-emerald-950/80 text-emerald-300 border-emerald-800/50',
+                overview: tmdbNext.overview || `${details.title || item.title} dizisinin tv'de yayınlanacak yeni bölümü.`,
+                voteAverage: tmdbNext.vote_average || details.vote_average || 8.5,
+                mediaType: 'tv'
+              });
+            }
+
+            // Also check all announced new season premieres
+            if ((details as any).seasons && Array.isArray((details as any).seasons)) {
+              (details as any).seasons.forEach((season: any) => {
+                if (season.season_number > 0 && season.air_date) {
+                  const alreadyAdded = fetchedList.some(
+                    e => e.showId === item.media_id && e.seasonNumber === season.season_number && e.episodeNumber === 1
+                  );
+                  if (!alreadyAdded) {
+                    const seasonPoster = season.poster_path ? getPosterUrl(season.poster_path) : poster;
+                    fetchedList.push({
+                      id: season.id || (item.media_id * 10000 + season.season_number * 10),
+                      showId: item.media_id,
+                      showName: details.title || details.name || item.title || 'Dizi',
+                      posterPath: seasonPoster,
+                      backdropPath: backdrop,
+                      seasonNumber: season.season_number,
+                      episodeNumber: 1,
+                      episodeName: `${season.season_number}. Sezon Prömiyeri (${season.name || 'Yeni Sezon'})`,
+                      airDate: season.air_date,
+                      network: networkName,
+                      networkColor: 'bg-amber-950/80 text-amber-300 border-amber-800/50',
+                      overview: season.overview || `${details.title || item.title} dizisinin ${season.season_number}. Sezon Prömiyeri.`,
+                      voteAverage: details.vote_average || 8.5,
+                      mediaType: 'tv'
+                    });
+                  }
+                }
+              });
+            }
+          } catch (err) {
+            console.warn(`Live schedule fetch error for show ${item.media_id}:`, err);
+          }
+        })
+      );
+
+      // Include demo upcoming items as well so calendar remains rich
+      const allEpisodes = [...fetchedList];
+      UPCOMING_EPISODES_DATA.forEach(demo => {
+        if (!allEpisodes.some(e => e.showId === demo.showId)) {
+          allEpisodes.push(demo);
+        }
+      });
+
+      if (isMounted) {
+        setLiveEpisodes(allEpisodes);
+        setLoadingLive(false);
+      }
+    }
+
+    fetchLiveSchedule();
+    return () => { isMounted = false; };
+  }, [watchingList]);
 
   // Filter episodes based on user watching list
-  const filteredEpisodes = UPCOMING_EPISODES_DATA.filter(ep => {
-    if (watchingList.length === 0) return false;
+  const filteredEpisodes = liveEpisodes.filter(ep => {
+    if (!filterWatchingOnly) return true;
+    if (watchingList.length === 0) return true;
+    const watchingIds = watchingList.map(w => w.media_id);
+    const watchingTitles = watchingList.map(w => (w.title || '').toLowerCase());
     const isIdMatch = watchingIds.includes(ep.showId);
     const isTitleMatch = watchingTitles.some(t => t && (t.includes(ep.showName.toLowerCase()) || ep.showName.toLowerCase().includes(t)));
     return isIdMatch || isTitleMatch;
@@ -474,27 +639,40 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     </span>
                   </div>
 
-                  {onSelectMedia && (
-                    <button
-                      onClick={() => onSelectMedia({
-                        id: ep.showId,
-                        name: ep.showName,
-                        title: ep.showName,
-                        poster_path: ep.posterPath,
-                        backdrop_path: ep.backdropPath,
-                        media_type: 'tv',
-                        overview: ep.overview,
-                        vote_average: ep.voteAverage,
-                        vote_count: 1000,
-                        popularity: 100,
-                        first_air_date: ep.airDate
-                      })}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0B0C0E] hover:bg-[#232833] border border-[#2B313E] text-slate-200 text-xs font-bold transition"
-                    >
-                      <Info className="w-3.5 h-3.5 text-[#E63946]" />
-                      <span>Dizi Sayfası</span>
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {onToggleEpisode && (
+                      <button
+                        onClick={() => onToggleEpisode(ep.showId, ep.seasonNumber, ep.episodeNumber)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 text-xs font-bold transition shadow-sm"
+                        title="Bu bölümü izlendi olarak işaretle"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>İzledim</span>
+                      </button>
+                    )}
+
+                    {onSelectMedia && (
+                      <button
+                        onClick={() => onSelectMedia({
+                          id: ep.showId,
+                          name: ep.showName,
+                          title: ep.showName,
+                          poster_path: ep.posterPath,
+                          backdrop_path: ep.backdropPath,
+                          media_type: 'tv',
+                          overview: ep.overview,
+                          vote_average: ep.voteAverage,
+                          vote_count: 1000,
+                          popularity: 100,
+                          first_air_date: ep.airDate
+                        })}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B0C0E] hover:bg-[#232833] border border-[#2B313E] text-slate-200 text-xs font-bold transition"
+                      >
+                        <Info className="w-3.5 h-3.5 text-[#E63946]" />
+                        <span>Dizi Sayfası</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
               </motion.div>

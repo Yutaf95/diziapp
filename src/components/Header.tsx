@@ -65,6 +65,14 @@ export const Header: React.FC<HeaderProps> = ({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const searchScrollRef = useRef<HTMLDivElement>(null);
+
+  // Reset search dropdown scroll position when searching new query
+  useEffect(() => {
+    if (searchScrollRef.current) {
+      searchScrollRef.current.scrollTop = 0;
+    }
+  }, [searchQuery, searchResults]);
 
   const handleSelectMediaFilter = (type: 'all' | 'tv' | 'movie') => {
     if (setMediaFilter) setMediaFilter(type);
@@ -134,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Results List */}
-        <div className="max-h-96 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
+        <div ref={searchScrollRef} className="max-h-96 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
           {isSearching && searchResults.length === 0 ? (
             <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2.5">
               <Loader2 className="w-6 h-6 text-[#E63946] animate-spin" />
@@ -219,16 +227,18 @@ export const Header: React.FC<HeaderProps> = ({
                   {/* Quick Action Buttons (visible on hover) */}
                   {onUpdateWatchStatus && (
                     <div className="absolute right-2 bottom-2 z-20 hidden group-hover:flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onUpdateWatchStatus(item, 'watching');
-                        }}
-                        className="p-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all duration-150 active:scale-90"
-                        title="İzliyorum"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
+                      {isTv && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateWatchStatus(item, 'watching');
+                          }}
+                          className="p-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all duration-150 active:scale-90"
+                          title="İzliyorum"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

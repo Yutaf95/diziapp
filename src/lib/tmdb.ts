@@ -193,12 +193,16 @@ export async function search(
     if (!res.ok) throw new Error(`TMDB Search failed with status ${res.status}`);
     const data = await res.json();
     
-    const formattedResults: TMDBMedia[] = (data.results || []).map((item: any) => ({
-      ...item,
-      media_type: item.media_type || (type === 'all' ? (item.first_air_date ? 'tv' : 'movie') : type),
-      title: item.title || item.name,
-      name: item.name || item.title,
-    }));
+    const formattedResults: TMDBMedia[] = (data.results || [])
+      .filter((item: any) => item.media_type !== 'person')
+      .map((item: any) => ({
+        ...item,
+        media_type: item.media_type || (type === 'all' ? (item.first_air_date ? 'tv' : 'movie') : type),
+        title: item.title || item.name,
+        name: item.name || item.title,
+        popularity: item.popularity || 0
+      }))
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
 
     return {
       results: formattedResults,
@@ -210,7 +214,7 @@ export async function search(
     const q = query.toLowerCase().trim();
     const filtered = MOCK_TRENDING_SHOWS.filter((item) => 
       (item.title || item.name || '').toLowerCase().includes(q)
-    );
+    ).sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
     return { results: filtered, total_results: filtered.length, page: 1 };
   }
 }

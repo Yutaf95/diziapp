@@ -822,6 +822,13 @@ export default function App() {
     };
   }, [searchQuery, mediaFilter]);
 
+  // Scroll to top when searching new query
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [searchQuery]);
+
   // Helper to get watch status of media
   const getUserWatchStatus = (mediaId: number, mediaType: MediaType): WatchStatusType | undefined => {
     const found = watchList.find(item => item.media_id === mediaId && item.media_type === mediaType);
@@ -1034,14 +1041,28 @@ export default function App() {
     }
   };
 
-  // Batch Mark Multiple Episodes as Watched
-  const handleBatchMarkEpisodes = async (showId: number, seasonNum: number, epNums: number[]) => {
+  // Batch Mark Multiple Episodes as Watched across seasons
+  const handleBatchMarkEpisodes = async (
+    showId: number,
+    seasonNumOrItems: number | Array<{ season_number: number; episode_number: number }>,
+    epNums?: number[]
+  ) => {
+    let itemsToMark: Array<{ season_number: number; episode_number: number }> = [];
+
+    if (Array.isArray(seasonNumOrItems)) {
+      itemsToMark = seasonNumOrItems;
+    } else if (typeof seasonNumOrItems === 'number' && epNums) {
+      itemsToMark = epNums.map(epNum => ({ season_number: seasonNumOrItems, episode_number: epNum }));
+    }
+
+    if (itemsToMark.length === 0) return;
+
     const now = new Date().toISOString();
     setEpisodeProgress(prev => {
       let nextState = [...prev];
-      for (const epNum of epNums) {
+      for (const item of itemsToMark) {
         const idx = nextState.findIndex(
-          e => e.show_id === showId && e.season_number === seasonNum && e.episode_number === epNum
+          e => e.show_id === showId && e.season_number === item.season_number && e.episode_number === item.episode_number
         );
         if (idx >= 0) {
           nextState[idx] = { ...nextState[idx], is_watched: true };
@@ -1049,8 +1070,8 @@ export default function App() {
           nextState.push({
             user_id: currentUser.id,
             show_id: showId,
-            season_number: seasonNum,
-            episode_number: epNum,
+            season_number: item.season_number,
+            episode_number: item.episode_number,
             is_watched: true,
             watched_at: now
           });
@@ -1072,7 +1093,7 @@ export default function App() {
 
     // Add activity for batch
     const showItem = watchList.find(w => w.media_id === showId);
-    const lastEp = Math.max(...epNums);
+    const lastItem = itemsToMark[itemsToMark.length - 1];
     const newActivity: ActivityFeedItem = {
       id: `act_${Date.now()}`,
       user_id: currentUser.id,
@@ -1083,8 +1104,8 @@ export default function App() {
       details: {
         media_title: showItem?.title || 'Dizi',
         media_poster: showItem?.poster_path,
-        season_number: seasonNum,
-        episode_number: lastEp
+        season_number: lastItem.season_number,
+        episode_number: lastItem.episode_number
       },
       created_at: now
     };
@@ -1106,11 +1127,11 @@ export default function App() {
         }
 
         // 2. Batch upsert episodes progress in Supabase
-        const upsertData = epNums.map(epNum => ({
+        const upsertData = itemsToMark.map(item => ({
           user_id: userId,
           show_id: showId,
-          season_number: seasonNum,
-          episode_number: epNum,
+          season_number: item.season_number,
+          episode_number: item.episode_number,
           is_watched: true
         }));
         await supabase
@@ -1128,8 +1149,8 @@ export default function App() {
             details: {
               media_title: showItem?.title || 'Dizi',
               media_poster: showItem?.poster_path,
-              season_number: seasonNum,
-              episode_number: lastEp
+              season_number: lastItem.season_number,
+              episode_number: lastItem.episode_number
             }
           });
       } catch (err) {
@@ -1588,13 +1609,13 @@ export default function App() {
                       </div>
 
                       {loadingMedia ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                          {Array.from({ length: 8 }).map((_, idx) => (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-3.5">
+                          {Array.from({ length: 12 }).map((_, idx) => (
                             <div key={idx} className="bg-[#0B0C0E] aspect-[2/3] rounded-2xl animate-pulse border border-[#232833]" />
                           ))}
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-3.5">
                           {filteredGridMedia.map((item) => {
                             const isTv = item.media_type === 'tv' || !!item.first_air_date;
                             const type: MediaType = isTv ? 'tv' : 'movie';
@@ -1648,8 +1669,8 @@ export default function App() {
                     </div>
 
                     {loadingMedia ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {Array.from({ length: 8 }).map((_, idx) => (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-3.5">
+                        {Array.from({ length: 12 }).map((_, idx) => (
                           <div key={idx} className="bg-[#0B0C0E] aspect-[2/3] rounded-2xl animate-pulse border border-[#232833]" />
                         ))}
                       </div>
@@ -1683,7 +1704,7 @@ export default function App() {
                         }}
                       />
                     ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-3.5">
                         {filteredGridMedia.map((item) => {
                           const isTv = item.media_type === 'tv' || !!item.first_air_date;
                           const type: MediaType = isTv ? 'tv' : 'movie';
@@ -1715,6 +1736,8 @@ export default function App() {
               ) : activeTab === 'calendar' ? (
                 <CalendarView
                   watchingList={watchList.filter(w => w.status === 'watching')}
+                  episodeProgress={episodeProgress}
+                  onToggleEpisode={handleToggleEpisode}
                   onSelectMedia={(m) => setSelectedMedia(m)}
                 />
               ) : activeTab === 'activity' ? (
@@ -1855,7 +1878,7 @@ export default function App() {
                       </button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-3.5">
                       {favorites.map((item) => {
                         const mediaItem: any = {
                           id: item.media_id,

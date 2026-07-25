@@ -28,12 +28,10 @@ interface MediaDetailModalProps {
   onToggleFavorite?: (media: TMDBMedia) => void;
 }
 
-const formatMissingEpisodesText = (epNums: number[]): string => {
-  if (epNums.length === 0) return '';
-  if (epNums.length === 1) return `${epNums[0]}. bölümü`;
-  const last = epNums[epNums.length - 1];
-  const rest = epNums.slice(0, -1).join(', ');
-  return `${rest} ve ${last}. bölümleri`;
+const formatMissingEpisodesText = (items: Array<{ season_number: number; episode_number: number }>): string => {
+  if (items.length === 0) return '';
+  if (items.length === 1) return `S${items[0].season_number}E${items[0].episode_number} bölümünü`;
+  return `önceki ${items.length} bölümü (tüm önceki sezonlar dahil)`;
 };
 
 export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
@@ -200,20 +198,35 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     showId: number;
     seasonNum: number;
     targetEp: TMDBEpisode;
-    missingEps: number[];
+    missingItems: Array<{ season_number: number; episode_number: number }>;
     rating?: number;
   } | null>(null);
 
-  // Helper to find missing prior episodes in selected season
-  const getMissingPriorEpisodes = (seasonNum: number, targetEpNum: number): number[] => {
-    if (!seasonDetails || !seasonDetails.episodes) return [];
-    const missing: number[] = [];
-    for (let epNum = 1; epNum < targetEpNum; epNum++) {
-      const prog = getEpisodeProgress(media.id, seasonNum, epNum);
-      if (!prog || !prog.is_watched) {
-        missing.push(epNum);
+  // Helper to find missing prior episodes across ALL seasons up to target season/episode
+  const getMissingPriorEpisodes = (targetSeasonNum: number, targetEpNum: number): Array<{ season_number: number; episode_number: number }> => {
+    const missing: Array<{ season_number: number; episode_number: number }> = [];
+    const availableSeasons = details.seasons || media.seasons || [];
+
+    // 1. All prior seasons (s < targetSeasonNum)
+    for (let s = 1; s < targetSeasonNum; s++) {
+      const seasonObj = availableSeasons.find(sec => sec.season_number === s);
+      const epCount = seasonObj?.episode_count || 10;
+      for (let epNum = 1; epNum <= epCount; epNum++) {
+        const prog = getEpisodeProgress(media.id, s, epNum);
+        if (!prog || !prog.is_watched) {
+          missing.push({ season_number: s, episode_number: epNum });
+        }
       }
     }
+
+    // 2. Current season prior episodes (epNum < targetEpNum)
+    for (let epNum = 1; epNum < targetEpNum; epNum++) {
+      const prog = getEpisodeProgress(media.id, targetSeasonNum, epNum);
+      if (!prog || !prog.is_watched) {
+        missing.push({ season_number: targetSeasonNum, episode_number: epNum });
+      }
+    }
+
     return missing;
   };
 
@@ -226,14 +239,14 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       return;
     }
 
-    const missingEps = getMissingPriorEpisodes(ep.season_number, ep.episode_number);
-    if (missingEps.length > 0) {
+    const missingItems = getMissingPriorEpisodes(ep.season_number, ep.episode_number);
+    if (missingItems.length > 0) {
       setRatingEpisodeModal(null);
       setBatchConfirmModal({
         showId: media.id,
         seasonNum: ep.season_number,
         targetEp: ep,
-        missingEps,
+        missingItems,
         rating
       });
     } else {
@@ -254,13 +267,13 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       return;
     }
 
-    const missingEps = getMissingPriorEpisodes(ep.season_number, ep.episode_number);
-    if (missingEps.length > 0) {
-      const allEpsToMark = [...missingEps, ep.episode_number];
+    const missingItems = getMissingPriorEpisodes(ep.season_number, ep.episode_number);
+    if (missingItems.length > 0) {
+      const allItemsToMark = [...missingItems, { season_number: ep.season_number, episode_number: ep.episode_number }];
       if (onBatchMarkEpisodes) {
-        onBatchMarkEpisodes(media.id, ep.season_number, allEpsToMark);
+        onBatchMarkEpisodes(media.id, allItemsToMark as any);
       } else {
-        allEpsToMark.forEach(epNum => onToggleEpisode(media.id, ep.season_number, epNum));
+        allItemsToMark.forEach(item => onToggleEpisode(media.id, item.season_number, item.episode_number));
       }
     } else {
       onToggleEpisode(media.id, ep.season_number, ep.episode_number);
@@ -528,18 +541,16 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
         {/* 2. BODY CONTENT */}
         <div className="p-4 sm:p-8 space-y-8">
           
-          {/* Summary / Overview: Only shown for TV shows in 'plan_to_watch' category (or for movies) */}
-          {(!isTv || userWatchStatus === 'plan_to_watch') && (
-            <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 shadow-lg space-y-2">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#E63946]">Özet & Hikaye</h3>
-              <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                {details.overview || 'Açıklama bulunmuyor.'}
-              </p>
-            </div>
-          )}
+          {/* Özet & Hikaye - Her zaman gösterilir */}
+          <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 shadow-lg space-y-2">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#E63946]">Özet & Hikaye</h3>
+            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+              {details.overview || 'Açıklama bulunmuyor.'}
+            </p>
+          </div>
 
-          {/* 3. SEZON BUTONLARI & BÖLÜM KARTLARI GRID'I */}
-          {isTv && (
+          {/* 3. SEZON BUTONLARI & BÖLÜM KARTLARI GRID'I (Yalnızca İzliyorum/İzlendi durumunda gösterilir) */}
+          {isTv && (userWatchStatus === 'watching' || userWatchStatus === 'watched') && (
             <div className="bg-[#14171D] border border-[#232833] rounded-3xl p-5 sm:p-6 space-y-5 shadow-xl">
               
               {/* Header & Sezon Butonları (Hap / Pill Sekme) */}
@@ -1036,17 +1047,17 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               </div>
 
               <div className="bg-[#0B0C0E] border border-[#2B313E] rounded-2xl p-4 text-slate-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-inner">
-                {formatMissingEpisodesText(batchConfirmModal.missingEps)} de izlendi olarak işaretlemek ister misin?
+                {formatMissingEpisodesText(batchConfirmModal.missingItems)} de izlendi olarak işaretlemek ister misin?
               </div>
 
               <div className="pt-2 space-y-2.5">
                 <button
                   onClick={() => {
-                    const allEpsToMark = [...batchConfirmModal.missingEps, batchConfirmModal.targetEp.episode_number];
+                    const allItemsToMark = [...batchConfirmModal.missingItems, { season_number: batchConfirmModal.targetEp.season_number, episode_number: batchConfirmModal.targetEp.episode_number }];
                     if (onBatchMarkEpisodes) {
-                      onBatchMarkEpisodes(batchConfirmModal.showId, batchConfirmModal.seasonNum, allEpsToMark);
+                      onBatchMarkEpisodes(batchConfirmModal.showId, allItemsToMark as any);
                     } else {
-                      allEpsToMark.forEach(epNum => onToggleEpisode(batchConfirmModal.showId, batchConfirmModal.seasonNum, epNum));
+                      allItemsToMark.forEach(item => onToggleEpisode(batchConfirmModal.showId, item.season_number, item.episode_number));
                     }
                     if (batchConfirmModal.rating && onRateEpisode) {
                       onRateEpisode(batchConfirmModal.showId, batchConfirmModal.seasonNum, batchConfirmModal.targetEp.episode_number, batchConfirmModal.rating);

@@ -345,14 +345,16 @@ export const MobileSearchView: React.FC<MobileSearchViewProps> = ({
                     <div className="flex flex-col gap-1.5 shrink-0 pl-1">
                       {status !== 'watching' && status !== 'plan_to_watch' && (
                         <>
-                          <button
-                            type="button"
-                            onClick={() => onUpdateWatchStatus({ ...item, media_type: mediaType }, 'watching')}
-                            className="p-2 rounded-xl text-xs transition border flex items-center justify-center bg-[#0B0C0E] text-slate-300 border-white/10 hover:text-white"
-                            title="İzliyorum"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
+                          {isTv && (
+                            <button
+                              type="button"
+                              onClick={() => onUpdateWatchStatus({ ...item, media_type: mediaType }, 'watching')}
+                              className="p-2 rounded-xl text-xs transition border flex items-center justify-center bg-[#0B0C0E] text-slate-300 border-white/10 hover:text-white"
+                              title="İzliyorum"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          )}
 
                           <button
                             type="button"

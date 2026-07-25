@@ -13,12 +13,10 @@ interface EpisodeTrackerProps {
   onNavigateToDiscover?: () => void;
 }
 
-const formatMissingEpisodesText = (epNums: number[]): string => {
-  if (epNums.length === 0) return '';
-  if (epNums.length === 1) return `${epNums[0]}. bölümü`;
-  const last = epNums[epNums.length - 1];
-  const rest = epNums.slice(0, -1).join(', ');
-  return `${rest} ve ${last}. bölümleri`;
+const formatMissingEpisodesText = (items: Array<{ season_number: number; episode_number: number }>): string => {
+  if (items.length === 0) return '';
+  if (items.length === 1) return `S${items[0].season_number}E${items[0].episode_number} bölümünü`;
+  return `önceki ${items.length} bölümü (tüm önceki sezonlar dahil)`;
 };
 
 export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
@@ -38,7 +36,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     showId: number;
     seasonNum: number;
     targetEpNum: number;
-    missingEps: number[];
+    missingItems: Array<{ season_number: number; episode_number: number }>;
   } | null>(null);
 
   // Filter TV shows in watching status
@@ -90,19 +88,32 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
       return;
     }
 
-    const missingEps: number[] = [];
-    for (let i = 1; i < epNum; i++) {
-      if (!isEpWatched(showId, seasonNum, i)) {
-        missingEps.push(i);
+    const missingItems: Array<{ season_number: number; episode_number: number }> = [];
+    
+    // 1. Check all prior seasons (s < seasonNum)
+    for (let s = 1; s < seasonNum; s++) {
+      const seasonData = seasonsData[`${showId}-${s}`];
+      const epCount = seasonData?.episodes?.length || 10;
+      for (let e = 1; e <= epCount; e++) {
+        if (!isEpWatched(showId, s, e)) {
+          missingItems.push({ season_number: s, episode_number: e });
+        }
       }
     }
 
-    if (missingEps.length > 0) {
+    // 2. Check current season prior episodes
+    for (let i = 1; i < epNum; i++) {
+      if (!isEpWatched(showId, seasonNum, i)) {
+        missingItems.push({ season_number: seasonNum, episode_number: i });
+      }
+    }
+
+    if (missingItems.length > 0) {
       setBatchModal({
         showId,
         seasonNum,
         targetEpNum: epNum,
-        missingEps
+        missingItems
       });
     } else {
       onToggleEpisode(showId, seasonNum, epNum);
@@ -324,17 +335,17 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
             </div>
 
             <div className="bg-[#0B0C0E] border border-[#2B313E] rounded-2xl p-4 text-slate-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-inner">
-              {formatMissingEpisodesText(batchModal.missingEps)} de izlendi olarak işaretlemek ister misin?
+              {formatMissingEpisodesText(batchModal.missingItems)} de izlendi olarak işaretlemek ister misin?
             </div>
 
             <div className="pt-2 space-y-2.5">
               <button
                 onClick={() => {
-                  const allEpsToMark = [...batchModal.missingEps, batchModal.targetEpNum];
+                  const allItemsToMark = [...batchModal.missingItems, { season_number: batchModal.seasonNum, episode_number: batchModal.targetEpNum }];
                   if (onBatchMarkEpisodes) {
-                    onBatchMarkEpisodes(batchModal.showId, batchModal.seasonNum, allEpsToMark);
+                    onBatchMarkEpisodes(batchModal.showId, allItemsToMark as any);
                   } else {
-                    allEpsToMark.forEach(epNum => onToggleEpisode(batchModal.showId, batchModal.seasonNum, epNum));
+                    allItemsToMark.forEach(item => onToggleEpisode(batchModal.showId, item.season_number, item.episode_number));
                   }
                   setBatchModal(null);
                 }}

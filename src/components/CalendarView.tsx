@@ -162,11 +162,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             const networkName = (details as any).networks?.[0]?.name || 'TV';
             const poster = getPosterUrl(details.poster_path || item.poster_path || null);
             const backdrop = getBackdropUrl(details.backdrop_path || details.poster_path || null);
+            const totalSeasons = details.number_of_seasons || 1;
 
-            // Calculate user's next unwatched episode from episodeProgress
+            // Calculate user's last watched episode from episodeProgress
             const watchedForShow = episodeProgress.filter(e => e.show_id === item.media_id && e.is_watched);
-            let nextSeason = 1;
-            let nextEp = 1;
+            let targetSeason = 1;
+            let targetEp = 1;
 
             if (watchedForShow.length > 0) {
               let maxS = 1;
@@ -183,15 +184,35 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 const totalEpsInSeason = sDetails?.episodes?.length || 10;
 
                 if (maxE < totalEpsInSeason) {
-                  nextSeason = maxS;
-                  nextEp = maxE + 1;
+                  targetSeason = maxS;
+                  targetEp = maxE + 1;
+                } else if (maxS < totalSeasons) {
+                  targetSeason = maxS + 1;
+                  targetEp = 1;
                 } else {
-                  nextSeason = maxS + 1;
-                  nextEp = 1;
+                  // User has completed all available seasons. Check if TMDB has next_episode_to_air
+                  const tmdbNext = (details as any).next_episode_to_air;
+                  if (tmdbNext && tmdbNext.air_date) {
+                    targetSeason = tmdbNext.season_number;
+                    targetEp = tmdbNext.episode_number;
+                  } else {
+                    return; // Show is fully completed, no past season repetition
+                  }
                 }
               } catch (e) {
-                nextSeason = maxS;
-                nextEp = maxE + 1;
+                targetSeason = maxS;
+                targetEp = maxE + 1;
+              }
+            }
+
+            // Ensure targetSeason does not exceed TMDB number_of_seasons unless TMDB explicitly has next_episode_to_air
+            const tmdbNext = (details as any).next_episode_to_air;
+            if (targetSeason > totalSeasons) {
+              if (tmdbNext && tmdbNext.air_date) {
+                targetSeason = tmdbNext.season_number;
+                targetEp = tmdbNext.episode_number;
+              } else {
+                targetSeason = totalSeasons;
               }
             }
 
@@ -199,24 +220,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             let targetEpisodeData: any = null;
             let targetSeasonData: any = null;
             try {
-              targetSeasonData = await getSeasonDetails(item.media_id, nextSeason);
-              targetEpisodeData = targetSeasonData?.episodes?.find((e: any) => e.episode_number === nextEp);
+              targetSeasonData = await getSeasonDetails(item.media_id, targetSeason);
+              targetEpisodeData = targetSeasonData?.episodes?.find((e: any) => e.episode_number === targetEp);
             } catch (e) {}
 
             const epName = targetEpisodeData?.name 
-              ? (nextEp === 1 ? `${nextSeason}. Sezon Prömiyeri (${targetEpisodeData.name})` : targetEpisodeData.name)
-              : `${nextSeason}. Sezon ${nextEp}. Bölüm`;
+              ? (targetEp === 1 ? `${targetSeason}. Sezon Prömiyeri (${targetEpisodeData.name})` : targetEpisodeData.name)
+              : `${targetSeason}. Sezon ${targetEp}. Bölüm`;
 
             const airDate = targetEpisodeData?.air_date || (details as any).next_episode_to_air?.air_date || (details as any).last_episode_to_air?.air_date || new Date().toISOString().split('T')[0];
 
             fetchedList.push({
-              id: item.media_id * 10000 + nextSeason * 100 + nextEp,
+              id: item.media_id * 10000 + targetSeason * 100 + targetEp,
               showId: item.media_id,
               showName: details.title || details.name || item.title || 'Dizi',
               posterPath: targetSeasonData?.poster_path ? getPosterUrl(targetSeasonData.poster_path) : poster,
               backdropPath: backdrop,
-              seasonNumber: nextSeason,
-              episodeNumber: nextEp,
+              seasonNumber: targetSeason,
+              episodeNumber: targetEp,
               episodeName: epName,
               airDate: airDate,
               network: networkName,
@@ -226,72 +247,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               mediaType: 'tv'
             });
 
-            // Also check TMDB next_episode_to_air if future broadcast announced
-            const tmdbNext = (details as any).next_episode_to_air;
-            if (tmdbNext && tmdbNext.air_date && !(tmdbNext.season_number === nextSeason && tmdbNext.episode_number === nextEp)) {
-              fetchedList.push({
-                id: tmdbNext.id || (item.media_id * 1000 + tmdbNext.episode_number),
-                showId: item.media_id,
-                showName: details.title || details.name || item.title || 'Dizi',
-                posterPath: poster,
-                backdropPath: backdrop,
-                seasonNumber: tmdbNext.season_number,
-                episodeNumber: tmdbNext.episode_number,
-                episodeName: tmdbNext.name || `${tmdbNext.season_number}. Sezon ${tmdbNext.episode_number}. Bölüm`,
-                airDate: tmdbNext.air_date,
-                network: networkName,
-                networkColor: 'bg-emerald-950/80 text-emerald-300 border-emerald-800/50',
-                overview: tmdbNext.overview || `${details.title || item.title} dizisinin tv'de yayınlanacak yeni bölümü.`,
-                voteAverage: tmdbNext.vote_average || details.vote_average || 8.5,
-                mediaType: 'tv'
-              });
-            }
-
-            // Also check all announced new season premieres
-            if ((details as any).seasons && Array.isArray((details as any).seasons)) {
-              (details as any).seasons.forEach((season: any) => {
-                if (season.season_number > 0 && season.air_date) {
-                  const alreadyAdded = fetchedList.some(
-                    e => e.showId === item.media_id && e.seasonNumber === season.season_number && e.episodeNumber === 1
-                  );
-                  if (!alreadyAdded) {
-                    const seasonPoster = season.poster_path ? getPosterUrl(season.poster_path) : poster;
-                    fetchedList.push({
-                      id: season.id || (item.media_id * 10000 + season.season_number * 10),
-                      showId: item.media_id,
-                      showName: details.title || details.name || item.title || 'Dizi',
-                      posterPath: seasonPoster,
-                      backdropPath: backdrop,
-                      seasonNumber: season.season_number,
-                      episodeNumber: 1,
-                      episodeName: `${season.season_number}. Sezon Prömiyeri (${season.name || 'Yeni Sezon'})`,
-                      airDate: season.air_date,
-                      network: networkName,
-                      networkColor: 'bg-amber-950/80 text-amber-300 border-amber-800/50',
-                      overview: season.overview || `${details.title || item.title} dizisinin ${season.season_number}. Sezon Prömiyeri.`,
-                      voteAverage: details.vote_average || 8.5,
-                      mediaType: 'tv'
-                    });
-                  }
-                }
-              });
-            }
           } catch (err) {
             console.warn(`Live schedule fetch error for show ${item.media_id}:`, err);
           }
         })
       );
 
-      // Include demo upcoming items as well so calendar remains rich
-      const allEpisodes = [...fetchedList];
-      UPCOMING_EPISODES_DATA.forEach(demo => {
-        if (!allEpisodes.some(e => e.showId === demo.showId)) {
-          allEpisodes.push(demo);
-        }
-      });
-
       if (isMounted) {
-        setLiveEpisodes(allEpisodes);
+        setLiveEpisodes(fetchedList);
         setLoadingLive(false);
       }
     }

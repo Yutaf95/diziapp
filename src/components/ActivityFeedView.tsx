@@ -193,14 +193,23 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
 
       {/* Feed List */}
       <div className="space-y-4">
-        {activities.length === 0 ? (
-          <EmptyState
-            title="Sosyal Akış Henüz Boş"
-            description="Takip ettiğiniz arkadaşlarınızın aktivite ve değerlendirmeleri burada görünecektir."
-            iconType="eye"
-          />
-        ) : (
-          activities.map((item) => {
+        {(() => {
+          const validActivities = activities.filter(a => 
+            (a.details?.media_title || a.media_title) && 
+            (a.profile?.username || (a.username && a.username !== 'kullanıcı'))
+          );
+
+          if (validActivities.length === 0) {
+            return (
+              <EmptyState
+                title="Sosyal Akış Henüz Boş"
+                description="Takip ettiğiniz arkadaşlarınızın aktivite ve değerlendirmeleri burada görünecektir."
+                iconType="eye"
+              />
+            );
+          }
+
+          return validActivities.map((item) => {
           const profile = item.profile || { username: 'Kullanıcı', full_name: 'TV Time Üyesi', avatar_url: '' };
           const details = item.details || {};
           const isSpoiler = details.contains_spoiler;
@@ -317,7 +326,8 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
 
             </div>
           );
-        }))}
+        })
+      })()}
       </div>
 
     </div>

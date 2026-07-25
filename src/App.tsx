@@ -268,7 +268,7 @@ export default function App() {
     };
 
     fetchUserData();
-  }, [session]);
+  }, [session?.user?.id]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showRecapModal, setShowRecapModal] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
@@ -429,12 +429,34 @@ export default function App() {
   const [loadingMedia, setLoadingMedia] = useState<boolean>(true);
 
   // User Interactive Application State
-  const [watchList, setWatchList] = useState<WatchStatus[]>(isSupabaseConfigured ? [] : INITIAL_USER_WATCH_STATUSES);
-  const [episodeProgress, setEpisodeProgress] = useState<EpisodeProgress[]>(isSupabaseConfigured ? [] : [
-    { user_id: CURRENT_USER.id, show_id: 110492, season_number: 1, episode_number: 1, is_watched: true },
-    { user_id: CURRENT_USER.id, show_id: 110492, season_number: 1, episode_number: 2, is_watched: true },
-    { user_id: CURRENT_USER.id, show_id: 94997, season_number: 1, episode_number: 1, is_watched: true }
-  ]);
+  const [watchList, setWatchList] = useState<WatchStatus[]>(() => {
+    try {
+      const saved = localStorage.getItem('diziapp_watch_list');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  const [episodeProgress, setEpisodeProgress] = useState<EpisodeProgress[]>(() => {
+    try {
+      const saved = localStorage.getItem('diziapp_episode_progress');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('diziapp_watch_list', JSON.stringify(watchList));
+    } catch {}
+  }, [watchList]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('diziapp_episode_progress', JSON.stringify(episodeProgress));
+    } catch {}
+  }, [episodeProgress]);
+
   const [reviews, setReviews] = useState<RatingReview[]>([]);
   const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
 

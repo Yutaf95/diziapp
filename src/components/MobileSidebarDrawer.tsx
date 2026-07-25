@@ -1,0 +1,236 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  User, 
+  TrendingUp, 
+  Bell, 
+  Settings, 
+  LogOut, 
+  X, 
+  ChevronRight, 
+  BarChart2, 
+  Sparkles, 
+  ShieldCheck,
+  Bookmark,
+  Tv,
+  Film
+} from 'lucide-react';
+import { Profile } from '../types';
+import { UserAvatar } from './UserAvatar';
+
+interface MobileSidebarDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: Profile;
+  onOpenProfile: () => void;
+  onOpenStats: () => void;
+  onOpenNotifications?: () => void;
+  onOpenSettings: () => void;
+  onLogout: () => void;
+}
+
+export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
+  isOpen,
+  onClose,
+  user,
+  onOpenProfile,
+  onOpenStats,
+  onOpenNotifications,
+  onOpenSettings,
+  onLogout
+}) => {
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  // Close drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
+
+  // Touch Swipe Left Handler to close
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const currentX = e.touches[0].clientX;
+    const diffX = currentX - touchStartX;
+    // Swipe left by 50px or more
+    if (diffX < -50) {
+      onClose();
+      setTouchStartX(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStartX(null);
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* 1. Backdrop overlay with blur & darken */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/75 backdrop-blur-md z-[9999] md:hidden"
+          />
+
+          {/* 2. Sol taraftan pürüzsüzce kayan Drawer (%80-85 genişlik) */}
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 240 }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            className="fixed top-0 left-0 bottom-0 w-[82vw] max-w-[320px] bg-[#121212] border-r border-neutral-800/80 z-[9999] md:hidden flex flex-col justify-between overflow-y-auto no-scrollbar shadow-2xl"
+          >
+            <div className="p-5 space-y-5">
+              
+              {/* Drawer Top Header & Close Button */}
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-[10px] font-black tracking-widest text-[#E63946] uppercase bg-[#E63946]/10 border border-[#E63946]/20 px-2.5 py-1 rounded-full">
+                  TV TIME
+                </span>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-2 rounded-full bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800 active:bg-white/10 transition"
+                  title="Kapat"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 2. Menü Üst Alanı (Profil Kimliği) */}
+              <div className="space-y-3">
+                <div 
+                  onClick={() => {
+                    onOpenProfile();
+                    onClose();
+                  }}
+                  className="flex items-center gap-3.5 p-2 -mx-2 rounded-2xl hover:bg-white/5 active:bg-white/10 transition cursor-pointer group"
+                >
+                  <div className="relative shrink-0">
+                    <UserAvatar user={user} size="lg" />
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-[#121212] z-20" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-black text-white uppercase tracking-wide truncate group-hover:text-[#E63946] transition">
+                      {user.full_name || user.username}
+                    </h3>
+                    <div className="text-[11px] font-bold text-[#E63946] truncate">
+                      @{user.username}
+                    </div>
+                    <div className="text-[11px] text-neutral-400 group-hover:text-white transition flex items-center gap-1 mt-0.5">
+                      <span>Profili görüntüle</span>
+                      <ChevronRight className="w-3 h-3 text-neutral-500 group-hover:text-white transition" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Yatay ince ayraç çizgisi */}
+                <div className="border-b border-neutral-800" />
+              </div>
+
+              {/* 3. Menü İçerik Listesi (İkonlu Seçenekler) */}
+              <div className="space-y-1.5 pt-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 px-3 pb-1">
+                  Kişisel Menü
+                </div>
+
+                {/* 📈 İzleme İstatistikleri */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenStats();
+                    onClose();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-amber-500/30 text-white shrink-0">
+                      <BarChart2 className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <div className="text-xs font-bold text-white group-hover:text-amber-400 transition">
+                        İzleme İstatistikleri
+                      </div>
+                      <div className="text-[10px] text-neutral-400 truncate">
+                        Aylık ve yıllık wrapped özeti
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition shrink-0" />
+                </button>
+
+                {/* ⚙️ Ayarlar ve Gizlilik */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenSettings();
+                    onClose();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-blue-500/30 text-white shrink-0">
+                      <Settings className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <div className="text-xs font-bold text-white group-hover:text-blue-400 transition">
+                        Ayarlar ve Gizlilik
+                      </div>
+                      <div className="text-[10px] text-neutral-400 truncate">
+                        Hesap ayarları ve bildirim tercihleri
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition shrink-0" />
+                </button>
+
+              </div>
+            </div>
+
+            {/* Alt Çıkış Yap Butonu & Versiyon Bilgisi */}
+            <div className="p-4 border-t border-neutral-800 space-y-3 bg-neutral-900/60 mt-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  onLogout();
+                  onClose();
+                }}
+                className="w-full flex items-center justify-center gap-2.5 p-3 rounded-xl text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 active:scale-95 border border-rose-500/20 hover:border-rose-600 transition font-extrabold text-xs cursor-pointer shadow-lg group"
+              >
+                <LogOut className="w-4 h-4 shrink-0 text-rose-400 group-hover:text-white transition" />
+                <span>Çıkış Yap</span>
+              </button>
+
+              <div className="text-[10px] text-neutral-500 text-center font-medium">
+                TV Time Mobile v2.4.0 • Türkiye
+              </div>
+            </div>
+
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};

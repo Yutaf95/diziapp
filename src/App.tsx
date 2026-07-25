@@ -31,6 +31,16 @@ export default function App() {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(isSupabaseConfigured);
 
+  // Global unhandled promise rejection catcher
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      event.preventDefault(); // Prevent crash
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/user/')) {
       return 'profile';
@@ -87,8 +97,8 @@ export default function App() {
     const fetchUserData = async () => {
       const userId = session.user.id;
 
+      // 1. Profile
       try {
-        // 1. Profile
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -104,20 +114,22 @@ export default function App() {
             banner_url: profileData.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
             featured_media_title: profileData.featured_media_title || 'Severance',
             bio: profileData.bio || '',
-            email: profileData.email || ''
+            email: profileData.email || session.user.email || ''
           };
           setCurrentUser(profileObj);
           setViewingUsername(profileData.username);
         }
+      } catch (err) { console.warn('profiles fetch error:', err); }
 
-        // 2. Watch Status List
+      // 2. Watch Status List
+      try {
         const { data: wlData } = await supabase
           .from('watch_status')
           .select('*')
           .eq('user_id', userId);
 
         if (wlData) {
-          setWatchList(wlData.map(w => ({
+          setWatchList(wlData.map((w: any) => ({
             media_id: w.media_id,
             media_type: w.media_type as MediaType,
             status: w.status as WatchStatusType,
@@ -126,15 +138,17 @@ export default function App() {
             vote_average: w.vote_average || 0
           })));
         }
+      } catch (err) { console.warn('watch_status fetch error:', err); }
 
-        // 3. Episode Progress
+      // 3. Episode Progress
+      try {
         const { data: epData } = await supabase
           .from('episode_progress')
           .select('*')
           .eq('user_id', userId);
 
         if (epData) {
-          setEpisodeProgress(epData.map(ep => ({
+          setEpisodeProgress(epData.map((ep: any) => ({
             user_id: ep.user_id,
             show_id: ep.show_id,
             season_number: ep.season_number,
@@ -142,42 +156,46 @@ export default function App() {
             is_watched: ep.is_watched
           })));
         }
+      } catch (err) { console.warn('episode_progress fetch error:', err); }
 
-        // 4. Ratings & Reviews (Public)
+      // 4. Ratings & Reviews
+      try {
         const { data: revData } = await supabase
           .from('ratings_reviews')
           .select('*, profiles(username, full_name, avatar_url)')
           .order('created_at', { ascending: false });
 
         if (revData) {
-          setReviews(revData.map(r => ({
+          setReviews(revData.map((r: any) => ({
             id: r.id,
             user_id: r.user_id,
-            username: (r as any).profiles?.username || 'kullanıcı',
-            user_fullname: (r as any).profiles?.full_name || 'Kullanıcı',
-            user_avatar: (r as any).profiles?.avatar_url || '',
+            username: r.profiles?.username || 'kullanıcı',
+            user_fullname: r.profiles?.full_name || 'Kullanıcı',
+            user_avatar: r.profiles?.avatar_url || '',
             media_id: r.media_id,
             media_type: r.media_type as MediaType,
             rating: r.rating,
             review_text: r.review_text,
             contains_spoiler: r.contains_spoiler,
             created_at: r.created_at,
-            likes: (r as any).likes || 0
+            likes: r.likes || 0
           })));
         }
+      } catch (err) { console.warn('ratings_reviews fetch error:', err); }
 
-        // 5. Activity Feed (Public)
+      // 5. Activity Feed
+      try {
         const { data: actData } = await supabase
           .from('activity_feed')
           .select('*, profiles(username, full_name, avatar_url)')
           .order('created_at', { ascending: false });
 
         if (actData) {
-          setActivityFeed(actData.map(a => ({
+          setActivityFeed(actData.map((a: any) => ({
             id: a.id,
             user_id: a.user_id,
-            username: (a as any).profiles?.username || 'kullanıcı',
-            user_avatar: (a as any).profiles?.avatar_url || '',
+            username: a.profiles?.username || 'kullanıcı',
+            user_avatar: a.profiles?.avatar_url || '',
             action_type: a.action_type as any,
             media_id: a.media_id,
             media_type: a.media_type as MediaType,
@@ -188,15 +206,17 @@ export default function App() {
             created_at: a.created_at
           })));
         }
+      } catch (err) { console.warn('activity_feed fetch error:', err); }
 
-        // 6. Favorites
+      // 6. Favorites
+      try {
         const { data: favData } = await supabase
           .from('favorites')
           .select('*')
           .eq('user_id', userId);
 
         if (favData) {
-          setFavorites(favData.map(f => ({
+          setFavorites(favData.map((f: any) => ({
             media_id: f.media_id,
             media_type: f.media_type as MediaType,
             status: 'watched',
@@ -205,15 +225,17 @@ export default function App() {
             vote_average: f.vote_average || 0
           })));
         }
+      } catch (err) { console.warn('favorites fetch error:', err); }
 
-        // 7. Custom Collections
+      // 7. Custom Collections
+      try {
         const { data: collData } = await supabase
           .from('custom_collections')
           .select('*, collection_items(*)')
           .eq('user_id', userId);
 
         if (collData) {
-          setCollections(collData.map(c => ({
+          setCollections(collData.map((c: any) => ({
             id: c.id,
             user_id: c.user_id,
             title: c.name,
@@ -230,19 +252,19 @@ export default function App() {
             }))
           })));
         }
+      } catch (err) { console.warn('custom_collections fetch error:', err); }
 
-        // 8. Following
+      // 8. Following
+      try {
         const { data: followData } = await supabase
           .from('follows')
           .select('following_id')
           .eq('follower_id', userId);
 
         if (followData) {
-          setFollowingUserIds(followData.map(f => f.following_id));
+          setFollowingUserIds(followData.map((f: any) => f.following_id));
         }
-      } catch (err) {
-        console.error('Error fetching Supabase user data:', err);
-      }
+      } catch (err) { console.warn('follows fetch error:', err); }
     };
 
     fetchUserData();

@@ -83,14 +83,7 @@ export default function App() {
     if (!isSupabaseConfigured) return;
 
     if (!session) {
-      // If logged out, reset to empty or mock values
-      setWatchList([]);
-      setEpisodeProgress([]);
-      setReviews([]);
-      setActivityFeed([]);
-      setFavorites([]);
-      setCollections([]);
-      setFollowingUserIds([]);
+      if (authLoading) return; // Do not clear state while auth is loading!
       return;
     }
 
@@ -121,7 +114,7 @@ export default function App() {
         }
       } catch (err) { console.warn('profiles fetch error:', err); }
 
-      // 2. Watch Status List
+      // 2. Watch Status List - Smart Merge & Auto-Sync
       try {
         const { data: wlData } = await supabase
           .from('watch_status')
@@ -129,18 +122,50 @@ export default function App() {
           .eq('user_id', userId);
 
         if (wlData) {
-          setWatchList(wlData.map((w: any) => ({
+          const supabaseItems: WatchStatus[] = wlData.map((w: any) => ({
             media_id: w.media_id,
             media_type: w.media_type as MediaType,
             status: w.status as WatchStatusType,
             title: w.title || 'Yapım',
             poster_path: w.poster_path || '',
             vote_average: w.vote_average || 0
-          })));
+          }));
+
+          setWatchList(prev => {
+            const map = new Map<string, WatchStatus>();
+            prev.forEach(item => map.set(`${item.media_id}-${item.media_type}`, item));
+            supabaseItems.forEach(item => map.set(`${item.media_id}-${item.media_type}`, item));
+            const merged = Array.from(map.values());
+
+            try {
+              localStorage.setItem('diziapp_watch_list', JSON.stringify(merged));
+            } catch {}
+
+            // Sync any local-only items to Supabase
+            if (prev.length > 0) {
+              prev.forEach(async (localItem) => {
+                if (!supabaseItems.some(s => s.media_id === localItem.media_id && s.media_type === localItem.media_type)) {
+                  try {
+                    await supabase.from('watch_status').upsert({
+                      user_id: userId,
+                      media_id: localItem.media_id,
+                      media_type: localItem.media_type,
+                      status: localItem.status,
+                      title: localItem.title,
+                      poster_path: localItem.poster_path,
+                      vote_average: localItem.vote_average
+                    });
+                  } catch (e) {}
+                }
+              });
+            }
+
+            return merged;
+          });
         }
       } catch (err) { console.warn('watch_status fetch error:', err); }
 
-      // 3. Episode Progress
+      // 3. Episode Progress - Smart Merge
       try {
         const { data: epData } = await supabase
           .from('episode_progress')
@@ -148,13 +173,26 @@ export default function App() {
           .eq('user_id', userId);
 
         if (epData) {
-          setEpisodeProgress(epData.map((ep: any) => ({
+          const supabaseEpItems: EpisodeProgress[] = epData.map((ep: any) => ({
             user_id: ep.user_id,
             show_id: ep.show_id,
             season_number: ep.season_number,
             episode_number: ep.episode_number,
             is_watched: ep.is_watched
-          })));
+          }));
+
+          setEpisodeProgress(prev => {
+            const map = new Map<string, EpisodeProgress>();
+            prev.forEach(item => map.set(`${item.show_id}-${item.season_number}-${item.episode_number}`, item));
+            supabaseEpItems.forEach(item => map.set(`${item.show_id}-${item.season_number}-${item.episode_number}`, item));
+            const merged = Array.from(map.values());
+
+            try {
+              localStorage.setItem('diziapp_episode_progress', JSON.stringify(merged));
+            } catch {}
+
+            return merged;
+          });
         }
       } catch (err) { console.warn('episode_progress fetch error:', err); }
 

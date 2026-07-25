@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tv, Sparkles, Clock, Star, Play, Info, Flame, Eye, Filter } from 'lucide-react';
 import { WatchStatus, TMDBMedia } from '../types';
+import { EmptyState } from './EmptyState';
 
 interface CalendarViewProps {
   watchingList: WatchStatus[];
@@ -129,19 +130,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   watchingList,
   onSelectMedia
 }) => {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 6, 21)); // July 2026 base
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timeline'>('calendar');
-  const [filterWatchingOnly, setFilterWatchingOnly] = useState(false);
+  const [filterWatchingOnly, setFilterWatchingOnly] = useState(true);
   const [selectedDayEpisodes, setSelectedDayEpisodes] = useState<UpcomingEpisode[] | null>(null);
 
   const watchingIds = watchingList.map(w => w.media_id);
+  const watchingTitles = watchingList.map(w => (w.title || '').toLowerCase());
 
-  // Filter episodes based on user toggle
+  // Filter episodes based on user watching list
   const filteredEpisodes = UPCOMING_EPISODES_DATA.filter(ep => {
-    if (filterWatchingOnly) {
-      return watchingIds.includes(ep.showId);
-    }
-    return true;
+    if (watchingList.length === 0) return false;
+    const isIdMatch = watchingIds.includes(ep.showId);
+    const isTitleMatch = watchingTitles.some(t => t && (t.includes(ep.showName.toLowerCase()) || ep.showName.toLowerCase().includes(t)));
+    return isIdMatch || isTitleMatch;
   });
 
   const year = currentDate.getFullYear();
@@ -171,7 +173,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const handleToday = () => {
-    setCurrentDate(new Date(2026, 6, 21)); // Reset to reference today
+    setCurrentDate(new Date());
   };
 
   // Helper to format YYYY-MM-DD
@@ -184,7 +186,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   // Calculate days count text
   const getCountdownBadge = (airDateStr: string) => {
     const air = new Date(airDateStr);
-    const today = new Date('2026-07-21');
+    const today = new Date();
     const diffTime = air.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -285,7 +287,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             onClick={handleToday}
             className="text-xs font-bold text-[#E63946] bg-[#E63946]/10 hover:bg-[#E63946]/20 px-3 py-1.5 rounded-xl border border-[#E63946]/30 transition"
           >
-            Bugüne Git (21 Temmuz)
+            Bugüne Git
           </button>
         </div>
       </div>
@@ -318,7 +320,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             {Array.from({ length: daysInMonth }).map((_, idx) => {
               const dayNumber = idx + 1;
               const formattedDateStr = formatDateString(year, month, dayNumber);
-              const isToday = year === 2026 && month === 6 && dayNumber === 21; // Reference today
+              const now = new Date();
+              const isToday = year === now.getFullYear() && month === now.getMonth() && dayNumber === now.getDate();
 
               // Find episodes on this date
               const dayEpisodes = filteredEpisodes.filter(

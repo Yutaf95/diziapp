@@ -435,8 +435,8 @@ export default function App() {
     { user_id: CURRENT_USER.id, show_id: 110492, season_number: 1, episode_number: 2, is_watched: true },
     { user_id: CURRENT_USER.id, show_id: 94997, season_number: 1, episode_number: 1, is_watched: true }
   ]);
-  const [reviews, setReviews] = useState<RatingReview[]>(isSupabaseConfigured ? [] : INITIAL_REVIEWS);
-  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>(isSupabaseConfigured ? [] : INITIAL_ACTIVITIES);
+  const [reviews, setReviews] = useState<RatingReview[]>([]);
+  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
 
   // Custom Collections State (saved in localStorage)
   const [collections, setCollections] = useState<CustomCollection[]>(() => {

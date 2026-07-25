@@ -102,7 +102,13 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
 
       {/* Activity List - Chronological Vertical Cards */}
       <div className="space-y-3">
-        {activities.map((item) => {
+        {activities.length === 0 ? (
+          <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-6 text-center space-y-2">
+            <p className="text-xs font-bold text-slate-300">Henüz aktivite bulunmuyor</p>
+            <p className="text-[11px] text-slate-500">Arkadaşlarınızın paylaşımları ve izleme hareketleri burada görünecektir.</p>
+          </div>
+        ) : (
+          activities.map((item) => {
           const profile = item.profile;
           const isLiked = likedActivities[item.id];
 
@@ -225,7 +231,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
 
             </div>
           );
-        })}
+        }))}
       </div>
 
     </aside>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Star, Eye, CheckCircle2, MessageSquare, AlertTriangle, UserPlus, UserCheck, Flame, Heart, Search, X, Users, ArrowRight } from 'lucide-react';
 import { ActivityFeedItem, Profile } from '../types';
-import { MOCK_FRIENDS, getMockProfileData } from '../data/mockData';
+import { EmptyState } from './EmptyState';
 
 interface ActivityFeedViewProps {
   activities: ActivityFeedItem[];
@@ -33,11 +33,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
   // Filter friends based on query
   const normalizedQuery = friendSearchQuery.trim().toLowerCase().replace(/^@/, '');
   
-  let matchingUsers: Profile[] = MOCK_FRIENDS.filter(u =>
-    u.username.toLowerCase().includes(normalizedQuery) ||
-    u.full_name.toLowerCase().includes(normalizedQuery) ||
-    (u.bio && u.bio.toLowerCase().includes(normalizedQuery))
-  );
+  let matchingUsers: Profile[] = [];
 
 
 
@@ -197,7 +193,14 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
 
       {/* Feed List */}
       <div className="space-y-4">
-        {activities.map((item) => {
+        {activities.length === 0 ? (
+          <EmptyState
+            title="Sosyal Akış Henüz Boş"
+            description="Takip ettiğiniz arkadaşlarınızın aktivite ve değerlendirmeleri burada görünecektir."
+            iconType="eye"
+          />
+        ) : (
+          activities.map((item) => {
           const profile = item.profile || { username: 'Kullanıcı', full_name: 'TV Time Üyesi', avatar_url: '' };
           const details = item.details || {};
           const isSpoiler = details.contains_spoiler;
@@ -314,7 +317,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
 
             </div>
           );
-        })}
+        }))}
       </div>
 
     </div>

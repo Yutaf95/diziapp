@@ -19,6 +19,7 @@ import { EmptyState } from './components/EmptyState';
 import { MonthlyRecapModal } from './components/MonthlyRecapModal';
 import { MobileSidebarDrawer } from './components/MobileSidebarDrawer';
 import { SettingsModal } from './components/SettingsModal';
+import { RecommendationsSection } from './components/RecommendationsSection';
 
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
 import { getTrending, search, getDetails } from './lib/tmdb';
@@ -45,7 +46,7 @@ export default function App() {
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/user/')) {
       return 'profile';
     }
-    return 'tracker';
+    return 'discover';
   });
 
   // Listen to Supabase auth state change
@@ -311,6 +312,7 @@ export default function App() {
   const [showRecapModal, setShowRecapModal] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
   
   // Left Sidebar Filter States
   const [mediaFilter, setMediaFilter] = useState<'all' | 'tv' | 'movie'>('all');
@@ -406,27 +408,85 @@ export default function App() {
   }, [followingUserIds]);
 
   // Handle browser URL changes (back/forward & direct links)
+  // Mouse Side Buttons Listener (Back = Button 4 / e.button === 3, Forward = Button 5 / e.button === 4)
   useEffect(() => {
-    const handlePopState = () => {
-      if (window.location.pathname.startsWith('/user/')) {
-        const username = window.location.pathname.replace('/user/', '').trim();
-        if (username) {
-          setViewingUsername(username);
-          setActiveTab('profile');
+    const handleMouseSideButtons = (e: MouseEvent) => {
+      if (e.button === 3) {
+        // Mouse Back Button
+        e.preventDefault();
+        if (selectedMedia) {
+          setSelectedMedia(null);
+        } else if (isDrawerOpen) {
+          setIsDrawerOpen(false);
+        } else if (isSettingsOpen) {
+          setIsSettingsOpen(false);
+        } else {
+          window.history.back();
         }
-      } else if (window.location.pathname === '/' && activeTab === 'profile') {
-        setViewingUsername(currentUser.username);
+      } else if (e.button === 4) {
+        // Mouse Forward Button
+        e.preventDefault();
+        window.history.forward();
       }
     };
+
+    window.addEventListener('auxclick', handleMouseSideButtons);
+    window.addEventListener('mouseup', handleMouseSideButtons);
+
+    return () => {
+      window.removeEventListener('auxclick', handleMouseSideButtons);
+      window.removeEventListener('mouseup', handleMouseSideButtons);
+    };
+  }, [selectedMedia, isDrawerOpen, isSettingsOpen]);
+
+  // Enhanced popstate listener for browser & mouse back/forward navigation
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (selectedMedia) {
+        setSelectedMedia(null);
+        return;
+      }
+      if (isDrawerOpen) {
+        setIsDrawerOpen(false);
+        return;
+      }
+      if (isSettingsOpen) {
+        setIsSettingsOpen(false);
+        return;
+      }
+
+      const state = event.state;
+      if (state && state.tab) {
+        setActiveTab(state.tab);
+        if (state.viewingUsername) {
+          setViewingUsername(state.viewingUsername);
+        }
+      } else {
+        const path = window.location.pathname;
+        if (path.startsWith('/user/')) {
+          const username = path.replace('/user/', '').trim();
+          if (username) {
+            setViewingUsername(username);
+            setActiveTab('profile');
+          }
+        } else if (path === '/' || path === '') {
+          setActiveTab('discover');
+        } else {
+          const cleanTab = path.replace('/', '').trim();
+          if (cleanTab) setActiveTab(cleanTab);
+        }
+      }
+    };
+
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeTab]);
+  }, [selectedMedia, isDrawerOpen, isSettingsOpen]);
 
   const handleNavigateToProfile = (username: string) => {
     setViewingUsername(username);
-    handleTabChange('profile');
+    setActiveTab('profile');
     try {
-      window.history.pushState({}, '', `/user/${username}`);
+      window.history.pushState({ tab: 'profile', viewingUsername: username }, '', `/user/${username}`);
     } catch (e) {
       console.error(e);
     }
@@ -794,12 +854,14 @@ export default function App() {
     }
   };
 
-  const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
-
-  // Tab Switcher Handler (closes open series detail page/modal immediately)
+  // Tab Switcher Handler (closes open series detail page/modal immediately & pushes to browser history)
   const handleTabChange = (newTab: string) => {
     setActiveTab(newTab);
     setSelectedMedia(null);
+    try {
+      const path = newTab === 'profile' ? `/user/${viewingUsername}` : `/${newTab === 'discover' ? '' : newTab}`;
+      window.history.pushState({ tab: newTab, viewingUsername }, '', path);
+    } catch (e) {}
   };
 
   const handleSetStatusFilter = (status: 'all' | 'watching' | 'plan_to_watch' | 'watched') => {
@@ -1635,6 +1697,14 @@ export default function App() {
                       </>
                     )}
 
+                    {/* Bunları da Beğenebilirsin (3 Popüler + 3 İzlediklerinize Göre Öneri Alanı) */}
+                    <RecommendationsSection
+                      watchList={watchList}
+                      onSelectMedia={(m) => setSelectedMedia(m)}
+                      onUpdateWatchStatus={(m, st) => handleUpdateWatchStatus(m, st)}
+                      getUserWatchStatus={getUserWatchStatus}
+                    />
+
                     <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 space-y-4 shadow-lg">
                       <div className="flex items-center justify-between pb-3 border-b border-[#232833]">
                         <div className="flex items-center gap-2">
@@ -1978,14 +2048,7 @@ export default function App() {
         </main>
       )}
 
-      {/* Footer */}
-      <footer className="bg-[#14171D] border-t border-[#232833] py-6 text-center text-xs text-slate-500 mt-12">
-        <div className="w-full px-4 md:px-8 lg:px-12 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <div className="text-slate-400">
-            Tüm hakları saklıdır © {new Date().getFullYear()}
-          </div>
-        </div>
-      </footer>
+
 
       {/* Selected Media Detail Modal */}
       <AnimatePresence>

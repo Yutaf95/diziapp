@@ -386,65 +386,57 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     ];
   });
 
-  const useMockFallbacks = !isSupabaseConfigured;
-  const hasRecapData = useMockFallbacks ? true : (episodeProgress.filter(ep => ep.is_watched).length > 0 || watchList.filter(w => w.status === 'watched').length > 0 || reviews.length > 0);
+  const useMockFallbacks = !isSupabaseConfigured && watchList.length === 0;
 
-  const watchedEpsCount = episodeProgress.filter(ep => ep.is_watched).length + (useMockFallbacks ? 84 : 0);
-  const tvShowsWatchedCount = watchList.filter(w => w.media_type === 'tv' && (w.status === 'watched' || w.status === 'watching')).length + (useMockFallbacks ? 12 : 0);
-  const moviesWatchedCount = watchList.filter(w => w.media_type === 'movie' && w.status === 'watched').length + (useMockFallbacks ? 18 : 0);
+  const realWatchedEpisodesCount = episodeProgress.filter(ep => ep.is_watched).length;
+  const realWatchedMoviesCount = watchList.filter(w => w.status === 'watched' && w.media_type === 'movie').length;
+  const totalWatchedItemsCount = realWatchedEpisodesCount + realWatchedMoviesCount;
+
+  const hasRecapData = totalWatchedItemsCount >= 2;
+
+  const watchedEpsCount = realWatchedEpisodesCount;
+  const tvShowsWatchedCount = watchList.filter(w => w.media_type === 'tv' && (w.status === 'watched' || w.status === 'watching')).length;
+  const moviesWatchedCount = realWatchedMoviesCount;
 
   // Calculate net duration
-  const totalMinutes = (moviesWatchedCount * 122) + (watchedEpsCount * 48) + (useMockFallbacks ? 55000 : 0);
+  const totalMinutes = (moviesWatchedCount * 122) + (watchedEpsCount * 48);
   const totalDays = Math.floor(totalMinutes / (24 * 60));
   const remainingHours = Math.floor((totalMinutes % (24 * 60)) / 60);
   const formattedTotalTime = `${totalDays} Gün ${remainingHours} Saat`;
 
-  const topGenreFormatted = useMockFallbacks ? 'Bilim Kurgu %38' : 'Yok';
+  const topGenreFormatted = totalWatchedItemsCount > 0 ? 'Dizi & Film' : 'Yok';
 
   // Dynamic Favorites Top 5 Selection
   const displayedFavorites = (() => {
-    if (useMockFallbacks) return TOP_5_FAVORITES;
-    
-    // Map watchList favorites or custom favorites list to Top 5 showcase
-    // Use first 5 favorited items (we pass watchList as currentUserWatchList/watchList, or favorites from parent)
-    // Actually, in App.tsx we passed `profileData.watchList` or `currentUserWatchList={watchList}`
-    // But we also have `watchList` prop inside ProfileView! Yes, line 18: `watchList: WatchStatus[];`
-    // And in App.tsx we sync `favorites` state in the database. Let's see if we can find favorited items from watchList or if they are in watchList.
-    // Wait! In App.tsx:
-    // favorites: WatchStatus[]
-    // But in ProfileView, is there a favorites prop? Let's check lines 16 to 30 of ProfileViewProps.
-    // Ah, there is no favorites prop in ProfileViewProps! But wait, we can pass it, or we can just filter the watchList for items that are favorited, or just use watchList with status === 'watched' if favorites is empty.
-    // Wait, let's look at the watchList. Does it have a status? Yes, 'watched', 'watching', 'plan_to_watch'.
-    // If they have no custom favorites, we can just slice their 'watched' items!
-    // That is brilliant! If they have watched movies/shows, we can show them in the showcase!
-    const watchedItems = watchList.filter(w => w.status === 'watched');
+    const watchedItems = watchList.filter(w => w.status === 'watched' || w.status === 'watching');
+    if (watchedItems.length === 0 && useMockFallbacks) return TOP_5_FAVORITES;
+
     return watchedItems.slice(0, 5).map((fav, index) => ({
       id: fav.media_id,
       rank: index + 1,
       type: fav.media_type,
-      title: fav.title,
+      title: fav.title || 'Yapım',
       genre: fav.media_type === 'tv' ? 'Dizi' : 'Film',
-      rating: fav.vote_average || 0,
+      rating: fav.vote_average || 8.0,
       poster: fav.poster_path ? (fav.poster_path.startsWith('http') ? fav.poster_path : `https://image.tmdb.org/t/p/w500${fav.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'
     }));
   })();
 
   // Dynamic monthly watched items
   const monthlyWatchedItems = (() => {
-    if (useMockFallbacks) return JULY_2026_WATCHED;
+    const watchedItems = watchList.filter(w => w.status === 'watched');
+    if (watchedItems.length === 0 && useMockFallbacks) return JULY_2026_WATCHED;
     
-    return watchList
-      .filter(w => w.status === 'watched')
-      .map(w => ({
-        id: w.media_id,
-        type: w.media_type,
-        title: w.title,
-        subtitle: w.media_type === 'tv' ? 'Dizi' : 'Film',
-        badge: w.media_type === 'tv' ? 'Tamamlandı' : 'Film',
-        poster: w.poster_path ? (w.poster_path.startsWith('http') ? w.poster_path : `https://image.tmdb.org/t/p/w500${w.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-        rating: w.vote_average || 0,
-        date: 'Yakın zamanda'
-      }));
+    return watchedItems.map(w => ({
+      id: w.media_id,
+      type: w.media_type,
+      title: w.title || 'Yapım',
+      subtitle: w.media_type === 'tv' ? 'Dizi' : 'Film',
+      badge: w.media_type === 'tv' ? 'Tamamlandı' : 'Film',
+      poster: w.poster_path ? (w.poster_path.startsWith('http') ? w.poster_path : `https://image.tmdb.org/t/p/w500${w.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
+      rating: w.vote_average || 8.0,
+      date: 'Bu Ay'
+    }));
   })();
 
   const toggleFollowStatus = (id: string, listType: 'followers' | 'following') => {
@@ -645,26 +637,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       ) : (
         <div 
-          className="relative z-10 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/[0.01] border border-white/10 backdrop-blur-md shadow-xl flex flex-row items-center justify-between gap-3 overflow-hidden"
+          className="relative z-10 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/[0.02] border border-amber-500/20 backdrop-blur-md shadow-xl flex flex-row items-center justify-between gap-3 overflow-hidden"
         >
           <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1">
-            <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-slate-800 text-slate-400 border border-slate-700 shadow-xl shrink-0">
-              <Clock className="w-4 h-4 sm:w-6 sm:h-6" />
+            <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-xl shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-amber-400" />
             </div>
             <div className="space-y-0.5 min-w-0">
-              <h3 className="text-xs sm:text-lg font-bold text-slate-400 tracking-tight truncate">
-                ✨ {formattedMonthTitle} Özeti Hazırlanıyor...
+              <h3 className="text-xs sm:text-base font-bold text-white tracking-tight truncate">
+                ✨ {formattedMonthTitle} Özeti İçin Yeterli İzleme Verisi Yok
               </h3>
-              <p className="text-xs text-slate-500 font-medium hidden sm:block">
-                Dizi veya filmleri tamamladıkça aylık özetiniz burada otomatik olarak hazırlanacaktır.
+              <p className="text-xs text-slate-400 font-medium hidden sm:block">
+                Aylık özetinizin hazırlanabilmesi için en az 2 bölüm veya film tamamlamalısınız. İlerlemeniz: <span className="text-amber-400 font-bold">{totalWatchedItemsCount}/2 yapım</span>
               </p>
             </div>
           </div>
 
           <div
-            className="px-3.5 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-slate-500 font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap cursor-default select-none"
+            className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-slate-400 font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap cursor-default select-none"
           >
-            <span>Veri Bekleniyor</span>
+            <span>Yetersiz Veri ({totalWatchedItemsCount}/2)</span>
           </div>
         </div>
       )}
@@ -732,26 +724,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* ========================================== */}
       {/* 2. FAVORİ VİTRİNİ (En Üstte Top 5 Listesi) */}
       {/* ========================================== */}
-      <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.05] rounded-2xl sm:rounded-3xl p-2.5 sm:p-6 space-y-2.5 sm:space-y-5 shadow-xl">
+      <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.05] rounded-xl sm:rounded-2xl p-2.5 sm:p-4 space-y-2 shadow-lg">
         
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="p-1.5 sm:p-2 rounded-xl bg-white/5 text-amber-400 border border-white/10">
-              <Heart className="w-4 h-4 sm:w-5 sm:h-5 fill-amber-400" />
+            <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 text-amber-400 border border-white/10">
+              <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400" />
             </div>
             <div>
-              <h2 className="text-xs sm:text-lg font-black text-white tracking-tight">Favori Vitrini</h2>
-              <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">Profilde sergilenen En Sevilen 5 Yapım</p>
+              <h2 className="text-xs sm:text-base font-black text-white tracking-tight">Favori Vitrini</h2>
+              <p className="text-[10px] text-slate-400 hidden sm:block">Profilde sergilenen En Sevilen 5 Yapım</p>
             </div>
           </div>
 
-          <span className="text-[9px] sm:text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 sm:px-3 sm:py-1 rounded-lg sm:rounded-xl border border-amber-500/20">
+          <span className="text-[9px] sm:text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border border-amber-500/20">
             Top 5 Seçkisi
           </span>
         </div>
 
-        {/* Top 5 Compact 5-Column Grid - Exactly 5 side-by-side without scrollbars */}
-        <div className="grid grid-cols-5 gap-1.5 sm:gap-3.5">
+        {/* Top 5 Compact 5-Column Grid */}
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5">
           {displayedFavorites.length > 0 ? (
             displayedFavorites.map((item) => {
               let rankBadgeColor = 'bg-slate-800/80 text-slate-300 border-slate-700';
@@ -763,15 +755,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <div
                   key={item.id}
                   onClick={() => onSelectMediaById?.(item.id, item.type)}
-                  className="relative bg-white/[0.03] backdrop-blur-md border border-white/[0.06] hover:border-amber-500/50 rounded-lg sm:rounded-2xl p-1 sm:p-2.5 space-y-1 sm:space-y-2 transition duration-300 group cursor-pointer hover:-translate-y-1 shadow-xl min-w-0"
+                  className="relative bg-white/[0.03] backdrop-blur-md border border-white/[0.06] hover:border-amber-500/50 rounded-lg sm:rounded-xl p-1 sm:p-1.5 space-y-1 transition duration-300 group cursor-pointer hover:-translate-y-0.5 shadow-md min-w-0"
                 >
                   {/* Rank Badge */}
-                  <div className={`absolute -top-1 -left-1 sm:-top-2 sm:-left-2 z-20 w-4 h-4 sm:w-7 sm:h-7 rounded sm:rounded-lg flex items-center justify-center font-mono text-[8px] sm:text-xs border ${rankBadgeColor}`}>
+                  <div className={`absolute -top-1 -left-1 sm:-top-1.5 sm:-left-1.5 z-20 w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center font-mono text-[8px] sm:text-[10px] border ${rankBadgeColor}`}>
                     #{item.rank}
                   </div>
 
-                  {/* Poster Image */}
-                  <div className="relative aspect-[2/3] w-full rounded sm:rounded-xl overflow-hidden bg-black/40">
+                  {/* Poster Image - Reduced vertical height */}
+                  <div className="relative h-20 sm:h-28 w-full rounded sm:rounded-lg overflow-hidden bg-black/40">
                     <img
                       src={item.poster}
                       alt={item.title}
@@ -780,8 +772,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     />
 
                     {/* Rating */}
-                    <div className="absolute bottom-0.5 right-0.5 sm:bottom-1.5 sm:right-1.5 bg-black/85 backdrop-blur-md text-amber-400 font-mono text-[7px] sm:text-[10px] font-black px-0.5 py-0.2 sm:px-1.5 sm:py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5">
-                      <Star className="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 fill-amber-400 text-amber-400" />
+                    <div className="absolute bottom-0.5 right-0.5 bg-black/85 backdrop-blur-md text-amber-400 font-mono text-[7px] sm:text-[9px] font-black px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5">
+                      <Star className="w-1.5 h-1.5 sm:w-2 sm:h-2 fill-amber-400 text-amber-400" />
                       {item.rating}
                     </div>
                   </div>

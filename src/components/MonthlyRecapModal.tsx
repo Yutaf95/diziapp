@@ -53,9 +53,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
 
   const useMockFallbacks = !isSupabaseConfigured;
 
-  // Calculation totals
-  const episodeCount = watchedEpisodes.length + (useMockFallbacks && watchedEpisodes.length === 0 ? 18 : 0);
-  const movieCount = watchedMovies.length + (useMockFallbacks && watchedMovies.length === 0 ? 2 : 0);
+  // Calculation totals (100% Live User Data)
+  const episodeCount = watchedEpisodes.length;
+  const movieCount = watchedMovies.length;
   const totalWatchMinutes = (episodeCount * 45) + (movieCount * 125);
   const totalHours = Math.floor(totalWatchMinutes / 60);
   const remainingMinutes = totalWatchMinutes % 60;

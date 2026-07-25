@@ -150,7 +150,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     <div className="flex items-center gap-1.5 text-xs text-slate-200 font-medium">
                       <Eye className="w-3.5 h-3.5 text-[#E63946] shrink-0" />
                       <span className="truncate">
-                        <strong className="text-white">{item.details.media_title}</strong> S{item.details.season_number?.toString().padStart(2, '0')}E{item.details.episode_number?.toString().padStart(2, '0')} izledi
+                        <strong className="text-white">{item.details?.media_title}</strong> S{item.details?.season_number?.toString().padStart(2, '0')}E{item.details?.episode_number?.toString().padStart(2, '0')} izledi
                       </span>
                     </div>
                   )}
@@ -160,10 +160,10 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                       <div className="flex items-center gap-1.5 text-xs text-slate-200 font-medium">
                         <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
                         <span className="truncate">
-                          <strong className="text-white">{item.details.media_title}</strong> için <span className="text-amber-400 font-bold">{item.details.rating}/10</span> verdi
+                          <strong className="text-white">{item.details?.media_title}</strong> için <span className="text-amber-400 font-bold">{item.details?.rating}/10</span> verdi
                         </span>
                       </div>
-                      {item.details.review_text && (
+                      {item.details?.review_text && (
                         <p className="text-[11px] text-slate-400 italic line-clamp-2 pl-2 border-l-2 border-[#E63946]">
                           "{item.details.review_text}"
                         </p>
@@ -175,7 +175,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     <div className="flex items-center gap-1.5 text-xs text-slate-200 font-medium">
                       <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
                       <span className="truncate">
-                        <strong className="text-white">{item.details.media_title}</strong> yapımına <span className="text-amber-400 font-bold">{item.details.rating}/10</span> verdi
+                        <strong className="text-white">{item.details?.media_title}</strong> yapımına <span className="text-amber-400 font-bold">{item.details?.rating}/10</span> verdi
                       </span>
                     </div>
                   )}
@@ -186,10 +186,10 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                       <span className="truncate">
                         {item.media_id ? (
                           <>
-                            <strong className="text-white">{item.details.media_title}</strong> listesine eklendi
+                            <strong className="text-white">{item.details?.media_title}</strong> listesine eklendi
                           </>
                         ) : (
-                          <strong className="text-white">{item.details.media_title}</strong>
+                          <strong className="text-white">{item.details?.media_title}</strong>
                         )}
                       </span>
                     </div>
@@ -198,10 +198,10 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                 </div>
 
                 {/* Poster Thumbnail */}
-                {item.details.media_poster && (
+                {item.details?.media_poster && (
                   <img
                     src={item.details.media_poster}
-                    alt={item.details.media_title || 'Poster'}
+                    alt={item.details?.media_title || 'Poster'}
                     className="w-9 h-12 rounded-lg object-cover border border-[#232833] shrink-0"
                   />
                 )}

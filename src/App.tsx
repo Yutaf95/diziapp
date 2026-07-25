@@ -48,13 +48,24 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthLoading(false);
+    }).catch((err: any) => {
+      console.error('Supabase getSession error:', err);
+      setAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    let subscription: any;
+    try {
+      const { data } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+        setSession(session);
+      });
+      subscription = data.subscription;
+    } catch (err) {
+      console.error('Supabase onAuthStateChange error:', err);
+    }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
   // Fetch user data from Supabase when session is active

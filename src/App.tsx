@@ -116,12 +116,14 @@ export default function App() {
         }
       } catch (err) { console.warn('profiles fetch error:', err); }
 
-      // 2. Watch Status List - Smart Merge & Auto-Sync
+      // 2. Watch Status List - Load FULLY from Supabase on login (cross-device sync)
       try {
-        const { data: wlData } = await supabase
+        const { data: wlData, error: wlError } = await supabase
           .from('watch_status')
           .select('*')
           .eq('user_id', userId);
+
+        if (wlError) console.warn('watch_status fetch error:', wlError);
 
         if (wlData) {
           const supabaseItems: WatchStatus[] = wlData.map((w: any) => ({
@@ -130,40 +132,44 @@ export default function App() {
             status: w.status as WatchStatusType,
             title: w.title || 'Yapım',
             poster_path: w.poster_path || '',
-            vote_average: w.vote_average || 0
+            vote_average: w.vote_average || 0,
+            updated_at: w.updated_at
           }));
 
-          setWatchList(prev => {
-            const map = new Map<string, WatchStatus>();
-            prev.forEach(item => map.set(`${item.media_id}-${item.media_type}`, item));
-            supabaseItems.forEach(item => map.set(`${item.media_id}-${item.media_type}`, item));
-            const merged = Array.from(map.values());
-
+          // Get local-only items that are NOT yet in Supabase, then push them up
+          const localItems: WatchStatus[] = (() => {
             try {
-              localStorage.setItem('diziapp_watch_list', JSON.stringify(merged));
-            } catch {}
+              const saved = localStorage.getItem('diziapp_watch_list');
+              return saved ? JSON.parse(saved) : [];
+            } catch { return []; }
+          })();
 
-            // Sync any local-only items to Supabase
-            if (prev.length > 0) {
-              prev.forEach(async (localItem) => {
-                if (!supabaseItems.some(s => s.media_id === localItem.media_id && s.media_type === localItem.media_type)) {
-                  try {
-                    await supabase.from('watch_status').upsert({
-                      user_id: userId,
-                      media_id: localItem.media_id,
-                      media_type: localItem.media_type,
-                      status: localItem.status,
-                      title: localItem.title,
-                      poster_path: localItem.poster_path,
-                      vote_average: localItem.vote_average
-                    });
-                  } catch (e) {}
-                }
-              });
-            }
+          const localOnlyItems = localItems.filter(local =>
+            !supabaseItems.some(s => s.media_id === local.media_id && s.media_type === local.media_type)
+          );
 
-            return merged;
-          });
+          // Push local-only items to Supabase
+          if (localOnlyItems.length > 0) {
+            await Promise.allSettled(localOnlyItems.map(localItem =>
+              supabase.from('watch_status').upsert({
+                user_id: userId,
+                media_id: localItem.media_id,
+                media_type: localItem.media_type,
+                status: localItem.status,
+                title: localItem.title,
+                poster_path: localItem.poster_path,
+                vote_average: localItem.vote_average
+              }, { onConflict: 'user_id,media_id,media_type' })
+            ));
+          }
+
+          // Authoritative list = Supabase + local-only items not yet synced
+          const authoritative = [...supabaseItems, ...localOnlyItems];
+
+          setWatchList(authoritative);
+          try {
+            localStorage.setItem('diziapp_watch_list', JSON.stringify(authoritative));
+          } catch {}
         }
       } catch (err) { console.warn('watch_status fetch error:', err); }
 
@@ -1039,8 +1045,9 @@ export default function App() {
               status,
               title,
               poster_path: media.poster_path ? (media.poster_path.startsWith('http') ? media.poster_path : `https://image.tmdb.org/t/p/w500${media.poster_path}`) : undefined,
-              vote_average: media.vote_average
-            });
+              vote_average: media.vote_average,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id,media_id,media_type' });
 
           await supabase
             .from('activity_feed')

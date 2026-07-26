@@ -134,26 +134,28 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <span className="text-slate-500 font-mono text-[9px]">{totalCount} kayıt</span>
         </div>
 
-        {/* İzleniyor Filtresi */}
-        <button
-          onClick={() => {
-            setActiveStatusFilter('watching');
-            if (activeTab !== 'discover' && activeTab !== 'watchlist') setActiveTab('watchlist');
-          }}
-          className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium transition ${
-            activeStatusFilter === 'watching'
-              ? 'bg-[#E63946]/15 text-white border border-[#E63946]/40 font-bold'
-              : 'text-slate-300 hover:bg-[#0B0C0E] hover:text-white'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <Eye className="w-4 h-4 text-[#E63946]" />
-            <span>İzleniyor</span>
-          </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#E63946]/20 text-[#E63946]">
-            {watchingCount}
-          </span>
-        </button>
+        {/* İzleniyor Filtresi - only shown for TV shows */}
+        {activeMediaType !== 'movie' && (
+          <button
+            onClick={() => {
+              setActiveStatusFilter('watching');
+              if (activeTab !== 'discover' && activeTab !== 'watchlist') setActiveTab('watchlist');
+            }}
+            className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium transition ${
+              activeStatusFilter === 'watching'
+                ? 'bg-[#E63946]/15 text-white border border-[#E63946]/40 font-bold'
+                : 'text-slate-300 hover:bg-[#0B0C0E] hover:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Eye className="w-4 h-4 text-[#E63946]" />
+              <span>İzleniyor</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#E63946]/20 text-[#E63946]">
+              {watchingCount}
+            </span>
+          </button>
+        )}
 
         {/* İzlenecek Filtresi */}
         <button

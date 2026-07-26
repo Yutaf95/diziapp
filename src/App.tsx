@@ -25,7 +25,7 @@ import { sortFranchiseAlphabetical } from './lib/sorting';
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
 import { getTrending, search, getDetails } from './lib/tmdb';
 import { CURRENT_USER, INITIAL_USER_WATCH_STATUSES, INITIAL_ACTIVITIES, INITIAL_REVIEWS, INITIAL_COLLECTIONS, getMockProfileData } from './data/mockData';
-import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2 } from 'lucide-react';
+import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
 
@@ -1570,6 +1570,16 @@ export default function App() {
     return true;
   });
 
+  // For Keşfet recommendations, pick 18 random items (3 rows of 6 items) from un-added media
+  const discoverRandomRecommendations = React.useMemo(() => {
+    return [...rawFilteredGridMedia].sort(() => 0.5 - Math.random()).slice(0, 18);
+  }, [rawFilteredGridMedia.length, mediaFilter]);
+
+  const gridDisplayMedia = (activeTab === 'discover' && statusFilter === 'all')
+    ? discoverRandomRecommendations
+    : sortFranchiseAlphabetical(rawFilteredGridMedia);
+
+  // Alias for watchlist grid (sorted, full)
   const filteredGridMedia = sortFranchiseAlphabetical(rawFilteredGridMedia);
 
   if (authLoading) {
@@ -1738,16 +1748,16 @@ export default function App() {
                           ) : statusFilter === 'watched' ? (
                             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                           ) : (
-                            <Bookmark className="w-5 h-5 text-[#E63946]" />
+                            <Sparkles className="w-5 h-5 text-[#E63946]" />
                           )}
                           <h2 className="text-lg font-bold text-white">
                             {statusFilter === 'watching'
-                              ? `İzleniyor (${filteredGridMedia.length})`
+                              ? `İzleniyor (${gridDisplayMedia.length})`
                               : statusFilter === 'plan_to_watch'
-                              ? `İzlenecek (${filteredGridMedia.length})`
+                              ? `İzlenecek (${gridDisplayMedia.length})`
                               : statusFilter === 'watched'
-                              ? `Tamamlandı (${filteredGridMedia.length})`
-                              : 'Keşfet & Tüm Yapımlar'}
+                              ? `Tamamlandı (${gridDisplayMedia.length})`
+                              : 'Dizi & Film Önerileri'}
                           </h2>
                         </div>
                         <span className="text-xs text-slate-400 font-medium bg-[#0B0C0E] px-2.5 py-1 rounded-lg border border-[#232833]">
@@ -1756,14 +1766,14 @@ export default function App() {
                       </div>
 
                       {loadingMedia ? (
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-3.5">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-3.5">
                           {Array.from({ length: 12 }).map((_, idx) => (
                             <div key={idx} className="bg-[#0B0C0E] aspect-[2/3] rounded-2xl animate-pulse border border-[#232833]" />
                           ))}
                         </div>
                       ) : (
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-3.5">
-                          {filteredGridMedia.slice(0, 21).map((item) => {
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-3.5">
+                          {gridDisplayMedia.map((item) => {
                             const isTv = item.media_type === 'tv' || !!item.first_air_date;
                             const type: MediaType = isTv ? 'tv' : 'movie';
                             const userStatus = getUserWatchStatus(item.id, type);

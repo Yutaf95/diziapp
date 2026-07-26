@@ -108,7 +108,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
               (a.details?.media_title || a.media_title) && 
               (a.profile?.username || (a.username && a.username !== 'kullanıcı'))
             )
-            .slice(0, 10);
+            .slice(0, 6);
 
           if (validActivities.length === 0) {
             return (

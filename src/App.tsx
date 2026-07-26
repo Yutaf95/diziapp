@@ -1586,6 +1586,7 @@ export default function App() {
         onOpenNotifications={() => handleTabChange('activity')}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onUpdateWatchStatus={(m, st) => handleUpdateWatchStatus(m, st)}
+        getUserWatchStatus={getUserWatchStatus}
       />
 
       {/* 2. Main Layout Container: Full-Width for Profile vs 3-Column Grid for Dashboard */}
@@ -1682,19 +1683,37 @@ export default function App() {
                   {/* Masaüstü Keşfet Görünümü */}
                   <div className="hidden md:block space-y-6">
 
-                    {/* Bunları da Beğenebilirsin (3 Popüler + 3 İzlediklerinize Göre Öneri Alanı) */}
-                    <RecommendationsSection
-                      watchList={watchList}
-                      onSelectMedia={(m) => setSelectedMedia(m)}
-                      onUpdateWatchStatus={(m, st) => handleUpdateWatchStatus(m, st)}
-                      getUserWatchStatus={getUserWatchStatus}
-                    />
+                    {/* Bunları da Beğenebilirsin (Sadece Keşfet / Tüm Liste seçili iken gösterilir) */}
+                    {statusFilter === 'all' && (
+                      <RecommendationsSection
+                        watchList={watchList}
+                        onSelectMedia={(m) => setSelectedMedia(m)}
+                        onUpdateWatchStatus={(m, st) => handleUpdateWatchStatus(m, st)}
+                        getUserWatchStatus={getUserWatchStatus}
+                      />
+                    )}
 
                     <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 space-y-4 shadow-lg">
                       <div className="flex items-center justify-between pb-3 border-b border-[#232833]">
                         <div className="flex items-center gap-2">
-                          <Bookmark className="w-5 h-5 text-[#E63946]" />
-                          <h2 className="text-lg font-bold text-white">Keşfet & Tüm Yapımlar</h2>
+                          {statusFilter === 'watching' ? (
+                            <Eye className="w-5 h-5 text-[#E63946]" />
+                          ) : statusFilter === 'plan_to_watch' ? (
+                            <Clock className="w-5 h-5 text-amber-400" />
+                          ) : statusFilter === 'watched' ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          ) : (
+                            <Bookmark className="w-5 h-5 text-[#E63946]" />
+                          )}
+                          <h2 className="text-lg font-bold text-white">
+                            {statusFilter === 'watching'
+                              ? `İzleniyor (${filteredGridMedia.length})`
+                              : statusFilter === 'plan_to_watch'
+                              ? `İzlenecek (${filteredGridMedia.length})`
+                              : statusFilter === 'watched'
+                              ? `Tamamlandı (${filteredGridMedia.length})`
+                              : 'Keşfet & Tüm Yapımlar'}
+                          </h2>
                         </div>
                         <span className="text-xs text-slate-400 font-medium bg-[#0B0C0E] px-2.5 py-1 rounded-lg border border-[#232833]">
                           {mediaFilter === 'tv' ? 'Diziler' : mediaFilter === 'movie' ? 'Filmler' : 'Tüm Yapımlar'}

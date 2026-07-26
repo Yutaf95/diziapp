@@ -32,6 +32,7 @@ interface HeaderProps {
   onOpenNotifications?: () => void;
   onOpenSettings?: () => void;
   onUpdateWatchStatus?: (media: TMDBMedia, status: WatchStatusType) => void;
+  getUserWatchStatus?: (id: number, type: 'tv' | 'movie') => WatchStatusType | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -44,18 +45,19 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
   onGoHome,
   onLogout,
-  notificationCount = 3,
+  notificationCount = 0,
   mediaFilter = 'all',
   setMediaFilter,
   statusFilter = 'all',
   setStatusFilter,
-  activeTab = 'tracker',
+  activeTab = 'discover',
   setActiveTab,
   onOpenDrawer,
   onOpenStats,
   onOpenNotifications,
   onOpenSettings,
-  onUpdateWatchStatus
+  onUpdateWatchStatus,
+  getUserWatchStatus
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -221,6 +223,31 @@ export const Header: React.FC<HeaderProps> = ({
                           {year}
                         </span>
                       )}
+                      {(() => {
+                        const status = getUserWatchStatus ? getUserWatchStatus(item.id, isTv ? 'tv' : 'movie') : null;
+                        if (status === 'watching') {
+                          return (
+                            <span className="px-2 py-0.5 rounded font-black uppercase text-[9px] tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                              İzliyorum
+                            </span>
+                          );
+                        }
+                        if (status === 'plan_to_watch') {
+                          return (
+                            <span className="px-2 py-0.5 rounded font-black uppercase text-[9px] tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                              İzleyeceğim
+                            </span>
+                          );
+                        }
+                        if (status === 'watched') {
+                          return (
+                            <span className="px-2 py-0.5 rounded font-black uppercase text-[9px] tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                              Tamamlandı
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 

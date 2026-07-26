@@ -118,12 +118,17 @@ export default function App() {
 
       // 2. Watch Status List - Load FULLY from Supabase on login (cross-device sync)
       try {
+        console.log('[SYNC] Fetching watch_status from Supabase for userId:', userId);
         const { data: wlData, error: wlError } = await supabase
           .from('watch_status')
           .select('*')
           .eq('user_id', userId);
 
-        if (wlError) console.warn('watch_status fetch error:', wlError);
+        if (wlError) {
+          console.error('[SYNC] watch_status fetch ERROR:', wlError);
+        } else {
+          console.log('[SYNC] watch_status fetched from Supabase:', wlData?.length, 'items', wlData);
+        }
 
         if (wlData) {
           const supabaseItems: WatchStatus[] = wlData.map((w: any) => ({
@@ -144,13 +149,16 @@ export default function App() {
             } catch { return []; }
           })();
 
+          console.log('[SYNC] localStorage items:', localItems.length);
+
           const localOnlyItems = localItems.filter(local =>
             !supabaseItems.some(s => s.media_id === local.media_id && s.media_type === local.media_type)
           );
 
           // Push local-only items to Supabase
           if (localOnlyItems.length > 0) {
-            await Promise.allSettled(localOnlyItems.map(localItem =>
+            console.log('[SYNC] Pushing', localOnlyItems.length, 'local-only items to Supabase');
+            const results = await Promise.allSettled(localOnlyItems.map(localItem =>
               supabase.from('watch_status').upsert({
                 user_id: userId,
                 media_id: localItem.media_id,
@@ -161,17 +169,22 @@ export default function App() {
                 vote_average: localItem.vote_average
               }, { onConflict: 'user_id,media_id,media_type' })
             ));
+            results.forEach((r, i) => {
+              if (r.status === 'rejected') console.error('[SYNC] Upsert failed for item', i, r.reason);
+              else if ((r.value as any).error) console.error('[SYNC] Upsert error for item', i, (r.value as any).error);
+            });
           }
 
           // Authoritative list = Supabase + local-only items not yet synced
           const authoritative = [...supabaseItems, ...localOnlyItems];
+          console.log('[SYNC] Final authoritative list:', authoritative.length, 'items');
 
           setWatchList(authoritative);
           try {
             localStorage.setItem('diziapp_watch_list', JSON.stringify(authoritative));
           } catch {}
         }
-      } catch (err) { console.warn('watch_status fetch error:', err); }
+      } catch (err) { console.error('[SYNC] watch_status fetch EXCEPTION:', err); }
 
       // 3. Episode Progress - Smart Merge
       try {

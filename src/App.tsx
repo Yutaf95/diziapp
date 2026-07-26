@@ -875,7 +875,7 @@ export default function App() {
     setSelectedMedia(null);
   };
 
-  // Load Trending Media on Mount & when mediaFilter changes
+  // Load Trending Media on Mount & when mediaFilter changes (for library filtering)
   useEffect(() => {
     let isMounted = true;
     async function fetchTrending() {
@@ -894,6 +894,40 @@ export default function App() {
     fetchTrending();
     return () => { isMounted = false; };
   }, [mediaFilter]);
+
+  // Separate fetch: always all-type trending for Keşfet recommendations (media filter independent)
+  const [discoverAllTrending, setDiscoverAllTrending] = useState<TMDBMedia[]>([]);
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchDiscoverAll() {
+      try {
+        const [allData, tvData, movieData] = await Promise.all([
+          getTrending('all', 'week'),
+          getTrending('tv', 'week'),
+          getTrending('movie', 'week'),
+        ]);
+        if (isMounted) {
+          const combined = [
+            ...(allData.results || []),
+            ...(tvData.results || []),
+            ...(movieData.results || []),
+          ];
+          // Deduplicate by id
+          const seen = new Set<number>();
+          const deduped = combined.filter(item => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+          });
+          setDiscoverAllTrending(deduped);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    fetchDiscoverAll();
+    return () => { isMounted = false; };
+  }, []);
 
   // Handle Search Input Debounce
   useEffect(() => {
@@ -1570,10 +1604,17 @@ export default function App() {
     return true;
   });
 
-  // For Keşfet recommendations, pick 18 random items (3 rows of 6 items) from un-added media
+  // For Keşfet recommendations: pick 18 random items from ALL trending (media-filter independent),
+  // excluding anything already in the user's library.
   const discoverRandomRecommendations = React.useMemo(() => {
-    return [...rawFilteredGridMedia].sort(() => 0.5 - Math.random()).slice(0, 18);
-  }, [rawFilteredGridMedia.length, mediaFilter]);
+    const pool = discoverAllTrending.filter(item => {
+      const isTv = item.media_type === 'tv' || !!item.first_air_date;
+      const type: MediaType = isTv ? 'tv' : 'movie';
+      const status = getUserWatchStatus(item.id, type);
+      return status === null || status === undefined;
+    });
+    return [...pool].sort(() => 0.5 - Math.random()).slice(0, 18);
+  }, [discoverAllTrending.length, watchList.length]);
 
   const gridDisplayMedia = (activeTab === 'discover' && statusFilter === 'all')
     ? discoverRandomRecommendations

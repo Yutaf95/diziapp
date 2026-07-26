@@ -428,16 +428,18 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               
               {/* Üst Satır: Durum Değiştirici & 'Puan Ver / Yorum Yap' (Strictly Side-by-Side) */}
               <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full">
-                {/* Durum Değiştirici ('İzliyorum' v.b) */}
                 <div className="flex items-center gap-0.5 sm:gap-1 bg-[#0B0C0E] p-0.5 sm:p-1 rounded-xl border border-[#232833] shrink-0">
                   {userWatchStatus === null ? (
                     <>
-                      <button
-                        onClick={() => onUpdateWatchStatus(details, 'watching')}
-                        className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition text-slate-400 hover:text-white cursor-pointer whitespace-nowrap"
-                      >
-                        <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> İzliyorum
-                      </button>
+                      {/* İzliyorum: only shown for TV shows */}
+                      {isTv && (
+                        <button
+                          onClick={() => onUpdateWatchStatus(details, 'watching')}
+                          className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition text-slate-400 hover:text-white cursor-pointer whitespace-nowrap"
+                        >
+                          <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> İzliyorum
+                        </button>
+                      )}
 
                       <button
                         onClick={() => onUpdateWatchStatus(details, 'plan_to_watch')}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Sparkles, Flame } from 'lucide-react';
 import { TMDBMedia, WatchStatusType, WatchStatus, MediaType } from '../types';
 import { getTrending } from '../lib/tmdb';
@@ -203,23 +203,31 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
     return () => { isMounted = false; };
   }, []);
 
-  // Filter 1: 3 Popular items strictly excluded if in user's library (watching, plan_to_watch, watched)
-  const popularFiltered = popularList.filter(item => {
-    const isTv = item.media_type === 'tv' || !!item.first_air_date;
-    const mediaType: MediaType = isTv ? 'tv' : 'movie';
-    const status = getUserWatchStatus(item.id, mediaType);
-    return !status; // Strictly exclude items already added by user
-  }).slice(0, 3);
+  // Filter 1: 3 random Popular items not in user's library (shuffled each render)
+  const popularFiltered = useMemo(() =>
+    [...popularList]
+      .sort(() => 0.5 - Math.random())
+      .filter(item => {
+        const isTv = item.media_type === 'tv' || !!item.first_air_date;
+        const mediaType: MediaType = isTv ? 'tv' : 'movie';
+        return !getUserWatchStatus(item.id, mediaType);
+      })
+      .slice(0, 3),
+  [popularList, watchList.length]);
 
-  // Filter 2: 3 Based On Watched items strictly excluded if in user's library
-  const basedOnWatchedFiltered = basedOnWatchedList.filter(item => {
-    const isTv = item.media_type === 'tv' || !!item.first_air_date;
-    const mediaType: MediaType = isTv ? 'tv' : 'movie';
-    const status = getUserWatchStatus(item.id, mediaType);
-    if (status) return false; // Strictly exclude items already added by user
-    if (popularFiltered.some(p => p.id === item.id)) return false; // Don't duplicate in popular block
-    return true;
-  }).slice(0, 3);
+  // Filter 2: 3 random Based On Watched items not in user's library (shuffled each render)
+  const basedOnWatchedFiltered = useMemo(() =>
+    [...basedOnWatchedList]
+      .sort(() => 0.5 - Math.random())
+      .filter(item => {
+        const isTv = item.media_type === 'tv' || !!item.first_air_date;
+        const mediaType: MediaType = isTv ? 'tv' : 'movie';
+        if (getUserWatchStatus(item.id, mediaType)) return false;
+        if (popularFiltered.some(p => p.id === item.id)) return false;
+        return true;
+      })
+      .slice(0, 3),
+  [basedOnWatchedList, watchList.length, popularFiltered]);
 
   if (popularFiltered.length === 0 && basedOnWatchedFiltered.length === 0) return null;
 

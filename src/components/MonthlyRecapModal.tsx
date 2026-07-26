@@ -29,28 +29,29 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   reviews,
   onSelectMediaById
 }) => {
+  // ALL HOOKS MUST BE DECLARED UNCONDITIONALLY AT THE TOP
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [cardTheme, setCardTheme] = useState<'cinema' | 'cyber' | 'poster'>('cinema');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [topActor, setTopActor] = useState<{
+    name: string;
+    role: string;
+    photo: string;
+    appearances: string;
+    description: string;
+  } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-
-  if (!isOpen) return null;
 
   // Month & Year string
   const currentMonthName = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
   const formattedMonthTitle = `${currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)}`;
-
-  // ==========================================
-  // DYNAMIC STATS CALCULATION
-  // ==========================================
-  const currentMonthYear = new Date().toISOString().slice(0, 7); // e.g. "2026-07"
 
   // Filter watched movies & episodes (100% Live User Data Only)
   const watchedEpisodes = episodeProgress.filter(ep => ep.is_watched);
   const watchedMovies = watchList.filter(w => w.status === 'watched' && w.media_type === 'movie');
   const watchingShows = watchList.filter(w => w.status === 'watching' || w.status === 'watched');
 
-  // Calculation totals (100% Live User Data)
+  // Calculation totals
   const episodeCount = watchedEpisodes.length;
   const movieCount = watchedMovies.length;
   const totalWatchMinutes = (episodeCount * 45) + (movieCount * 125);
@@ -59,13 +60,11 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
 
   const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80';
   const anyWatchedItem = watchList.find(w => w.status === 'watched' || w.status === 'watching') || watchList[0];
+  const topWatchedItem = watchList.filter(w => w.status === 'watched').sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))[0];
 
-  // Dynamic Zirve Yapım (Top Rated Item in user's library - guaranteed non-null)
   const topReview = reviews.length > 0 
     ? [...reviews].sort((a, b) => b.rating - a.rating)[0]
     : null;
-
-  const topWatchedItem = watchList.filter(w => w.status === 'watched').sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))[0];
 
   const zirveYapim = topReview 
     ? {
@@ -109,15 +108,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
           )
       );
 
-  // Dynamic TMDB Cast Fetching for Favori Oyuncu
-  const [topActor, setTopActor] = useState<{
-    name: string;
-    role: string;
-    photo: string;
-    appearances: string;
-    description: string;
-  } | null>(null);
-
   useEffect(() => {
     let isMounted = true;
     async function loadActorDetails() {
@@ -145,9 +135,11 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
       }
     }
 
-    loadActorDetails();
+    if (isOpen) {
+      loadActorDetails();
+    }
     return () => { isMounted = false; };
-  }, [watchList, episodeProgress]);
+  }, [isOpen, watchList, episodeProgress]);
 
   // Dynamic Favori Oyuncu (TMDB Actor Data)
   const favoriOyuncu = topActor || {
@@ -157,6 +149,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     appearances: `${episodeCount} Bölüm • ${movieCount} Film`,
     description: 'Bu ay ekran maratonunda izlediğiniz yapımın öne çıkan oyuncusu'
   };
+
+  // EARLY RETURN PLACED AFTER ALL HOOKS
+  if (!isOpen) return null;
 
   // Dynamic En Yoğun Gün calculation from watched items
   const enYogunGun = {

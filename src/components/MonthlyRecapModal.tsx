@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Film, Tv, Clock, Star, Calendar, Trophy, User, Download, 
   Share2, X, ChevronRight, ChevronLeft, Flame, Award, Heart, CheckCircle2,
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import html2canvas from 'html2canvas';
 import { Profile, WatchStatus, EpisodeProgress, RatingReview } from '../types';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { getDetails } from '../lib/tmdb';
 
 interface MonthlyRecapModalProps {
   isOpen: boolean;
@@ -108,13 +109,53 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
           )
       );
 
-  // Dynamic Favori Oyuncu / Kullanıcı Profili
-  const favoriOyuncu = {
-    name: user.full_name || user.username || 'Sinemasever',
-    role: 'İzleme Maratoncusu',
-    photo: user.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+  // Dynamic TMDB Cast Fetching for Favori Oyuncu
+  const [topActor, setTopActor] = useState<{
+    name: string;
+    role: string;
+    photo: string;
+    appearances: string;
+    description: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadActorDetails() {
+      const targetItem = topWatchedItem || anyWatchedItem;
+      if (!targetItem || !targetItem.media_id) return;
+
+      try {
+        const details = await getDetails(targetItem.media_id, targetItem.media_type);
+        if (details?.cast && details.cast.length > 0 && isMounted) {
+          const firstCast = details.cast[0];
+          const photoUrl = firstCast.profile_path
+            ? (firstCast.profile_path.startsWith('http') ? firstCast.profile_path : `https://image.tmdb.org/t/p/w500${firstCast.profile_path}`)
+            : (targetItem.poster_path ? (targetItem.poster_path.startsWith('http') ? targetItem.poster_path : `https://image.tmdb.org/t/p/w500${targetItem.poster_path}`) : defaultPoster);
+
+          setTopActor({
+            name: firstCast.name,
+            role: `${firstCast.character ? `${firstCast.character} • ` : ''}${targetItem.title || 'Yapım'}`,
+            photo: photoUrl,
+            appearances: episodeCount > 0 ? `${episodeCount} Bölüm İzlendi` : `${movieCount} Film İzlendi`,
+            description: `Bu ay en çok izlediğiniz ${targetItem.title || 'yapımın'} oyuncu kadrosundan`
+          });
+        }
+      } catch (e) {
+        console.warn('Actor fetch error:', e);
+      }
+    }
+
+    loadActorDetails();
+    return () => { isMounted = false; };
+  }, [watchList, episodeProgress]);
+
+  // Dynamic Favori Oyuncu (TMDB Actor Data)
+  const favoriOyuncu = topActor || {
+    name: zirveYapim?.title ? `${zirveYapim.title} Oyuncusu` : 'Favori Oyuncu',
+    role: `Başrol • ${zirveYapim?.title || 'Yapım'}`,
+    photo: zirveYapim?.poster || defaultPoster,
     appearances: `${episodeCount} Bölüm • ${movieCount} Film`,
-    description: 'Bu ay boyunca ekran karşısında geçirdiğiniz izleme maratonu'
+    description: 'Bu ay ekran maratonunda izlediğiniz yapımın öne çıkan oyuncusu'
   };
 
   // Dynamic En Yoğun Gün calculation from watched items

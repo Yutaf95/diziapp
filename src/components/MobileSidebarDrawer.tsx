@@ -100,10 +100,6 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              onClose();
-            }}
             className="fixed inset-0 bg-black/75 backdrop-blur-md z-[9998] md:hidden cursor-pointer pointer-events-auto"
           />
 
@@ -126,7 +122,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
             onTouchEnd={handleTouchEnd}
             className="fixed top-0 left-0 bottom-0 w-[82vw] max-w-[320px] bg-[#121212] border-r border-neutral-800/80 z-[9999] md:hidden flex flex-col justify-between overflow-y-auto no-scrollbar shadow-2xl touch-pan-y"
           >
-            <div className="p-5 space-y-5">
+            <div className="p-5 space-y-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
               
               {/* Drawer Top Header & Close Button */}
               <div className="flex items-center justify-between pb-1">
@@ -136,7 +132,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 rounded-full bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800 active:bg-white/10 transition"
+                  className="p-2 rounded-full bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800 active:bg-white/10 transition cursor-pointer"
                   title="Kapat"
                 >
                   <X className="w-4 h-4" />
@@ -145,12 +141,13 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
 
               {/* 2. Menü Üst Alanı (Profil Kimliği) */}
               <div className="space-y-3">
-                <div 
+                <button 
+                  type="button"
                   onClick={() => {
-                    onOpenProfile();
                     onClose();
+                    onOpenProfile();
                   }}
-                  className="flex items-center gap-3.5 p-2 -mx-2 rounded-2xl hover:bg-white/5 active:bg-white/10 transition cursor-pointer group"
+                  className="w-full text-left flex items-center gap-3.5 p-2 -mx-2 rounded-2xl hover:bg-white/5 active:bg-white/10 transition cursor-pointer group border-none bg-transparent"
                 >
                   <div className="relative shrink-0">
                     <UserAvatar user={user} size="lg" />
@@ -169,7 +166,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                       <ChevronRight className="w-3 h-3 text-neutral-500 group-hover:text-white transition" />
                     </div>
                   </div>
-                </div>
+                </button>
 
                 {/* Yatay ince ayraç çizgisi */}
                 <div className="border-b border-neutral-800" />
@@ -185,10 +182,10 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    onOpenStats();
                     onClose();
+                    onOpenStats();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group"
+                  className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-amber-500/30 text-white shrink-0">
@@ -211,10 +208,10 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      onOpenCalendar();
                       onClose();
+                      onOpenCalendar();
                     }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group"
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-rose-500/30 text-white shrink-0">
@@ -238,10 +235,10 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      onOpenFavorites();
                       onClose();
+                      onOpenFavorites();
                     }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group"
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-pink-500/30 text-white shrink-0">
@@ -264,10 +261,10 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    onOpenSettings();
                     onClose();
+                    onOpenSettings();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group"
+                  className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-blue-500/30 text-white shrink-0">
@@ -293,8 +290,8 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  onLogout();
                   onClose();
+                  onLogout();
                 }}
                 className="w-full flex items-center justify-center gap-2.5 p-3 rounded-xl text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 active:scale-95 border border-rose-500/20 hover:border-rose-600 transition font-extrabold text-xs cursor-pointer shadow-lg group"
               >

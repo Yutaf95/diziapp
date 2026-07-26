@@ -303,7 +303,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#14171D]/95 backdrop-blur-md border-b border-[#232833] text-white transition-all">
+    <header className="sticky top-0 z-50 bg-[#14171D]/95 backdrop-blur-md border-b border-[#232833] text-white transition-all pt-[env(safe-area-inset-top,0px)]">
       {/* ========================================== */}
       {/* DESKTOP HEADER (MD & UP)                   */}
       {/* ========================================== */}
@@ -467,7 +467,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* ========================================== */}
       {/* SPOTIFY MOBILE HEADER (< 768px)            */}
       {/* ========================================== */}
-      <div className="block md:hidden px-3 py-2.5 space-y-2.5">
+      <div className="block md:hidden px-3 py-2.5 space-y-2.5 pt-[max(0.625rem,env(safe-area-inset-top))]">
         {/* 1. KATMAN: Sol Profil İkonu + Yan Yana Kaydırılabilir Tip Filtreleri */}
         <div className="flex items-center justify-between gap-2.5">
           {/* Sol üst küçük dairesel Profil İkonu (Tıklandığında Soldan Açılan Sidebar Drawer Görünür) */}

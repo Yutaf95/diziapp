@@ -167,7 +167,7 @@ export default function App() {
                 title: localItem.title,
                 poster_path: localItem.poster_path,
                 vote_average: localItem.vote_average
-              }, { onConflict: 'user_id,media_id,media_type' })
+              })
             ));
             results.forEach((r, i) => {
               if (r.status === 'rejected') console.error('[SYNC] Upsert failed for item', i, r.reason);
@@ -1060,7 +1060,7 @@ export default function App() {
               poster_path: media.poster_path ? (media.poster_path.startsWith('http') ? media.poster_path : `https://image.tmdb.org/t/p/w500${media.poster_path}`) : undefined,
               vote_average: media.vote_average,
               updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id,media_id,media_type' });
+            });
 
           await supabase
             .from('activity_feed')

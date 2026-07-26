@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   Bookmark,
   Tv,
-  Film
+  Film,
+  Calendar,
+  Heart
 } from 'lucide-react';
 import { Profile } from '../types';
 import { UserAvatar } from './UserAvatar';
@@ -24,6 +26,8 @@ interface MobileSidebarDrawerProps {
   user: Profile;
   onOpenProfile: () => void;
   onOpenStats: () => void;
+  onOpenFavorites?: () => void;
+  onOpenCalendar?: () => void;
   onOpenNotifications?: () => void;
   onOpenSettings: () => void;
   onLogout: () => void;
@@ -35,6 +39,8 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   user,
   onOpenProfile,
   onOpenStats,
+  onOpenFavorites,
+  onOpenCalendar,
   onOpenNotifications,
   onOpenSettings,
   onLogout
@@ -199,6 +205,60 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                   </div>
                   <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition shrink-0" />
                 </button>
+
+                {/* 📅 Yayın Takvimi */}
+                {onOpenCalendar && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenCalendar();
+                      onClose();
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-rose-500/30 text-white shrink-0">
+                        <Calendar className="w-4 h-4 text-rose-400" />
+                      </div>
+                      <div className="text-left min-w-0">
+                        <div className="text-xs font-bold text-white group-hover:text-rose-400 transition">
+                          Yayın Takvimi
+                        </div>
+                        <div className="text-[10px] text-neutral-400 truncate">
+                          Gelecek tüm dizi ve film yayınları
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition shrink-0" />
+                  </button>
+                )}
+
+                {/* ❤️ Favorilerim */}
+                {onOpenFavorites && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenFavorites();
+                      onClose();
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-pink-500/30 text-white shrink-0">
+                        <Heart className="w-4 h-4 text-pink-500 fill-pink-500/20" />
+                      </div>
+                      <div className="text-left min-w-0">
+                        <div className="text-xs font-bold text-white group-hover:text-pink-400 transition">
+                          Favorilerim
+                        </div>
+                        <div className="text-[10px] text-neutral-400 truncate">
+                          Favorilerinize eklediğiniz özel yapımlar
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition shrink-0" />
+                  </button>
+                )}
 
                 {/* ⚙️ Ayarlar ve Gizlilik */}
                 <button

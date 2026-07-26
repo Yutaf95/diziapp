@@ -40,6 +40,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   onLogout
 }) => {
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
 
   // Close drawer on Escape key
   useEffect(() => {
@@ -59,47 +60,65 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   // Touch Swipe Left Handler to close
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
+    if (touchStartX === null || touchStartY === null) return;
     const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
     const diffX = currentX - touchStartX;
-    // Swipe left by 50px or more
-    if (diffX < -50) {
+    const diffY = Math.abs(currentY - touchStartY);
+
+    // If swiping left and horizontal movement is dominant
+    if (diffX < -35 && Math.abs(diffX) > diffY) {
       onClose();
       setTouchStartX(null);
+      setTouchStartY(null);
     }
   };
 
   const handleTouchEnd = () => {
     setTouchStartX(null);
+    setTouchStartY(null);
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* 1. Backdrop overlay with blur & darken */}
+          {/* 1. Backdrop overlay with blur & darken - clicking empty space closes drawer */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/75 backdrop-blur-md z-[9999] md:hidden"
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onClose();
+            }}
+            className="fixed inset-0 bg-black/75 backdrop-blur-md z-[9998] md:hidden cursor-pointer pointer-events-auto"
           />
 
-          {/* 2. Sol taraftan pürüzsüzce kayan Drawer (%80-85 genişlik) */}
+          {/* 2. Sol taraftan pürüzsüzce kayan Drawer (%82 genişlik) */}
           <motion.div
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 240 }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={{ left: 0.5, right: 0 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -40 || info.velocity.x < -150) {
+                onClose();
+              }
+            }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className="fixed top-0 left-0 bottom-0 w-[82vw] max-w-[320px] bg-[#121212] border-r border-neutral-800/80 z-[9999] md:hidden flex flex-col justify-between overflow-y-auto no-scrollbar shadow-2xl"
+            className="fixed top-0 left-0 bottom-0 w-[82vw] max-w-[320px] bg-[#121212] border-r border-neutral-800/80 z-[9999] md:hidden flex flex-col justify-between overflow-y-auto no-scrollbar shadow-2xl touch-pan-y"
           >
             <div className="p-5 space-y-5">
               

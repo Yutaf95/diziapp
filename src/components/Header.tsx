@@ -494,42 +494,30 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-1 sm:gap-1.5 flex-1 py-0.5">
-              <button
-                type="button"
-                onClick={() => handleSelectMediaFilter('all')}
-                className={`flex-1 py-1 px-2 rounded-full text-xs transition text-center font-bold ${
-                  mediaFilter === 'all'
-                    ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/30 ring-1 ring-[#E63946]'
-                    : 'bg-[#181A22] text-slate-300 border border-white/10 hover:text-white'
-                }`}
-              >
-                Tümü
-              </button>
-
+            <div className="flex items-center gap-1.5 flex-1 py-0.5">
               <button
                 type="button"
                 onClick={() => handleSelectMediaFilter('tv')}
-                className={`flex-1 py-1 px-2 rounded-full text-xs transition flex items-center justify-center gap-1 font-bold ${
+                className={`flex-1 py-1.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 font-bold ${
                   mediaFilter === 'tv'
                     ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/30 ring-1 ring-[#E63946]'
                     : 'bg-[#181A22] text-slate-300 border border-white/10 hover:text-white'
                 }`}
               >
-                <Tv className="w-3 h-3 shrink-0" />
+                <Tv className="w-3.5 h-3.5 shrink-0" />
                 <span>Diziler</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSelectMediaFilter('movie')}
-                className={`flex-1 py-1 px-2 rounded-full text-xs transition flex items-center justify-center gap-1 font-bold ${
+                className={`flex-1 py-1.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 font-bold ${
                   mediaFilter === 'movie'
                     ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/30 ring-1 ring-[#E63946]'
                     : 'bg-[#181A22] text-slate-300 border border-white/10 hover:text-white'
                 }`}
               >
-                <Film className="w-3 h-3 shrink-0" />
+                <Film className="w-3.5 h-3.5 shrink-0" />
                 <span>Filmler</span>
               </button>
             </div>

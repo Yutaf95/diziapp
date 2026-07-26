@@ -983,6 +983,27 @@ export default function App() {
     }
   }, [searchQuery]);
 
+  // Handle Logout
+  const handleLogout = async () => {
+    setIsDrawerOpen(false);
+    localStorage.removeItem('cine_current_user');
+    localStorage.removeItem('diziapp_watch_list');
+    localStorage.removeItem('diziapp_episode_progress');
+    setWatchList([]);
+    setEpisodeProgress([]);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error('Supabase signOut error:', err);
+      }
+      setSession(null);
+    } else {
+      setCurrentUser(CURRENT_USER);
+      alert('Yerel oturum kapatıldı. TV Time hesabınızdan güvenle çıkış yaptınız.');
+    }
+  };
+
   // Helper to get watch status of media
   const getUserWatchStatus = (mediaId: number, mediaType: MediaType): WatchStatusType | undefined => {
     const found = watchList.find(item => item.media_id === mediaId && item.media_type === mediaType);
@@ -1671,15 +1692,7 @@ export default function App() {
           handleTabChange('tracker');
           try { window.history.pushState({}, '', '/'); } catch(e){}
         }}
-        onLogout={async () => {
-          localStorage.removeItem('cine_current_user');
-          if (isSupabaseConfigured) {
-            await supabase.auth.signOut();
-          } else {
-            alert('Yerel oturum kapatıldı. TV Time hesabınızdan güvenle çıkış yaptınız.');
-            setCurrentUser(CURRENT_USER);
-          }
-        }}
+        onLogout={handleLogout}
         notificationCount={isSupabaseConfigured ? 0 : 3}
         mediaFilter={mediaFilter}
         setMediaFilter={handleSetMediaFilter}
@@ -2207,7 +2220,7 @@ export default function App() {
         onOpenStats={() => setShowRecapModal(true)}
         onOpenNotifications={() => handleTabChange('activity')}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onLogout={() => alert('Oturum kapatıldı. TV Time hesabınızdan güvenle çıkış yaptınız.')}
+        onLogout={handleLogout}
       />
 
       {/* Settings Modal */}

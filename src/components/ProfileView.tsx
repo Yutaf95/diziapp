@@ -17,6 +17,7 @@ import { extractDominantColor, RGBColor } from '../lib/colorExtractor';
 interface ProfileViewProps {
   user: Profile;
   watchList: WatchStatus[];
+  favorites?: WatchStatus[];
   episodeProgress: EpisodeProgress[];
   reviews: RatingReview[];
   onSelectTab: (tab: string) => void;
@@ -159,6 +160,7 @@ const TOP_5_FAVORITES = [
 export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
   watchList,
+  favorites = [],
   episodeProgress,
   reviews,
   onSelectTab,
@@ -406,12 +408,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const topGenreFormatted = totalWatchedItemsCount > 0 ? 'Dizi & Film' : 'Yok';
 
-  // Dynamic Favorites Top 5 Selection
+  // Explicit User Favorites Top 5 Selection (No automatic system assignment)
   const displayedFavorites = (() => {
-    const watchedItems = watchList.filter(w => w.status === 'watched' || w.status === 'watching');
-    if (watchedItems.length === 0 && useMockFallbacks) return TOP_5_FAVORITES;
+    if (!favorites || favorites.length === 0) return [];
 
-    return watchedItems.slice(0, 5).map((fav, index) => ({
+    return favorites.slice(0, 5).map((fav, index) => ({
       id: fav.media_id,
       rank: index + 1,
       type: fav.media_type,
@@ -742,10 +743,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </span>
         </div>
 
-        {/* Top 5 Compact 5-Column Grid */}
+        {/* Top 5 Compact 5-Column Grid - Always exactly 5 slots */}
         <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5">
-          {displayedFavorites.length > 0 ? (
-            displayedFavorites.map((item) => {
+          {Array.from({ length: 5 }).map((_, index) => {
+            const rank = index + 1;
+            const item = displayedFavorites[index];
+
+            if (item) {
               let rankBadgeColor = 'bg-slate-800/80 text-slate-300 border-slate-700';
               if (item.rank === 1) rankBadgeColor = 'bg-amber-500 text-slate-950 font-black border-amber-400 shadow-lg shadow-amber-500/30';
               if (item.rank === 2) rankBadgeColor = 'bg-slate-300 text-slate-950 font-black border-white shadow-lg shadow-slate-300/20';
@@ -762,7 +766,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     #{item.rank}
                   </div>
 
-                  {/* Poster Image - Reduced vertical height */}
+                  {/* Poster Image */}
                   <div className="relative h-20 sm:h-28 w-full rounded sm:rounded-lg overflow-hidden bg-black/40">
                     <img
                       src={item.poster}
@@ -790,21 +794,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                 </div>
               );
-            })
-          ) : (
-            Array.from({ length: 5 }).map((_, index) => (
+            }
+
+            return (
               <div
-                key={`empty-${index}`}
-                className="relative bg-white/[0.01] border border-dashed border-white/10 rounded-lg sm:rounded-2xl aspect-[2/3] flex flex-col items-center justify-center p-2 text-slate-600 gap-1.5 shadow-inner"
+                key={`empty-slot-${rank}`}
+                className="relative bg-white/[0.01] border border-dashed border-white/10 rounded-lg sm:rounded-xl h-28 sm:h-36 flex flex-col items-center justify-center p-1 text-slate-600 gap-1 shadow-inner select-none"
               >
-                <div className="absolute top-1 left-1 sm:top-2 sm:left-2 w-4 h-4 sm:w-7 sm:h-7 rounded sm:rounded-lg flex items-center justify-center font-mono text-[8px] sm:text-xs border border-white/5 bg-white/5 text-slate-400">
-                  #{index + 1}
+                <div className="absolute top-1 left-1 w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center font-mono text-[8px] sm:text-[10px] border border-white/10 bg-white/5 text-slate-500">
+                  #{rank}
                 </div>
-                <Heart className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white/5 fill-none" />
-                <span className="text-[7px] sm:text-[9px] text-slate-500 font-medium">Boş Slot</span>
+                <Heart className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white/10 fill-none" />
+                <span className="text-[8px] sm:text-[10px] text-slate-600 font-medium">Boş Slot</span>
               </div>
-            ))
-          )}
+            );
+          })}
         </div>
       </div>
 

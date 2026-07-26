@@ -1615,6 +1615,7 @@ export default function App() {
                   <ProfileView
                     user={profileData.profile}
                     watchList={profileData.watchList}
+                    favorites={favorites}
                     episodeProgress={profileData.episodeProgress}
                     reviews={profileData.reviews}
                     onSelectTab={handleTabChange}

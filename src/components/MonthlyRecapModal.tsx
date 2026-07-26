@@ -44,14 +44,10 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   // ==========================================
   const currentMonthYear = new Date().toISOString().slice(0, 7); // e.g. "2026-07"
 
-  // Filter episode progress for current month (or all watched if date matching)
+  // Filter watched movies & episodes (100% Live User Data Only)
   const watchedEpisodes = episodeProgress.filter(ep => ep.is_watched);
-  
-  // Filter watched movies
   const watchedMovies = watchList.filter(w => w.status === 'watched' && w.media_type === 'movie');
   const watchingShows = watchList.filter(w => w.status === 'watching' || w.status === 'watched');
-
-  const useMockFallbacks = !isSupabaseConfigured;
 
   // Calculation totals (100% Live User Data)
   const episodeCount = watchedEpisodes.length;
@@ -60,8 +56,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   const totalHours = Math.floor(totalWatchMinutes / 60);
   const remainingMinutes = totalWatchMinutes % 60;
 
-  // Dynamic Zirve Yapım (Top Rated Item in current month)
-  // Check highest review or top rated show
+  // Dynamic Zirve Yapım (Top Rated Item in user's library)
   const topReview = reviews.length > 0 
     ? [...reviews].sort((a, b) => b.rating - a.rating)[0]
     : null;
@@ -72,11 +67,11 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     ? {
         id: topReview.media_id,
         type: topReview.media_type,
-        title: topReview.media_title || 'Severance',
-        poster: topReview.media_poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-        rating: topReview.rating || 9.8,
-        reviewText: topReview.review_text || 'İnanılmaz bir sezon finali, tüm teorileri alt üst etti!',
-        badge: '10/10 Zirve Puan'
+        title: topReview.media_title || 'Zirve Yapım',
+        poster: topReview.media_poster || (topWatchedItem?.poster_path ? (topWatchedItem.poster_path.startsWith('http') ? topWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${topWatchedItem.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'),
+        rating: topReview.rating || 9.0,
+        reviewText: topReview.review_text || 'Bu ay kütüphanenizdeki en yüksek puanlı değerlendirmeniz.',
+        badge: `${topReview.rating}/10 Zirve Puan`
       } 
     : (topWatchedItem 
         ? {
@@ -84,43 +79,32 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
             type: topWatchedItem.media_type,
             title: topWatchedItem.title || 'Yapım',
             poster: topWatchedItem.poster_path ? (topWatchedItem.poster_path.startsWith('http') ? topWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${topWatchedItem.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-            rating: topWatchedItem.vote_average || 0,
-            reviewText: 'Bu ay kütüphanende tamamladığın ve yüksek puan verdiğin yapım.',
-            badge: `★ ${topWatchedItem.vote_average || 0} Tamamlandı`
+            rating: topWatchedItem.vote_average || 8.0,
+            reviewText: 'Bu ay kütüphanenizde tamamladığınız ve öne çıkan yapım.',
+            badge: `★ ${topWatchedItem.vote_average || 8.0} Tamamlandı`
           }
-        : (useMockFallbacks 
-            ? {
-                id: 110492,
-                type: 'tv' as const,
-                title: 'Severance',
-                poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-                rating: 9.8,
-                reviewText: 'Zihin zorlayıcı kurgusu ve harika oyunculuklarıyla bu ayın açık ara en iyi yapımı!',
-                badge: '★ 9.8 Ayın En İyisi'
-              }
-            : null
-          )
+        : null
       );
 
-  // Dynamic Favori Oyuncu / Yönetmen
+  // Dynamic Favori Oyuncu / Kullanıcı Profili
   const favoriOyuncu = {
-    name: useMockFallbacks ? 'Adam Scott' : (user.full_name || 'Siz'),
-    role: useMockFallbacks ? 'Mark Scout • Severance' : 'TV Time Ailesi',
-    photo: useMockFallbacks ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' : (user.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'),
-    appearances: useMockFallbacks ? '9 Bölüm İzlendi' : `${episodeCount} Bölüm İzlendi`,
-    description: useMockFallbacks ? 'Bu ay ekran süresinde zirveye oturan oyuncun' : 'Bu ay boyunca en çok vakit ayırdığın yapımlar'
+    name: user.full_name || user.username || 'Sinemasever',
+    role: 'İzleme Maratoncusu',
+    photo: user.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+    appearances: `${episodeCount} Bölüm • ${movieCount} Film`,
+    description: 'Bu ay boyunca ekran karşısında geçirdiğiniz izleme maratonu'
   };
 
-  // Dynamic En Yoğun Gün calculation from watched_at timestamps
+  // Dynamic En Yoğun Gün calculation from watched items
   const enYogunGun = {
-    dayName: useMockFallbacks ? 'Cumartesi' : 'Hafta Sonu',
-    dateText: useMockFallbacks ? '19 Temmuz' : 'Bu Ay',
-    hoursSpent: useMockFallbacks ? '6 Saat 15 Dk' : `${Math.floor(totalWatchMinutes / 60)} Saat`,
-    episodesWatched: useMockFallbacks ? '7 Bölüm' : `${episodeCount} Bölüm`
+    dayName: 'Bu Ay',
+    dateText: formattedMonthTitle,
+    hoursSpent: `${totalHours} Saat ${remainingMinutes} Dk`,
+    episodesWatched: `${episodeCount} Bölüm, ${movieCount} Film`
   };
 
-  // Check if user has sufficient data
-  const hasData = useMockFallbacks ? true : (watchedEpisodes.length > 0 || watchedMovies.length > 0 || reviews.length > 0);
+  // Check if user has sufficient data (strictly >= 2 watched items)
+  const hasData = (episodeCount + movieCount) >= 2;
 
   // Handle PNG Image Download of the Spotify Wrapped Card
   const handleDownloadWrappedCard = async () => {

@@ -13,6 +13,7 @@ import { MonthlyRecapModal } from './MonthlyRecapModal';
 import { UserAvatar } from './UserAvatar';
 import { ProfileBannerModal } from './ProfileBannerModal';
 import { extractDominantColor, RGBColor } from '../lib/colorExtractor';
+import { sortFranchiseAlphabetical } from '../lib/sorting';
 
 interface ProfileViewProps {
   user: Profile;
@@ -1674,14 +1675,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
               {/* Grid of All Watched Items */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 overflow-y-auto p-1 flex-1 scrollbar-thin scrollbar-thumb-white/10">
-                {watchList
-                  .filter(w => {
+                {sortFranchiseAlphabetical(
+                  watchList.filter(w => {
                     if (allWatchedTypeModal === 'movie') {
                       return w.media_type === 'movie' && w.status === 'watched';
                     } else {
                       return w.media_type === 'tv' && (w.status === 'watched' || w.status === 'watching');
                     }
                   })
+                )
                   .map((item) => {
                     const posterUrl = getPosterUrl(item.poster_path);
                     return (

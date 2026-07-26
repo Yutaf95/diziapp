@@ -30,6 +30,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   const [seasonsData, setSeasonsData] = useState<Record<string, TMDBSeasonDetails>>({});
   const [loadingSeasons, setLoadingSeasons] = useState<boolean>(true);
   const [expandedShowId, setExpandedShowId] = useState<number | null>(null);
+  const [selectedSeasonByShow, setSelectedSeasonByShow] = useState<Record<number, number>>({});
 
   // Batch Confirm Modal state
   const [batchModal, setBatchModal] = useState<{
@@ -51,8 +52,19 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
       await Promise.all(
         tvWatching.map(async (item) => {
           try {
-            const s1 = await getSeasonDetails(item.media_id, 1);
-            newSeasons[`${item.media_id}-1`] = s1;
+            const maxSeasons = item.number_of_seasons || 5;
+            for (let s = 1; s <= maxSeasons; s++) {
+              try {
+                const sData = await getSeasonDetails(item.media_id, s);
+                if (sData && sData.episodes && sData.episodes.length > 0) {
+                  newSeasons[`${item.media_id}-${s}`] = sData;
+                } else if (s > 1) {
+                  break;
+                }
+              } catch (err) {
+                if (s > 1) break;
+              }
+            }
           } catch (e) {
             console.error(e);
           }
@@ -120,18 +132,47 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     }
   };
 
-  // Find next episode to watch for a show
+  // Find next episode to watch across ALL loaded seasons for a show
   const getNextEpisodeToWatch = (showId: number) => {
-    const season = seasonsData[`${showId}-1`];
-    if (!season || !season.episodes || season.episodes.length === 0) return null;
+    const seasonsList = Object.keys(seasonsData)
+      .filter(k => k.startsWith(`${showId}-`))
+      .map(k => parseInt(k.split('-')[1], 10))
+      .sort((a, b) => a - b);
 
-    for (const ep of season.episodes) {
-      if (!isEpWatched(showId, ep.season_number, ep.episode_number)) {
-        return ep;
+    if (seasonsList.length === 0) return null;
+
+    for (const sNum of seasonsList) {
+      const season = seasonsData[`${showId}-${sNum}`];
+      if (season && season.episodes) {
+        for (const ep of season.episodes) {
+          if (!isEpWatched(showId, ep.season_number, ep.episode_number)) {
+            return ep;
+          }
+        }
       }
     }
-    // If all in season 1 watched, check season 2
-    return season.episodes[season.episodes.length - 1];
+
+    // If all episodes in all seasons are watched, return the last episode of the last season
+    const lastSeasonNum = seasonsList[seasonsList.length - 1];
+    const lastSeason = seasonsData[`${showId}-${lastSeasonNum}`];
+    if (lastSeason && lastSeason.episodes && lastSeason.episodes.length > 0) {
+      return lastSeason.episodes[lastSeason.episodes.length - 1];
+    }
+
+    return null;
+  };
+
+  // Determine active season number (the season with next unwatched episode, or latest)
+  const getActiveSeasonNumber = (showId: number) => {
+    const nextEp = getNextEpisodeToWatch(showId);
+    if (nextEp) return nextEp.season_number;
+
+    const seasonsList = Object.keys(seasonsData)
+      .filter(k => k.startsWith(`${showId}-`))
+      .map(k => parseInt(k.split('-')[1], 10))
+      .sort((a, b) => a - b);
+
+    return seasonsList.length > 0 ? seasonsList[seasonsList.length - 1] : 1;
   };
 
   if (tvWatching.length === 0) {
@@ -154,11 +195,18 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
       <div className="space-y-4">
         {tvWatching.map((item) => {
           const showId = item.media_id;
-          const season = seasonsData[`${showId}-1`];
+          const seasonsList = Object.keys(seasonsData)
+            .filter(k => k.startsWith(`${showId}-`))
+            .map(k => parseInt(k.split('-')[1], 10))
+            .sort((a, b) => a - b);
+
+          const activeSeasonNum = getActiveSeasonNumber(showId);
+          const currentSeasonNum = selectedSeasonByShow[showId] || activeSeasonNum;
+          const season = seasonsData[`${showId}-${currentSeasonNum}`] || seasonsData[`${showId}-1`];
           const nextEp = getNextEpisodeToWatch(showId);
           const isExpanded = expandedShowId === showId;
 
-          // Compute progress stats
+          // Compute progress stats for current active season
           const totalEpsInSeason = season?.episodes?.length || 10;
           const watchedInSeason = season?.episodes?.filter(ep => 
             isEpWatched(showId, ep.season_number, ep.episode_number)
@@ -195,7 +243,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                     {/* Progress Bar */}
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-                        <span>Sezon 1 İlerlemesi ({watchedInSeason}/{totalEpsInSeason} Bölüm)</span>
+                        <span>Sezon {currentSeasonNum} İlerlemesi ({watchedInSeason}/{totalEpsInSeason} Bölüm)</span>
                         <span className="text-amber-400 font-bold">%{progressPercent}</span>
                       </div>
                       <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -244,9 +292,38 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
 
               </div>
 
-              {/* Expanded Season Episode List */}
+              {/* Expanded Season Episode List with Season Tabs */}
               {isExpanded && season && (
                 <div className="border-t border-slate-800 bg-slate-950/60 p-4 sm:p-5 space-y-3">
+                  {seasonsList.length > 1 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 border-b border-slate-800/80">
+                      {seasonsList.map(sNum => {
+                        const isSel = currentSeasonNum === sNum;
+                        const sData = seasonsData[`${showId}-${sNum}`];
+                        const sTotal = sData?.episodes?.length || 0;
+                        const sWatched = sData?.episodes?.filter(ep => isEpWatched(showId, sNum, ep.episode_number)).length || 0;
+                        const sDone = sTotal > 0 && sWatched === sTotal;
+
+                        return (
+                          <button
+                            key={sNum}
+                            onClick={() => setSelectedSeasonByShow(prev => ({ ...prev, [showId]: sNum }))}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
+                              isSel
+                                ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/20'
+                                : sDone
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                                : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                            }`}
+                          >
+                            <span>Sezon {sNum}</span>
+                            <span className="text-[10px] font-mono opacity-80">({sWatched}/{sTotal})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
                     {season.name} Bölüm Listesi
                   </h4>

@@ -83,71 +83,61 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         )}
       </div>
 
-      {/* 2. [Diziler] / [Filmler] Switch Toggle */}
+      {/* 2. Keşfet Butonu (Profilin hemen altında) */}
+      <button
+        onClick={() => {
+          setActiveStatusFilter('all');
+          setActiveTab('discover');
+        }}
+        className={`w-full flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition shadow-md border ${
+          activeStatusFilter === 'all' && activeTab === 'discover'
+            ? 'bg-[#E63946] text-white border-[#E63946] shadow-[#E63946]/30'
+            : 'bg-[#14171D] text-slate-300 border-[#232833] hover:border-slate-600 hover:text-white'
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          <Compass className="w-4 h-4" />
+          <span>Keşfet</span>
+        </div>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+          activeStatusFilter === 'all' && activeTab === 'discover' ? 'bg-black/25 text-white' : 'bg-[#0B0C0E] text-slate-400'
+        }`}>
+          {totalCount}
+        </span>
+      </button>
+
+      {/* 3. [Diziler] / [Filmler] Switch Toggle */}
       <div className="bg-[#14171D] border border-[#232833] p-1.5 rounded-2xl flex items-center justify-between gap-1 shadow-inner">
         <button
-          onClick={() => setActiveMediaType('all')}
-          className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition text-center ${
-            activeMediaType === 'all'
-              ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/20'
-              : 'text-slate-400 hover:text-white hover:bg-[#0B0C0E]/50'
-          }`}
-        >
-          Tümü
-        </button>
-        <button
           onClick={() => setActiveMediaType('tv')}
-          className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 ${
-            activeMediaType === 'tv'
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            activeMediaType === 'tv' || activeMediaType === 'all'
               ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/20'
               : 'text-slate-400 hover:text-white hover:bg-[#0B0C0E]/50'
           }`}
         >
-          <Tv className="w-3.5 h-3.5" />
+          <Tv className="w-4 h-4" />
           <span>Diziler</span>
         </button>
         <button
           onClick={() => setActiveMediaType('movie')}
-          className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 ${
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
             activeMediaType === 'movie'
               ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/20'
               : 'text-slate-400 hover:text-white hover:bg-[#0B0C0E]/50'
           }`}
         >
-          <Film className="w-3.5 h-3.5" />
+          <Film className="w-4 h-4" />
           <span>Filmler</span>
         </button>
       </div>
 
-      {/* 3. İzleniyor / İzlenecek / Tamamlandı Sayaçlı Filtre Menüsü */}
+      {/* 4. Kütüphane Sayaçlı Filtre Menüsü */}
       <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-3 space-y-1 shadow-lg">
         <div className="px-2 py-1 mb-1 text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center justify-between">
-          <span>Kütüphane Filtresi</span>
+          <span>Kütüphane</span>
           <span className="text-slate-500 font-mono text-[9px]">{totalCount} kayıt</span>
         </div>
-
-        {/* Keşfet (Tüm Liste) Filtresi */}
-        <button
-          onClick={() => {
-            setActiveStatusFilter('all');
-            setActiveTab('discover');
-          }}
-          className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium transition ${
-            activeStatusFilter === 'all' && activeTab === 'discover'
-              ? 'bg-[#E63946]/15 text-white border border-[#E63946]/40 font-bold'
-              : 'text-slate-300 hover:bg-[#0B0C0E] hover:text-white'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <Compass className={`w-4 h-4 ${activeStatusFilter === 'all' && activeTab === 'discover' ? 'text-[#E63946]' : 'text-slate-400'}`} />
-            <span>Keşfet</span>
-          </div>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-            activeStatusFilter === 'all' && activeTab === 'discover' ? 'bg-[#E63946] text-white' : 'bg-[#0B0C0E] text-slate-400'
-          }`}>
-            {totalCount}
-          </span>
-        </button>
 
         {/* İzleniyor Filtresi */}
         <button

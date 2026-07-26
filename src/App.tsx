@@ -20,6 +20,7 @@ import { MonthlyRecapModal } from './components/MonthlyRecapModal';
 import { MobileSidebarDrawer } from './components/MobileSidebarDrawer';
 import { SettingsModal } from './components/SettingsModal';
 import { RecommendationsSection } from './components/RecommendationsSection';
+import { sortFranchiseAlphabetical } from './lib/sorting';
 
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
 import { getTrending, search, getDetails } from './lib/tmdb';
@@ -1029,35 +1030,51 @@ export default function App() {
 
   // Toggle Episode Watched Progress
   const handleToggleEpisode = async (showId: number, seasonNum: number, epNum: number) => {
-    let wasWatched = false;
+    let isMarkingAsWatched = false;
+
     setEpisodeProgress(prev => {
       const existing = prev.find(
         e => e.show_id === showId && e.season_number === seasonNum && e.episode_number === epNum
       );
-      if (existing) {
-        wasWatched = !existing.is_watched;
-        return prev.map(e => 
-          e.show_id === showId && e.season_number === seasonNum && e.episode_number === epNum
-            ? { ...e, is_watched: !e.is_watched }
-            : e
-        );
-      } else {
-        wasWatched = true;
-        return [
-          ...prev,
-          {
-            user_id: currentUser.id,
-            show_id: showId,
-            season_number: seasonNum,
-            episode_number: epNum,
-            is_watched: true,
-            watched_at: new Date().toISOString()
+      const isCurrentlyWatched = existing ? existing.is_watched : false;
+      isMarkingAsWatched = !isCurrentlyWatched;
+
+      if (!isMarkingAsWatched) {
+        // UNWATCHING: Mark target episode AND ALL SUBSEQUENT EPISODES of this show as unwatched
+        return prev.map(e => {
+          if (e.show_id === showId) {
+            const isAfterOrEqual = e.season_number > seasonNum || (e.season_number === seasonNum && e.episode_number >= epNum);
+            if (isAfterOrEqual) {
+              return { ...e, is_watched: false };
+            }
           }
-        ];
+          return e;
+        });
+      } else {
+        // WATCHING: Mark target episode as watched
+        if (existing) {
+          return prev.map(e => 
+            e.show_id === showId && e.season_number === seasonNum && e.episode_number === epNum
+              ? { ...e, is_watched: true, watched_at: new Date().toISOString() }
+              : e
+          );
+        } else {
+          return [
+            ...prev,
+            {
+              user_id: currentUser.id,
+              show_id: showId,
+              season_number: seasonNum,
+              episode_number: epNum,
+              is_watched: true,
+              watched_at: new Date().toISOString()
+            }
+          ];
+        }
       }
     });
 
-    if (wasWatched) {
+    if (isMarkingAsWatched) {
       // Automatically move show to 'watching' if it was in 'plan_to_watch'
       setWatchList(prev => {
         const show = prev.find(w => w.media_id === showId && w.media_type === 'tv');
@@ -1099,27 +1116,17 @@ export default function App() {
               .eq('media_id', showId)
               .eq('media_type', 'tv');
           }
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    }
 
-    if (session && isSupabaseConfigured) {
-      try {
-        const userId = session.user.id;
-        await supabase
-          .from('episode_progress')
-          .upsert({
-            user_id: userId,
-            show_id: showId,
-            season_number: seasonNum,
-            episode_number: epNum,
-            is_watched: wasWatched
-          });
+          await supabase
+            .from('episode_progress')
+            .upsert({
+              user_id: userId,
+              show_id: showId,
+              season_number: seasonNum,
+              episode_number: epNum,
+              is_watched: true
+            });
 
-        if (wasWatched) {
-          const showItem = watchList.find(w => w.media_id === showId);
           await supabase
             .from('activity_feed')
             .insert({
@@ -1134,9 +1141,32 @@ export default function App() {
                 episode_number: epNum
               }
             });
+        } catch (err) {
+          console.error('Failed to sync episode watched progress in Supabase:', err);
         }
-      } catch (err) {
-        console.error('Failed to sync episode watched progress in Supabase:', err);
+      }
+    } else {
+      // UNWATCHING: Sync unwatched state for target episode and all subsequent episodes to Supabase
+      if (session && isSupabaseConfigured) {
+        try {
+          const userId = session.user.id;
+          await supabase
+            .from('episode_progress')
+            .update({ is_watched: false })
+            .eq('user_id', userId)
+            .eq('show_id', showId)
+            .eq('season_number', seasonNum)
+            .gte('episode_number', epNum);
+
+          await supabase
+            .from('episode_progress')
+            .update({ is_watched: false })
+            .eq('user_id', userId)
+            .eq('show_id', showId)
+            .gt('season_number', seasonNum);
+        } catch (err) {
+          console.error('Failed to sync unwatched episodes in Supabase:', err);
+        }
       }
     }
   };
@@ -1518,7 +1548,7 @@ export default function App() {
     }
   });
 
-  const filteredGridMedia = allAvailableMedia.filter(item => {
+  const rawFilteredGridMedia = allAvailableMedia.filter(item => {
     const isTv = item.media_type === 'tv' || !!item.first_air_date;
     const type: MediaType = isTv ? 'tv' : 'movie';
 
@@ -1536,6 +1566,8 @@ export default function App() {
 
     return true;
   });
+
+  const filteredGridMedia = sortFranchiseAlphabetical(rawFilteredGridMedia);
 
   if (authLoading) {
     return (

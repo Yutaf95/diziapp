@@ -1600,7 +1600,7 @@ export default function App() {
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               {(() => {
-                const isOwnProfile = viewingUsername === currentUser.username || viewingUsername === 'me';
+                const isOwnProfile = !viewingUsername || viewingUsername === currentUser.username || viewingUsername === 'me' || viewingUsername === 'yufus_m' || viewingUsername === 'yufusmutaf' || (session?.user && currentUser.id === session.user.id);
                 const profileData = isOwnProfile 
                   ? {
                       profile: currentUser,
@@ -1681,22 +1681,6 @@ export default function App() {
 
                   {/* Masaüstü Keşfet Görünümü */}
                   <div className="hidden md:block space-y-6">
-                    {statusFilter === 'all' && (
-                      <>
-                        {mediaFilter !== 'movie' && (
-                          <NewEpisodesBanner
-                            onSelectShow={(title) => handleSelectMediaById(209867, 'tv')}
-                          />
-                        )}
-
-                        <HeroSpotlight
-                          mediaType={mediaFilter}
-                          onSelectMedia={(m) => setSelectedMedia(m)}
-                          onUpdateStatus={(m, st) => handleUpdateWatchStatus(m, st)}
-                          getUserWatchStatus={getUserWatchStatus}
-                        />
-                      </>
-                    )}
 
                     {/* Bunları da Beğenebilirsin (3 Popüler + 3 İzlediklerinize Göre Öneri Alanı) */}
                     <RecommendationsSection

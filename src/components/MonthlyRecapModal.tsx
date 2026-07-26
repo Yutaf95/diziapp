@@ -296,7 +296,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                             {movieCount} Sinema Filmi
                           </span>
                           <span className="text-[11px] font-medium text-slate-400">
-                            Zirve: Dune: Part Two
+                            Zirve: {zirveYapim ? zirveYapim.title : 'Yok'}
                           </span>
                         </div>
                       </div>

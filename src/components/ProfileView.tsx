@@ -174,7 +174,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onToggleFollowUser,
   onUpdateProfile
 }) => {
-  const isOwnProfile = !currentUserId || user.id === currentUserId || user.username === 'yufus_m' || user.username === 'yufusmutaf';
+  const isOwnProfile = !currentUserId || user.id === currentUserId || user.username === currentUserProfile?.username || user.username === 'yufus_m' || user.username === 'yufusmutaf';
   
   // Comparison Modal state & user profile references
   const [showCompareModal, setShowCompareModal] = useState(false);

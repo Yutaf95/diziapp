@@ -246,13 +246,13 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
       {/* Grid containing 2 recommendation categories */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         
-        {/* Category 1: 3 Adet Popüler Yapımlar */}
+        {/* Category 1: Popüler Yapımlar */}
         {popularFiltered.length > 0 && (
           <div className="space-y-3 bg-[#0B0C0E]/70 border border-[#232833] rounded-2xl p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-black text-white uppercase tracking-wider">
                 <Flame className="w-4 h-4 text-[#E63946]" />
-                <span>Popüler Yapımlar (3 Öneri)</span>
+                <span>Popüler Yapımlar</span>
               </div>
             </div>
 
@@ -275,13 +275,13 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
           </div>
         )}
 
-        {/* Category 2: 3 Adet İzlediklerinize Göre */}
+        {/* Category 2: İzlediklerinize Göre */}
         {basedOnWatchedFiltered.length > 0 && (
           <div className="space-y-3 bg-[#0B0C0E]/70 border border-[#232833] rounded-2xl p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-black text-white uppercase tracking-wider">
                 <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>İzlediklerinize Göre (3 Öneri)</span>
+                <span>İzlediklerinize Göre</span>
               </div>
             </div>
 

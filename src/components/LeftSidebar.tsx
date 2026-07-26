@@ -126,24 +126,24 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <span className="text-slate-500 font-mono text-[9px]">{totalCount} kayıt</span>
         </div>
 
-        {/* Tümü Filtresi */}
+        {/* Keşfet (Tüm Liste) Filtresi */}
         <button
           onClick={() => {
             setActiveStatusFilter('all');
-            if (activeTab !== 'discover' && activeTab !== 'watchlist') setActiveTab('watchlist');
+            setActiveTab('discover');
           }}
           className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium transition ${
-            activeStatusFilter === 'all'
+            activeStatusFilter === 'all' && activeTab === 'discover'
               ? 'bg-[#E63946]/15 text-white border border-[#E63946]/40 font-bold'
               : 'text-slate-300 hover:bg-[#0B0C0E] hover:text-white'
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <Bookmark className={`w-4 h-4 ${activeStatusFilter === 'all' ? 'text-[#E63946]' : 'text-slate-400'}`} />
-            <span>Tüm Liste</span>
+            <Compass className={`w-4 h-4 ${activeStatusFilter === 'all' && activeTab === 'discover' ? 'text-[#E63946]' : 'text-slate-400'}`} />
+            <span>Keşfet</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-            activeStatusFilter === 'all' ? 'bg-[#E63946] text-white' : 'bg-[#0B0C0E] text-slate-400'
+            activeStatusFilter === 'all' && activeTab === 'discover' ? 'bg-[#E63946] text-white' : 'bg-[#0B0C0E] text-slate-400'
           }`}>
             {totalCount}
           </span>

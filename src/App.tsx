@@ -1562,6 +1562,9 @@ export default function App() {
     if (statusFilter === 'plan_to_watch' && userStatus !== 'plan_to_watch') return false;
     if (statusFilter === 'watched' && userStatus !== 'watched') return false;
 
+    // 3. In Keşfet (discover) view, exclude any content already in any of the user's categories
+    if (activeTab === 'discover' && statusFilter === 'all' && userStatus !== null) return false;
+
     if (activeTab === 'watchlist' && statusFilter === 'all' && !userStatus) return false;
 
     return true;
@@ -1760,7 +1763,7 @@ export default function App() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-3.5">
-                          {filteredGridMedia.map((item) => {
+                          {filteredGridMedia.slice(0, 21).map((item) => {
                             const isTv = item.media_type === 'tv' || !!item.first_air_date;
                             const type: MediaType = isTv ? 'tv' : 'movie';
                             const userStatus = getUserWatchStatus(item.id, type);

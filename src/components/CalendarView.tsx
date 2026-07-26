@@ -263,8 +263,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     return () => { isMounted = false; };
   }, [watchingList]);
 
-  // Filter episodes based on user watching list
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Filter episodes based on user watching list and strictly ONLY future/today release dates
   const filteredEpisodes = liveEpisodes.filter(ep => {
+    // Filter out past air dates (e.g. 2012, 2021, 2024 - only keep future or today air dates)
+    if (ep.airDate && ep.airDate < todayStr) return false;
+
     if (!filterWatchingOnly) return true;
     if (watchingList.length === 0) return true;
     const watchingIds = watchingList.map(w => w.media_id);

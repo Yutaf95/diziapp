@@ -99,11 +99,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <Compass className="w-4 h-4" />
           <span>Keşfet</span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-          activeStatusFilter === 'all' && activeTab === 'discover' ? 'bg-black/25 text-white' : 'bg-[#0B0C0E] text-slate-400'
-        }`}>
-          {totalCount}
-        </span>
       </button>
 
       {/* 3. [Diziler] / [Filmler] Switch Toggle */}

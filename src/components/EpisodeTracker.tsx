@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckSquare, Play, Check, ChevronDown, ChevronUp, Sparkles, Tv, Clock, Star, CheckCircle2, X } from 'lucide-react';
 import { TMDBMedia, TMDBSeasonDetails, EpisodeProgress, WatchStatus } from '../types';
-import { getSeasonDetails, getPosterUrl } from '../lib/tmdb';
+import { getDetails, getSeasonDetails, getPosterUrl } from '../lib/tmdb';
 import { EmptyState } from './EmptyState';
 
 interface EpisodeTrackerProps {
@@ -40,8 +40,26 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     missingItems: Array<{ season_number: number; episode_number: number }>;
   } | null>(null);
 
-  // Filter TV shows in watching status
-  const tvWatching = watchingList.filter(item => item.media_type === 'tv');
+  // Helper to compute show's latest interaction timestamp (from episodeProgress or watchList updated_at)
+  const getShowLatestInteractionTime = (showId: number, itemUpdatedAt?: string): number => {
+    const watchedEps = episodeProgress.filter(ep => ep.show_id === showId);
+    let latestWatchedTime = 0;
+    watchedEps.forEach(ep => {
+      if (ep.watched_at) {
+        const t = new Date(ep.watched_at).getTime();
+        if (t > latestWatchedTime) latestWatchedTime = t;
+      }
+    });
+    const watchListTime = itemUpdatedAt ? new Date(itemUpdatedAt).getTime() : 0;
+    return Math.max(latestWatchedTime, watchListTime);
+  };
+
+  // Filter TV shows in watching status and sort by most recent watch history / interaction timestamp
+  const tvWatching = [...watchingList.filter(item => item.media_type === 'tv')].sort((a, b) => {
+    const timeA = getShowLatestInteractionTime(a.media_id, a.updated_at);
+    const timeB = getShowLatestInteractionTime(b.media_id, b.updated_at);
+    return timeB - timeA;
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -52,8 +70,9 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
       await Promise.all(
         tvWatching.map(async (item) => {
           try {
-            const maxSeasons = item.number_of_seasons || 5;
-            for (let s = 1; s <= maxSeasons; s++) {
+            const details = await getDetails(item.media_id, 'tv');
+            const totalSeasons = details?.number_of_seasons || item.number_of_seasons || 25;
+            for (let s = 1; s <= totalSeasons; s++) {
               try {
                 const sData = await getSeasonDetails(item.media_id, s);
                 if (sData && sData.episodes && sData.episodes.length > 0) {

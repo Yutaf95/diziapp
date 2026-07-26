@@ -224,19 +224,19 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
   if (popularFiltered.length === 0 && basedOnWatchedFiltered.length === 0) return null;
 
   return (
-    <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 space-y-5 shadow-xl">
+    <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-3.5 space-y-3.5 shadow-lg">
       
       {/* Header: Bunları da Beğenebilirsin */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#232833]">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-[#E63946]/10 text-[#E63946] border border-[#E63946]/20">
-            <Sparkles className="w-5 h-5 animate-pulse" />
+      <div className="flex items-center justify-between pb-2.5 border-b border-[#232833]">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-[#E63946]/10 text-[#E63946] border border-[#E63946]/20">
+            <Sparkles className="w-4 h-4 animate-pulse" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+            <h2 className="text-base font-black text-white tracking-tight flex items-center gap-2">
               <span>Bunları da Beğenebilirsin</span>
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] text-slate-400">
               Sizin için özel seçilmiş popüler ve benzeri yapım önerileri
             </p>
           </div>
@@ -244,19 +244,19 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
       </div>
 
       {/* Grid containing 2 recommendation categories */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
         
         {/* Category 1: Popüler Yapımlar */}
         {popularFiltered.length > 0 && (
-          <div className="space-y-3 bg-[#0B0C0E]/70 border border-[#232833] rounded-2xl p-4">
+          <div className="space-y-2 bg-[#0B0C0E]/70 border border-[#232833] rounded-xl p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-black text-white uppercase tracking-wider">
-                <Flame className="w-4 h-4 text-[#E63946]" />
+              <div className="flex items-center gap-1.5 text-[11px] font-black text-white uppercase tracking-wider">
+                <Flame className="w-3.5 h-3.5 text-[#E63946]" />
                 <span>Popüler Yapımlar</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
               {popularFiltered.map(item => {
                 const isTv = item.media_type === 'tv' || !!item.first_air_date;
                 const mediaType: MediaType = isTv ? 'tv' : 'movie';
@@ -277,15 +277,15 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
 
         {/* Category 2: İzlediklerinize Göre */}
         {basedOnWatchedFiltered.length > 0 && (
-          <div className="space-y-3 bg-[#0B0C0E]/70 border border-[#232833] rounded-2xl p-4">
+          <div className="space-y-2 bg-[#0B0C0E]/70 border border-[#232833] rounded-xl p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-black text-white uppercase tracking-wider">
-                <Sparkles className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-1.5 text-[11px] font-black text-white uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>İzlediklerinize Göre</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
               {basedOnWatchedFiltered.map(item => {
                 const isTv = item.media_type === 'tv' || !!item.first_air_date;
                 const mediaType: MediaType = isTv ? 'tv' : 'movie';

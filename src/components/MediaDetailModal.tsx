@@ -428,52 +428,53 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               
               {/* Üst Satır: Durum Değiştirici & 'Puan Ver / Yorum Yap' (Strictly Side-by-Side) */}
               <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full">
-                <div className="flex items-center gap-0.5 sm:gap-1 bg-[#0B0C0E] p-0.5 sm:p-1 rounded-xl border border-[#232833] shrink-0">
-                  {userWatchStatus === null ? (
-                    <>
-                      {/* İzliyorum: only shown for TV shows */}
-                      {isTv && (
-                        <button
-                          onClick={() => onUpdateWatchStatus(details, 'watching')}
-                          className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition text-slate-400 hover:text-white cursor-pointer whitespace-nowrap"
-                        >
-                          <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> İzliyorum
-                        </button>
-                      )}
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-[#0B0C0E] p-0.5 sm:p-1 rounded-xl border border-[#232833] shrink-0">
 
-                      <button
-                        onClick={() => onUpdateWatchStatus(details, 'plan_to_watch')}
-                        className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition text-slate-400 hover:text-white cursor-pointer whitespace-nowrap"
-                      >
-                        <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400" /> İzleyeceğim
-                      </button>
-                    </>
-                  ) : userWatchStatus === 'watching' || userWatchStatus === 'plan_to_watch' ? (
-                    <div className="px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-extrabold flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap">
-                      {userWatchStatus === 'watching' ? <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> : <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400" />}
-                      <span>{userWatchStatus === 'watching' ? 'İzliyorsun' : 'İzleyeceksin'}</span>
-                    </div>
-                  ) : null}
+                  {/* İzliyorum — only for TV shows, always visible */}
+                  {isTv && (
+                    <button
+                      onClick={() => onUpdateWatchStatus(details, userWatchStatus === 'watching' ? null : 'watching')}
+                      className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                        userWatchStatus === 'watching'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 font-extrabold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#232833]'
+                      }`}
+                    >
+                      <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> İzliyorum
+                    </button>
+                  )}
 
+                  {/* İzleyeceğim — always visible */}
+                  <button
+                    onClick={() => onUpdateWatchStatus(details, userWatchStatus === 'plan_to_watch' ? null : 'plan_to_watch')}
+                    className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                      userWatchStatus === 'plan_to_watch'
+                        ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30 font-extrabold'
+                        : 'text-slate-400 hover:text-white hover:bg-[#232833]'
+                    }`}
+                  >
+                    <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400" /> İzleyeceğim
+                  </button>
+
+                  {/* İzledim — always visible, active when watched */}
                   <button
                     onClick={() => {
                       if (userWatchStatus === 'watched') {
-                        // Toggle off: revert to previous watch status where user left off
-                        onUpdateWatchStatus(details, prevWatchStatus || 'watching');
+                        onUpdateWatchStatus(details, null);
                       } else {
-                        // Ask confirmation before moving to completed
                         setShowCompleteConfirmModal(true);
                       }
                     }}
                     className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                       userWatchStatus === 'watched'
                         ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-md shadow-emerald-500/30'
-                        : 'text-slate-300 hover:text-white hover:bg-[#232833]'
+                        : 'text-slate-400 hover:text-white hover:bg-[#232833]'
                     }`}
                   >
-                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" /> İzlendi
+                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" /> İzledim
                   </button>
 
+                  {/* Trash: remove from list entirely */}
                   {userWatchStatus !== null && (
                     <button
                       onClick={() => onUpdateWatchStatus(details, null)}

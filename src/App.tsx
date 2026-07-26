@@ -23,7 +23,7 @@ import { RecommendationsSection } from './components/RecommendationsSection';
 import { sortFranchiseAlphabetical } from './lib/sorting';
 
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
-import { getTrending, search, getDetails } from './lib/tmdb';
+import { getTrending, search, getDetails, getSeasonDetails } from './lib/tmdb';
 import { CURRENT_USER, INITIAL_USER_WATCH_STATUSES, INITIAL_ACTIVITIES, INITIAL_REVIEWS, INITIAL_COLLECTIONS, getMockProfileData } from './data/mockData';
 import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -1057,6 +1057,37 @@ export default function App() {
         created_at: new Date().toISOString()
       };
       setActivityFeed(prev => [newActivity, ...prev]);
+
+      // If a TV show is marked as 'watched', automatically mark all episodes as watched
+      if (status === 'watched' && isTv) {
+        (async () => {
+          try {
+            const details = await getDetails(media.id, 'tv');
+            const totalSeasons = details?.number_of_seasons || media.number_of_seasons || 1;
+            const seasonPromises = [];
+            for (let s = 1; s <= totalSeasons; s++) {
+              seasonPromises.push(getSeasonDetails(media.id, s));
+            }
+            const seasonsData = await Promise.all(seasonPromises);
+            const allEpisodes: Array<{ season_number: number; episode_number: number }> = [];
+            seasonsData.forEach(sData => {
+              if (sData?.episodes && Array.isArray(sData.episodes)) {
+                sData.episodes.forEach(ep => {
+                  allEpisodes.push({
+                    season_number: ep.season_number,
+                    episode_number: ep.episode_number
+                  });
+                });
+              }
+            });
+            if (allEpisodes.length > 0) {
+              await handleBatchMarkEpisodes(media.id, allEpisodes);
+            }
+          } catch (err) {
+            console.error('Failed to auto-mark all episodes as watched:', err);
+          }
+        })();
+      }
     }
 
     if (session && isSupabaseConfigured) {

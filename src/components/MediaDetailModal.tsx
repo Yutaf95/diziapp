@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Star, Eye, Clock, Check, Tv, Film, MessageSquare, AlertTriangle, Heart, 
-  Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, Zap, Info, ShieldAlert, Layers, Pencil, Trash2
+  Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, ChevronDown, Zap, Info, ShieldAlert, Layers, Pencil, Trash2
 } from 'lucide-react';
 import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem } from '../types';
 import { getDetails, getSeasonDetails, getBackdropUrl, getPosterUrl } from '../lib/tmdb';
@@ -68,6 +68,12 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       setPrevWatchStatus(userWatchStatus);
     }
   }, [userWatchStatus]);
+  const [isEpisodesExpanded, setIsEpisodesExpanded] = useState<boolean>(() => userWatchStatus !== 'watched');
+
+  useEffect(() => {
+    setIsEpisodesExpanded(userWatchStatus !== 'watched');
+  }, [userWatchStatus, media?.id]);
+
   const [selectedSeasonNum, setSelectedSeasonNum] = useState<number>(1);
   const [seasonDetails, setSeasonDetails] = useState<TMDBSeasonDetails | null>(null);
 
@@ -554,188 +560,219 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
           {/* 3. SEZON BUTONLARI & BÖLÜM KARTLARI GRID'I (Yalnızca İzliyorum/İzlendi durumunda gösterilir) */}
           {isTv && (userWatchStatus === 'watching' || userWatchStatus === 'watched') && (
-            <div className="bg-[#14171D] border border-[#232833] rounded-3xl p-5 sm:p-6 space-y-5 shadow-xl">
+            <div className="bg-[#14171D] border border-[#232833] rounded-3xl shadow-xl transition-all overflow-hidden">
               
-              {/* Header & Sezon Butonları (Hap / Pill Sekme) */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#232833]">
-                
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-[#E63946]/10 text-[#E63946] border border-[#E63946]/20">
-                    <Tv className="w-5 h-5" />
+              {/* Header Bar - Tıklanabilir (Tamamlanan dizilerde tek sıra kapalı kalır, tıklanınca açılır) */}
+              <div 
+                onClick={() => setIsEpisodesExpanded(!isEpisodesExpanded)}
+                className={`p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer transition select-none ${
+                  isEpisodesExpanded ? 'border-b border-[#232833] bg-[#14171D]' : 'bg-[#14171D] hover:bg-[#1A1E26]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl border ${
+                    userWatchStatus === 'watched'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : 'bg-[#E63946]/10 text-[#E63946] border-[#E63946]/20'
+                  }`}>
+                    {userWatchStatus === 'watched' ? <CheckCircle2 className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
                   </div>
                   <div>
-                    <h3 className="text-base font-extrabold text-white">Bölüm Listesi & Takibi</h3>
-                    <p className="text-[11px] text-slate-400">Puan vermek ve izlendi işaretlemek için bir bölüme tıklayın</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-extrabold text-white">Bölüm Listesi & Takibi</h3>
+                      {userWatchStatus === 'watched' && (
+                        <span className="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                          Tamamlandı
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      {isEpisodesExpanded 
+                        ? 'Bölümleri gizlemek için tıklayın' 
+                        : userWatchStatus === 'watched'
+                        ? 'Tüm bölümler tamamlandı • Bölüm detaylarını görmek için tıklayın'
+                        : 'Puan vermek ve izlendi işaretlemek için tıklayın'}
+                    </p>
                   </div>
                 </div>
 
-                {/* SEZON BUTONLARI: Hap (pill) Şeklinde Sekme Butonları */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {Array.from({ length: details.number_of_seasons || 2 }).map((_, idx) => {
-                    const sNum = idx + 1;
-                    const isActive = selectedSeasonNum === sNum;
-                    return (
-                      <button
-                        key={sNum}
-                        onClick={() => handleSeasonChange(sNum)}
-                        className={`px-4 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all shadow-md ${
-                          isActive
-                            ? 'bg-[#E63946] text-white border border-[#E63946] shadow-[#E63946]/25 scale-105'
-                            : 'bg-[#0B0C0E] text-slate-300 hover:text-white border border-[#232833] hover:border-[#E63946]/50'
-                        }`}
-                      >
-                        Season {sNum}
-                      </button>
-                    );
-                  })}
-                </div>
+                <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                  {/* SEZON BUTONLARI (Sadece Açık Olduğunda Gösterilir) */}
+                  {isEpisodesExpanded && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" onClick={(e) => e.stopPropagation()}>
+                      {Array.from({ length: details.number_of_seasons || 2 }).map((_, idx) => {
+                        const sNum = idx + 1;
+                        const isActive = selectedSeasonNum === sNum;
+                        return (
+                          <button
+                            key={sNum}
+                            onClick={() => handleSeasonChange(sNum)}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition-all shadow-md ${
+                              isActive
+                                ? 'bg-[#E63946] text-white border border-[#E63946] shadow-[#E63946]/25 scale-105'
+                                : 'bg-[#0B0C0E] text-slate-300 hover:text-white border border-[#232833] hover:border-[#E63946]/50'
+                            }`}
+                          >
+                            Season {sNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
+                  {/* AÇ/KAPAT OK İKONU */}
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 shrink-0 ml-auto sm:ml-0">
+                    <span className="hidden sm:inline-block">{isEpisodesExpanded ? 'Gizle' : 'Bölümleri Göster'}</span>
+                    <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isEpisodesExpanded ? 'rotate-180' : ''}`} />
+                  </div>
+                </div>
               </div>
 
-              {/* BÖLÜM KARTLARI GRID'I */}
-              {loadingSeason ? (
-                <div className="flex flex-col items-center justify-center py-12 space-y-3">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                    className="w-8 h-8 rounded-full border-3 border-slate-800 border-t-[#E63946]"
-                  />
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider animate-pulse">Bölümler Yükleniyor...</p>
-                </div>
-              ) : seasonDetails && seasonDetails.episodes ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {seasonDetails.episodes.map(ep => {
-                    const prog = getEpisodeProgress(details.id, ep.season_number, ep.episode_number);
-                    const isWatched = prog?.is_watched;
-                    const userScore = prog?.rating;
-                    const isNextToWatch = !isWatched && ep.episode_number === nextEpNum;
+              {/* BÖLÜM KARTLARI GRID'I (Sadece Açık Olduğunda Gösterilir) */}
+              {isEpisodesExpanded && (
+                <div className="p-4 sm:p-6 space-y-5 bg-[#14171D]">
+                  {loadingSeason ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                        className="w-8 h-8 rounded-full border-3 border-slate-800 border-t-[#E63946]"
+                      />
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider animate-pulse">Bölümler Yükleniyor...</p>
+                    </div>
+                  ) : seasonDetails && seasonDetails.episodes ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      {seasonDetails.episodes.map(ep => {
+                        const prog = getEpisodeProgress(details.id, ep.season_number, ep.episode_number);
+                        const isWatched = prog?.is_watched;
+                        const userScore = prog?.rating;
+                        const isNextToWatch = !isWatched && ep.episode_number === nextEpNum;
 
-                    // 1. İzlenen bölüm: #4ADE80 belirgin yeşil çerçeve, yeşil metin & yeşil tik ikonu
-                    // 2. Sıradaki bölüm: #FBBF24 sarı çerçeve, sarı SIRADAKİ rozeti
-                    // 3. İzlenmeyen: Koyu sade arka plan #1A1D23, gri silik metinler
-                    let cardBorderClass = '';
-                    let topText = `${ep.season_number}. SEZON ${ep.episode_number}. BÖLÜM`;
-                    let statusIcon = null;
-                    let bottomBadge = null;
+                        let cardBorderClass = '';
+                        let topText = `${ep.season_number}. SEZON ${ep.episode_number}. BÖLÜM`;
+                        let statusIcon = null;
+                        let bottomBadge = null;
 
-                    if (isWatched) {
-                      cardBorderClass = 'border-2 border-[#4ADE80] bg-[#4ADE80]/10 hover:bg-[#4ADE80]/15 shadow-md shadow-[#4ADE80]/10';
-                      statusIcon = (
-                        <div className="w-5 h-5 rounded-full bg-[#4ADE80] text-[#0B0C0E] flex items-center justify-center shrink-0 shadow-sm">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        </div>
-                      );
-                      bottomBadge = (
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4ADE80] flex items-center gap-1">
-                          <span>İZLEDİM</span>
-                          {userScore ? <span className="text-amber-300 font-mono font-bold">★ {userScore}</span> : null}
-                        </span>
-                      );
-                    } else if (isNextToWatch) {
-                      cardBorderClass = 'border-2 border-[#FBBF24] bg-[#FBBF24]/10 hover:bg-[#FBBF24]/15 shadow-md shadow-[#FBBF24]/10';
-                      statusIcon = (
-                        <div className="w-5 h-5 rounded-full bg-[#FBBF24] text-[#0B0C0E] flex items-center justify-center shrink-0 shadow-sm">
-                          <Zap className="w-3 h-3 fill-current" />
-                        </div>
-                      );
-                      bottomBadge = (
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#FBBF24] bg-[#FBBF24]/20 px-2 py-0.5 rounded-md border border-[#FBBF24]/30">
-                          SIRADAKİ
-                        </span>
-                      );
-                    } else {
-                      cardBorderClass = 'bg-[#1A1D23] border border-[#232833] hover:border-slate-500';
-                      statusIcon = (
-                        <div className="w-5 h-5 rounded-full border border-slate-600 shrink-0 group-hover:border-slate-400 transition-colors" />
-                      );
-                      bottomBadge = (
-                        <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-                          İZLENMEDİ
-                        </span>
-                      );
-                    }
+                        if (isWatched) {
+                          cardBorderClass = 'border-2 border-[#4ADE80] bg-[#4ADE80]/10 hover:bg-[#4ADE80]/15 shadow-md shadow-[#4ADE80]/10';
+                          statusIcon = (
+                            <div className="w-5 h-5 rounded-full bg-[#4ADE80] text-[#0B0C0E] flex items-center justify-center shrink-0 shadow-sm">
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                            </div>
+                          );
+                          bottomBadge = (
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4ADE80] flex items-center gap-1">
+                              <span>İZLEDİM</span>
+                              {userScore ? <span className="text-amber-300 font-mono font-bold">★ {userScore}</span> : null}
+                            </span>
+                          );
+                        } else if (isNextToWatch) {
+                          cardBorderClass = 'border-2 border-[#FBBF24] bg-[#FBBF24]/10 hover:bg-[#FBBF24]/15 shadow-md shadow-[#FBBF24]/10';
+                          statusIcon = (
+                            <div className="w-5 h-5 rounded-full bg-[#FBBF24] text-[#0B0C0E] flex items-center justify-center shrink-0 shadow-sm">
+                              <Zap className="w-3 h-3 fill-current" />
+                            </div>
+                          );
+                          bottomBadge = (
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#FBBF24] bg-[#FBBF24]/20 px-2 py-0.5 rounded-md border border-[#FBBF24]/30">
+                              SIRADAKİ
+                            </span>
+                          );
+                        } else {
+                          cardBorderClass = 'bg-[#1A1D23] border border-[#232833] hover:border-slate-500';
+                          statusIcon = (
+                            <div className="w-5 h-5 rounded-full border border-slate-600 shrink-0 group-hover:border-slate-400 transition-colors" />
+                          );
+                          bottomBadge = (
+                            <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                              İZLENMEDİ
+                            </span>
+                          );
+                        }
 
-                    const epNote = prog?.note;
-                    const epNoteSpoiler = prog?.note_has_spoiler;
+                        const epNote = prog?.note;
+                        const epNoteSpoiler = prog?.note_has_spoiler;
 
-                    return (
-                      <div
-                        key={ep.id}
-                        onClick={() => handleDirectEpisodeClick(ep)}
-                        className={`p-2.5 sm:p-3 rounded-2xl ${cardBorderClass} transition-all duration-200 cursor-pointer group flex flex-col justify-between min-h-[116px] overflow-hidden hover:scale-[1.02] select-none`}
-                      >
-                        {/* Üstte küçük metin: 3. SEZON 1. BÖLÜM & Sağ üstte Not İkonu & Dairesel durum ikonu */}
-                        <div className="flex items-center justify-between gap-1 z-10">
-                          <span className={`text-[10px] font-black font-mono uppercase tracking-wider truncate ${
-                            isWatched ? 'text-[#4ADE80]' : isNextToWatch ? 'text-[#FBBF24]' : 'text-slate-400'
-                          }`}>
-                            {topText}
-                          </span>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Kişisel Not Gösterge İkonu & Tooltip */}
-                            {epNote && (
-                              <div className="relative group/note z-30">
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); openNoteModal(ep); }}
-                                  className="p-1 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/40 transition"
-                                  title="Kişisel Notu Oku/Düzenle"
-                                >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                </button>
-                                {/* Tooltip Bilgi Baloncuğu */}
-                                <div className="absolute bottom-full right-0 mb-2 w-52 p-2.5 rounded-xl bg-[#0B0C0E] border border-amber-500/50 text-white text-[11px] shadow-2xl opacity-0 group-hover/note:opacity-100 transition-all duration-200 pointer-events-none z-50">
-                                  <div className="flex items-center justify-between mb-1 text-[9px] font-bold text-amber-400 uppercase tracking-wider">
-                                    <span>Kişisel Notun</span>
-                                    {epNoteSpoiler && (
-                                      <span className="text-[#E63946] flex items-center gap-0.5">
-                                        <AlertTriangle className="w-2.5 h-2.5" /> Spoiler
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="line-clamp-4 leading-relaxed text-slate-200 italic font-medium">
-                                    "{epNote}"
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {statusIcon}
-                          </div>
-                        </div>
-
-                        {/* Ortada bold/koyu başlık: Episode Name */}
-                        <h4 className={`font-black text-xs sm:text-sm line-clamp-2 uppercase tracking-wide leading-tight my-1 ${
-                          isWatched ? 'text-white' : isNextToWatch ? 'text-white' : 'text-slate-200 group-hover:text-white'
-                        }`}>
-                          {ep.name}
-                        </h4>
-
-                        {/* Alt tarafta minik durum etiketi & Sağ altta Puanla Butonu */}
-                        <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-white/10 mt-auto min-w-0 w-full overflow-hidden">
-                          <div className="min-w-0 flex-1 truncate">
-                            {bottomBadge}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEpisodeModal(ep);
-                            }}
-                            className="flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-500/30 transition shadow-sm shrink-0 whitespace-nowrap hover:scale-105 active:scale-95"
-                            title="Bölümü Puanla"
+                        return (
+                          <div
+                            key={ep.id}
+                            onClick={() => handleDirectEpisodeClick(ep)}
+                            className={`p-2.5 sm:p-3 rounded-2xl ${cardBorderClass} transition-all duration-200 cursor-pointer group flex flex-col justify-between min-h-[116px] overflow-hidden hover:scale-[1.02] select-none`}
                           >
-                            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 shrink-0" />
-                            <span className="whitespace-nowrap">{userScore ? `★ ${userScore}` : 'Puanla'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                            {/* Üstte küçük metin: 3. SEZON 1. BÖLÜM & Sağ üstte Not İkonu & Dairesel durum ikonu */}
+                            <div className="flex items-center justify-between gap-1 z-10">
+                              <span className={`text-[10px] font-black font-mono uppercase tracking-wider truncate ${
+                                isWatched ? 'text-[#4ADE80]' : isNextToWatch ? 'text-[#FBBF24]' : 'text-slate-400'
+                              }`}>
+                                {topText}
+                              </span>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {/* Kişisel Not Gösterge İkonu & Tooltip */}
+                                {epNote && (
+                                  <div className="relative group/note z-30">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); openNoteModal(ep); }}
+                                      className="p-1 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/40 transition"
+                                      title="Kişisel Notu Oku/Düzenle"
+                                    >
+                                      <MessageSquare className="w-3.5 h-3.5" />
+                                    </button>
+                                    {/* Tooltip Bilgi Baloncuğu */}
+                                    <div className="absolute bottom-full right-0 mb-2 w-52 p-2.5 rounded-xl bg-[#0B0C0E] border border-amber-500/50 text-white text-[11px] shadow-2xl opacity-0 group-hover/note:opacity-100 transition-all duration-200 pointer-events-none z-50">
+                                      <div className="flex items-center justify-between mb-1 text-[9px] font-bold text-amber-400 uppercase tracking-wider">
+                                        <span>Kişisel Notun</span>
+                                        {epNoteSpoiler && (
+                                          <span className="text-[#E63946] flex items-center gap-0.5">
+                                            <AlertTriangle className="w-2.5 h-2.5" /> Spoiler
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="line-clamp-4 leading-relaxed text-slate-200 italic font-medium">
+                                        "{epNote}"
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {statusIcon}
+                              </div>
+                            </div>
+
+                            {/* Ortada bold/koyu başlık: Episode Name */}
+                            <h4 className={`font-black text-xs sm:text-sm line-clamp-2 uppercase tracking-wide leading-tight my-1 ${
+                              isWatched ? 'text-white' : isNextToWatch ? 'text-white' : 'text-slate-200 group-hover:text-white'
+                            }`}>
+                              {ep.name}
+                            </h4>
+
+                            {/* Alt tarafta minik durum etiketi & Sağ altta Puanla Butonu */}
+                            <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-white/10 mt-auto min-w-0 w-full overflow-hidden">
+                              <div className="min-w-0 flex-1 truncate">
+                                {bottomBadge}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEpisodeModal(ep);
+                                }}
+                                className="flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-500/30 transition shadow-sm shrink-0 whitespace-nowrap hover:scale-105 active:scale-95"
+                                title="Bölümü Puanla"
+                              >
+                                <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 shrink-0" />
+                                <span className="whitespace-nowrap">{userScore ? `★ ${userScore}` : 'Puanla'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-400 text-sm">Bölüm bilgileri yükleniyor...</div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400 text-sm">Bölüm bilgileri yükleniyor...</div>
               )}
 
             </div>

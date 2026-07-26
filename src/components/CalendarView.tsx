@@ -150,6 +150,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     async function fetchLiveSchedule() {
       setLoadingLive(true);
       const tvWatching = watchingList.filter(item => item.media_type === 'tv' || item.status === 'watching');
+      const todayStr = new Date().toISOString().split('T')[0];
       
       const fetchedList: UpcomingEpisode[] = [];
 
@@ -162,79 +163,97 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             const networkName = (details as any).networks?.[0]?.name || 'TV';
             const poster = getPosterUrl(details.poster_path || item.poster_path || null);
             const backdrop = getBackdropUrl(details.backdrop_path || details.poster_path || null);
-            const totalSeasons = details.number_of_seasons || 1;
 
-            // Calculate user's last watched episode from episodeProgress
+            const lastEp = (details as any).last_episode_to_air;
+            const nextEp = (details as any).next_episode_to_air;
+
+            // Calculate user's highest watched episode for this show
             const watchedForShow = episodeProgress.filter(e => e.show_id === item.media_id && e.is_watched);
+            let maxS = 0;
+            let maxE = 0;
+            watchedForShow.forEach(e => {
+              if (e.season_number > maxS || (e.season_number === maxS && e.episode_number > maxE)) {
+                maxS = e.season_number;
+                maxE = e.episode_number;
+              }
+            });
+
+            // CHECK CAUGHT UP CONDITION:
+            // A user is caught up if:
+            // 1. Show status is 'watched' (completed)
+            // 2. OR user's max watched episode >= last_episode_to_air
+            // 3. OR there is no last_episode_to_air yet (brand new unreleased show)
+            let isCaughtUp = false;
+
+            if (item.status === 'watched') {
+              isCaughtUp = true;
+            } else if (!lastEp && nextEp) {
+              isCaughtUp = true; // Brand new show premiere
+            } else if (lastEp && typeof lastEp.season_number === 'number' && typeof lastEp.episode_number === 'number') {
+              if (maxS > lastEp.season_number || (maxS === lastEp.season_number && maxE >= lastEp.episode_number)) {
+                isCaughtUp = true;
+              }
+            } else if (watchedForShow.length > 0) {
+              isCaughtUp = true;
+            }
+
+            // CRITICAL RULE:
+            // If the user has NOT caught up to the latest currently released episode yet,
+            // DO NOT display future upcoming episode/season dates on the calendar!
+            if (!isCaughtUp) {
+              return;
+            }
+
+            // User IS caught up! Find the future episode/season premiere to show in the calendar:
             let targetSeason = 1;
             let targetEp = 1;
+            let airDate = '';
+            let targetEpisodeData: any = null;
 
-            if (watchedForShow.length > 0) {
-              let maxS = 1;
-              let maxE = 0;
-              watchedForShow.forEach(e => {
-                if (e.season_number > maxS || (e.season_number === maxS && e.episode_number > maxE)) {
-                  maxS = e.season_number;
-                  maxE = e.episode_number;
-                }
-              });
-
+            if (nextEp && nextEp.air_date) {
+              targetSeason = nextEp.season_number;
+              targetEp = nextEp.episode_number;
+              airDate = nextEp.air_date;
+              targetEpisodeData = nextEp;
+            } else {
+              // Try finding next episode in current or next season with air_date >= today
+              let searchSeason = lastEp ? lastEp.season_number : 1;
+              let searchEp = lastEp ? lastEp.episode_number + 1 : 1;
               try {
-                const sDetails = await getSeasonDetails(item.media_id, maxS);
-                const totalEpsInSeason = sDetails?.episodes?.length || 10;
-
-                if (maxE < totalEpsInSeason) {
-                  targetSeason = maxS;
-                  targetEp = maxE + 1;
-                } else if (maxS < totalSeasons) {
-                  targetSeason = maxS + 1;
-                  targetEp = 1;
+                let sData = await getSeasonDetails(item.media_id, searchSeason);
+                let epData = sData?.episodes?.find((e: any) => e.episode_number === searchEp);
+                if (epData && epData.air_date) {
+                  targetSeason = searchSeason;
+                  targetEp = searchEp;
+                  airDate = epData.air_date;
+                  targetEpisodeData = epData;
                 } else {
-                  // User has completed all available seasons. Check if TMDB has next_episode_to_air
-                  const tmdbNext = (details as any).next_episode_to_air;
-                  if (tmdbNext && tmdbNext.air_date) {
-                    targetSeason = tmdbNext.season_number;
-                    targetEp = tmdbNext.episode_number;
-                  } else {
-                    return; // Show is fully completed, no past season repetition
+                  // Try next season episode 1
+                  const nextSeasonData = await getSeasonDetails(item.media_id, searchSeason + 1);
+                  if (nextSeasonData?.episodes && nextSeasonData.episodes.length > 0) {
+                    targetSeason = searchSeason + 1;
+                    targetEp = 1;
+                    targetEpisodeData = nextSeasonData.episodes[0];
+                    airDate = targetEpisodeData?.air_date || '';
                   }
                 }
-              } catch (e) {
-                targetSeason = maxS;
-                targetEp = maxE + 1;
-              }
+              } catch (e) {}
             }
 
-            // Ensure targetSeason does not exceed TMDB number_of_seasons unless TMDB explicitly has next_episode_to_air
-            const tmdbNext = (details as any).next_episode_to_air;
-            if (targetSeason > totalSeasons) {
-              if (tmdbNext && tmdbNext.air_date) {
-                targetSeason = tmdbNext.season_number;
-                targetEp = tmdbNext.episode_number;
-              } else {
-                targetSeason = totalSeasons;
-              }
+            // Skip if airDate is in the past (< todayStr) or invalid
+            if (!airDate || airDate < todayStr) {
+              return;
             }
-
-            // Fetch season details for target next episode
-            let targetEpisodeData: any = null;
-            let targetSeasonData: any = null;
-            try {
-              targetSeasonData = await getSeasonDetails(item.media_id, targetSeason);
-              targetEpisodeData = targetSeasonData?.episodes?.find((e: any) => e.episode_number === targetEp);
-            } catch (e) {}
 
             const epName = targetEpisodeData?.name 
               ? (targetEp === 1 ? `${targetSeason}. Sezon Prömiyeri (${targetEpisodeData.name})` : targetEpisodeData.name)
               : `${targetSeason}. Sezon ${targetEp}. Bölüm`;
 
-            const airDate = targetEpisodeData?.air_date || (details as any).next_episode_to_air?.air_date || (details as any).last_episode_to_air?.air_date || new Date().toISOString().split('T')[0];
-
             fetchedList.push({
               id: item.media_id * 10000 + targetSeason * 100 + targetEp,
               showId: item.media_id,
               showName: details.title || details.name || item.title || 'Dizi',
-              posterPath: targetSeasonData?.poster_path ? getPosterUrl(targetSeasonData.poster_path) : poster,
+              posterPath: poster,
               backdropPath: backdrop,
               seasonNumber: targetSeason,
               episodeNumber: targetEp,
@@ -242,7 +261,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               airDate: airDate,
               network: networkName,
               networkColor: 'bg-[#14171D] text-slate-100 border-[#232833]',
-              overview: targetEpisodeData?.overview || `${details.title || item.title} dizisinin sıradaki izlenecek bölümü.`,
+              overview: targetEpisodeData?.overview || `${details.title || item.title} dizisinin yeni bölümü.`,
               voteAverage: targetEpisodeData?.vote_average || details.vote_average || 8.5,
               mediaType: 'tv'
             });
@@ -261,7 +280,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
     fetchLiveSchedule();
     return () => { isMounted = false; };
-  }, [watchingList]);
+  }, [watchingList, episodeProgress]);
 
   const todayStr = new Date().toISOString().split('T')[0];
 

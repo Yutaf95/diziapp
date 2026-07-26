@@ -56,7 +56,10 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   const totalHours = Math.floor(totalWatchMinutes / 60);
   const remainingMinutes = totalWatchMinutes % 60;
 
-  // Dynamic Zirve Yapım (Top Rated Item in user's library)
+  const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80';
+  const anyWatchedItem = watchList.find(w => w.status === 'watched' || w.status === 'watching') || watchList[0];
+
+  // Dynamic Zirve Yapım (Top Rated Item in user's library - guaranteed non-null)
   const topReview = reviews.length > 0 
     ? [...reviews].sort((a, b) => b.rating - a.rating)[0]
     : null;
@@ -68,22 +71,41 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
         id: topReview.media_id,
         type: topReview.media_type,
         title: topReview.media_title || 'Zirve Yapım',
-        poster: topReview.media_poster || (topWatchedItem?.poster_path ? (topWatchedItem.poster_path.startsWith('http') ? topWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${topWatchedItem.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'),
+        poster: topReview.media_poster || (anyWatchedItem?.poster_path ? (anyWatchedItem.poster_path.startsWith('http') ? anyWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${anyWatchedItem.poster_path}`) : defaultPoster),
         rating: topReview.rating || 9.0,
         reviewText: topReview.review_text || 'Bu ay kütüphanenizdeki en yüksek puanlı değerlendirmeniz.',
-        badge: `${topReview.rating}/10 Zirve Puan`
+        badge: `${topReview.rating || 9}/10 Zirve Puan`
       } 
     : (topWatchedItem 
         ? {
             id: topWatchedItem.media_id,
             type: topWatchedItem.media_type,
             title: topWatchedItem.title || 'Yapım',
-            poster: topWatchedItem.poster_path ? (topWatchedItem.poster_path.startsWith('http') ? topWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${topWatchedItem.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
+            poster: topWatchedItem.poster_path ? (topWatchedItem.poster_path.startsWith('http') ? topWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${topWatchedItem.poster_path}`) : defaultPoster,
             rating: topWatchedItem.vote_average || 8.0,
             reviewText: 'Bu ay kütüphanenizde tamamladığınız ve öne çıkan yapım.',
             badge: `★ ${topWatchedItem.vote_average || 8.0} Tamamlandı`
           }
-        : null
+        : (anyWatchedItem
+            ? {
+                id: anyWatchedItem.media_id,
+                type: anyWatchedItem.media_type,
+                title: anyWatchedItem.title || 'Yapım',
+                poster: anyWatchedItem.poster_path ? (anyWatchedItem.poster_path.startsWith('http') ? anyWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${anyWatchedItem.poster_path}`) : defaultPoster,
+                rating: anyWatchedItem.vote_average || 8.0,
+                reviewText: 'Bu ay izlemeye başladığınız öne çıkan yapım.',
+                badge: `★ ${anyWatchedItem.vote_average || 8.0} İzleniyor`
+              }
+            : {
+                id: 0,
+                type: 'movie' as const,
+                title: 'Öne Çıkan Yapım',
+                poster: defaultPoster,
+                rating: 8.5,
+                reviewText: 'Bu ayki izleme maratonunuzun öne çıkan içeriği.',
+                badge: 'Özel Seçki'
+              }
+          )
       );
 
   // Dynamic Favori Oyuncu / Kullanıcı Profili
@@ -332,19 +354,19 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                     {/* Spotlight Hero Card */}
                     <div 
                       onClick={() => {
-                        if (onSelectMediaById) onSelectMediaById(zirveYapim.id, zirveYapim.type);
+                        if (onSelectMediaById && zirveYapim?.id) onSelectMediaById(zirveYapim.id, zirveYapim.type);
                         onClose();
                       }}
                       className="group bg-gradient-to-r from-[#1A1D25] to-[#12141A] border border-amber-500/40 rounded-3xl p-4 sm:p-5 flex gap-4 items-center shadow-2xl cursor-pointer hover:border-amber-400 transition"
                     >
                       <div className="w-24 sm:w-28 aspect-[2/3] rounded-2xl overflow-hidden shrink-0 relative bg-[#1F232D] shadow-md">
                         <img 
-                          src={zirveYapim.poster} 
-                          alt={zirveYapim.title}
+                          src={zirveYapim?.poster || defaultPoster} 
+                          alt={zirveYapim?.title || 'Yapım'}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
                         />
                         <div className="absolute top-2 left-2 bg-amber-400 text-black px-2 py-0.5 rounded-md text-[10px] font-black font-mono shadow-md">
-                          ★ {zirveYapim.rating}
+                          ★ {zirveYapim?.rating || 8.0}
                         </div>
                       </div>
 
@@ -509,7 +531,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                         <>
                           {/* Full Backdrop Poster Image with Blur */}
                           <div className="absolute inset-0 pointer-events-none opacity-25">
-                            <img src={zirveYapim.poster} alt="" className="w-full h-full object-cover blur-md scale-110" />
+                            <img src={zirveYapim?.poster || defaultPoster} alt="" className="w-full h-full object-cover blur-md scale-110" />
                           </div>
                           <div className="absolute inset-0 bg-gradient-to-b from-[#080A0F]/80 via-[#080A0F]/90 to-[#080A0F] pointer-events-none" />
                         </>
@@ -587,8 +609,8 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                           : 'bg-gradient-to-r from-[#171A23] to-[#11131A] border-amber-500/30'
                       }`}>
                         <img 
-                          src={zirveYapim.poster} 
-                          alt={zirveYapim.title}
+                          src={zirveYapim?.poster || defaultPoster} 
+                          alt={zirveYapim?.title || 'Yapım'}
                           className="w-16 h-22 rounded-xl object-cover border border-amber-400/40 shadow-lg shrink-0" 
                         />
                         <div className="space-y-1 min-w-0 flex-1">
@@ -600,7 +622,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                             🏆 AYIN ZİRVE YAPIMI
                           </span>
                           <h4 className="text-sm font-black text-white truncate">
-                            {zirveYapim.title}
+                            {zirveYapim?.title || 'Yapım'}
                           </h4>
                           <p className="text-[10px] text-slate-300 italic line-clamp-2">
                             "{zirveYapim.reviewText}"

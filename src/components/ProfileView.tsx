@@ -597,7 +597,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* ========================================== */}
       {/* MONTHLY RECAP GRADIENT BANNER              */}
       {/* ========================================== */}
-      {hasRecapData ? (
+      {hasRecapData && (
         <div 
           style={{
             boxShadow: `0 15px 35px -10px rgba(${dominantColor.r}, ${dominantColor.g}, ${dominantColor.b}, 0.22)`,
@@ -635,30 +635,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <span>Özeti İncele</span>
             <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-black" />
           </button>
-        </div>
-      ) : (
-        <div 
-          className="relative z-10 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/[0.02] border border-amber-500/20 backdrop-blur-md shadow-xl flex flex-row items-center justify-between gap-3 overflow-hidden"
-        >
-          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1">
-            <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-xl shrink-0">
-              <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-amber-400" />
-            </div>
-            <div className="space-y-0.5 min-w-0">
-              <h3 className="text-xs sm:text-base font-bold text-white tracking-tight truncate">
-                ✨ {formattedMonthTitle} Özeti İçin Yeterli İzleme Verisi Yok
-              </h3>
-              <p className="text-xs text-slate-400 font-medium hidden sm:block">
-                Aylık özetinizin hazırlanabilmesi için en az 2 bölüm veya film tamamlamalısınız. İlerlemeniz: <span className="text-amber-400 font-bold">{totalWatchedItemsCount}/2 yapım</span>
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-slate-400 font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap cursor-default select-none"
-          >
-            <span>Yetersiz Veri ({totalWatchedItemsCount}/2)</span>
-          </div>
         </div>
       )}
 

@@ -150,7 +150,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const remainingMins = totalMinutes % 60;
 
   // Get Top 5 Recent Movies/TV Shows for Favorites
-  const userFavorites = (() => {
+  const displayedFavorites = (() => {
     const items = [...filteredMovies, ...filteredTvShows].sort((a, b) => {
       const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
       const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
@@ -160,6 +160,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       id: item.media_id,
       type: item.media_type,
       title: item.title || 'Yapım',
+      genre: item.media_type === 'tv' ? 'Dizi' : 'Film',
       rating: item.vote_average || 8.5,
       poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'
     }));

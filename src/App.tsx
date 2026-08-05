@@ -1790,8 +1790,8 @@ export default function App() {
           
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             
-            {/* Sol Sidebar (~240px - Hidden on mobile, handled by Spotify mobile header & bottom nav) */}
-            <div className="hidden lg:block w-[240px] shrink-0 space-y-5">
+            {/* Sol Sidebar (270px - Hidden on mobile) */}
+            <div className="hidden lg:block w-[270px] shrink-0 space-y-5">
               <LeftSidebar
                 user={currentUser}
                 activeMediaType={mediaFilter}

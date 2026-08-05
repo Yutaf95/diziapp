@@ -42,7 +42,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const totalCount = filteredList.length;
 
   return (
-    <aside className="w-full lg:w-[270px] shrink-0 space-y-6">
+    <aside className="w-full space-y-6">
       
       {/* 1. Aktif Profil Kartı ('Yusuf') */}
       <div 

@@ -37,3 +37,10 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #E63946;
 }
+
+/* Letterboxd Baskerville Style for Numbers */
+.font-baskerville {
+  font-family: 'Baskerville', 'Baskerville Old Face', 'Hoefler Text', 'Garamond', 'Times New Roman', serif;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}

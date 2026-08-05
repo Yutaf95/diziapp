@@ -149,6 +149,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMins = totalMinutes % 60;
 
+  // Recent Watched Activity (Top 5 sorted by log/update date descending)
+  const recentWatchedActivity = (() => {
+    const items = [...watchList]
+      .filter(w => w.status === 'watched' || w.status === 'watching')
+      .sort((a, b) => {
+        const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
+        const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
+        return timeB - timeA;
+      });
+    return items.slice(0, 5).map(item => ({
+      id: item.media_id,
+      type: item.media_type,
+      title: item.title || 'Yapım',
+      poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
+      date: item.updated_at ? new Date(item.updated_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : 'Son Zamanlarda'
+    }));
+  })();
+
   // Get Top 5 Recent Movies/TV Shows for Favorites
   const displayedFavorites = (() => {
     const items = [...filteredMovies, ...filteredTvShows].sort((a, b) => {

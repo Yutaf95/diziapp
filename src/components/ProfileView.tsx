@@ -174,162 +174,187 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const displayReviews = reviews.length > 0 ? reviews : MOCK_PINNED_REVIEWS;
 
   return (
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 -mb-12 min-h-screen bg-[#14181c] text-[#9ab] font-sans pb-24 overflow-x-hidden">
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 -mb-12 min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24 overflow-x-hidden">
 
-      {/* ========================================== */}
-      {/* 1. FULL-WIDTH LETTERBOXD HERO BACKDROP     */}
-      {/*    No side padding – banner bleeds edge-to-edge */}
-      {/* ========================================== */}
-      <div className="relative w-full group/banner">
+      {/* ================================================================ */}
+      {/* PROFILE HEADER — Letterboxd / Cinema Reference Style             */}
+      {/* ================================================================ */}
 
-        {/* Banner image – tall cinematic crop */}
-        <div className="relative w-full h-[220px] sm:h-[300px] md:h-[360px] overflow-hidden">
-          <img
-            src={user.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1920&q=90'}
-            alt="Profile Backdrop"
-            className="w-full h-full object-cover object-center transition-transform duration-700 group-hover/banner:scale-105"
-          />
+      {/* 1. FULL-WIDTH COVER BANNER */}
+      <div className="relative w-full h-[260px] sm:h-[320px] md:h-[380px] overflow-hidden bg-[#0e1116] group/banner">
+        {/* Banner image — grayscale via CSS filter */}
+        <img
+          src={user.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1920&q=90'}
+          alt="Profile Cover"
+          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover/banner:scale-105"
+          style={{ filter: 'grayscale(85%) brightness(0.7)' }}
+        />
+        {/* Bottom-to-top heavy gradient → page background color */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/55 to-transparent" />
+        {/* Slight left darkening */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#14181c]/60 via-transparent to-transparent" />
+        {/* Top vignette */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-transparent" />
+      </div>
 
-          {/* LEFT fade into page bg */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#14181c] via-[#14181c]/30 to-transparent" />
-          {/* RIGHT fade into page bg */}
-          <div className="absolute inset-0 bg-gradient-to-l from-[#14181c] via-[#14181c]/20 to-transparent" />
-          {/* BOTTOM heavy fade – content sits here */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/60 to-transparent" />
-          {/* TOP slight darkening for vignette */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
-        </div>
+      {/* 2. CONTENT AREA — Avatar overlaps banner bottom */}
+      <div className="max-w-[1150px] mx-auto px-4 sm:px-6">
 
-        {/* Avatar + Name + Bio – anchored to bottom of banner, -mt to overlap */}
-        <div className="max-w-[1150px] mx-auto px-4 sm:px-6">
-          <div className="relative -mt-16 sm:-mt-20 flex flex-col sm:flex-row items-end sm:items-end gap-3 sm:gap-5 pb-4">
+        {/* ── Avatar + User Info + Stats Row ── */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 sm:-mt-14 pb-5 border-b border-[#2c3440]">
 
-            {/* Avatar with ring */}
-            <div className="relative shrink-0 z-10 drop-shadow-2xl">
-              <div className="ring-2 ring-[#2c3440] rounded-full">
-                <UserAvatar user={user} size="2xl" showEditCameraBadge={false} />
-              </div>
+          {/* LEFT — Avatar + User Info */}
+          <div className="flex items-end gap-4 sm:gap-5">
+
+            {/* Avatar — overlaps the banner (negative margin) */}
+            <div className="relative shrink-0 z-10">
+              {user.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.username}
+                  className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-full object-cover border-2 border-white/30 shadow-2xl ring-1 ring-white/10"
+                />
+              ) : (
+                <div className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-full bg-[#2c3440] border-2 border-white/20 flex items-center justify-center shadow-2xl">
+                  <span className="text-3xl font-black text-white/60">
+                    {(user.full_name || user.username || '?').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Text info */}
-            <div className="z-10 flex-1 min-w-0 pb-1">
+            {/* User info: name, badge, bio, link */}
+            <div className="z-10 pb-1 space-y-1 min-w-0">
+
+              {/* Name row + PATRON badge + ••• */}
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight truncate drop-shadow-lg leading-tight">
-                  {user.full_name || user.username}
-                </h1>
-                <span className="shrink-0 p-0.5 rounded-full bg-[#00e054]/20 text-[#00e054] border border-[#00e054]/50" title="Onaylı Profil">
-                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-[11px] font-black text-white/60 tracking-widest uppercase">
+                  {user.username?.charAt(0)?.toUpperCase() || 'J'}
                 </span>
+                {isOwnProfile && (
+                  <span className="bg-[#40bcf4] text-slate-950 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider leading-none">
+                    ÜYEM
+                  </span>
+                )}
+                {isOwnProfile ? (
+                  <button
+                    onClick={() => setShowSettingsModal(true)}
+                    className="text-[#8a9096] hover:text-white transition cursor-pointer"
+                    title="Profili Düzenle"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onToggleFollowUser && onToggleFollowUser(user.id)}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[11px] font-extrabold transition hover:scale-105 active:scale-95 ${
+                      isFollowing
+                        ? 'bg-[#2c3440] text-slate-300 border border-[#3e4856]'
+                        : 'bg-[#40bcf4] text-slate-950'
+                    }`}
+                  >
+                    {isFollowing ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+                    <span>{isFollowing ? 'Takiptesin' : 'Takip Et'}</span>
+                  </button>
+                )}
               </div>
-              <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">@{user.username}</p>
+
+              {/* Full Name (bold, large) */}
+              <h1 className="text-white font-black text-xl sm:text-2xl leading-tight tracking-tight truncate max-w-[340px]">
+                {user.full_name || user.username}
+              </h1>
+
+              {/* Bio */}
               {user.bio && (
-                <p className="text-xs sm:text-sm text-slate-300 italic mt-1 max-w-lg leading-relaxed drop-shadow">
+                <p className="text-[#8a9096] text-xs sm:text-sm leading-relaxed max-w-xs truncate">
                   {user.bio}
                 </p>
               )}
-            </div>
 
-            {/* Profili Düzenle / Takip Et */}
-            <div className="z-10 shrink-0 pb-1">
-              {isOwnProfile ? (
-                <button
-                  onClick={() => setShowSettingsModal(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2c3440]/90 hover:bg-[#363f4e] text-white text-xs font-bold transition border border-[#3e4856] shadow-lg backdrop-blur-sm cursor-pointer hover:scale-105 active:scale-95"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-[#00e054]" />
-                  <span>Profili Düzenle</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => onToggleFollowUser && onToggleFollowUser(user.id)}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-extrabold shadow-xl backdrop-blur-sm transition hover:scale-105 active:scale-95 ${
-                    isFollowing
-                      ? 'bg-[#2c3440]/90 text-slate-200 border border-[#3e4856]'
-                      : 'bg-[#00e054] hover:bg-[#00c84b] text-slate-950 shadow-[#00e054]/20'
-                  }`}
-                >
-                  {isFollowing ? <UserCheck className="w-4 h-4 text-[#00e054]" /> : <UserPlus className="w-4 h-4" />}
-                  <span>{isFollowing ? 'Takiptesin' : 'Takip Et'}</span>
-                </button>
-              )}
-            </div>
+              {/* Social link */}
+              <div className="flex items-center gap-1 text-[#40bcf4] text-xs font-medium pt-0.5">
+                <Link className="w-3 h-3 shrink-0" />
+                <span className="truncate max-w-[200px]">instagram.com/{user.username}</span>
+              </div>
 
+            </div>
           </div>
 
-          {/* ── STATS ROW below avatar ── */}
-          <div className="flex items-center gap-5 sm:gap-8 border-b border-[#2c3440] pb-4 pt-1 flex-wrap">
+          {/* RIGHT — Stats (Films | This Year | Following | Followers) */}
+          <div className="flex items-center gap-5 sm:gap-8 pl-0 sm:pb-1 flex-wrap sm:flex-nowrap sm:self-end">
             <button
               onClick={() => setActiveSubTab('movies')}
               className="text-center hover:opacity-80 transition cursor-pointer group/stat"
             >
-              <span className="text-lg sm:text-2xl font-black text-white group-hover/stat:text-[#00e054] transition">{moviesWatchedCount}</span>
-              <p className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Filmler</p>
+              <div className="text-2xl sm:text-3xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
+                {moviesWatchedCount.toLocaleString('tr-TR')}
+              </div>
+              <div className="text-[10px] font-bold text-[#8a9096] uppercase tracking-widest mt-0.5">Filmler</div>
             </button>
-            <div className="w-px h-6 bg-[#2c3440]" />
+
             <button
               onClick={() => setActiveSubTab('tv')}
               className="text-center hover:opacity-80 transition cursor-pointer group/stat"
             >
-              <span className="text-lg sm:text-2xl font-black text-white group-hover/stat:text-[#00e054] transition">{tvShowsWatchedCount}</span>
-              <p className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Diziler</p>
+              <div className="text-2xl sm:text-3xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
+                {tvShowsWatchedCount.toLocaleString('tr-TR')}
+              </div>
+              <div className="text-[10px] font-bold text-[#8a9096] uppercase tracking-widest mt-0.5">Diziler</div>
             </button>
-            <div className="w-px h-6 bg-[#2c3440]" />
-            <button
-              onClick={() => setActiveSubTab('reviews')}
-              className="text-center hover:opacity-80 transition cursor-pointer group/stat"
-            >
-              <span className="text-lg sm:text-2xl font-black text-white group-hover/stat:text-[#00e054] transition">{reviews.length}</span>
-              <p className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">İncelemeler</p>
-            </button>
-            <div className="w-px h-6 bg-[#2c3440]" />
-            <button
-              onClick={() => { setFollowerTab('followers'); setShowFollowersModal(true); }}
-              className="text-center hover:opacity-80 transition cursor-pointer group/stat"
-            >
-              <span className="text-lg sm:text-2xl font-black text-[#00e054]">{followers.length + (!isOwnProfile && isFollowing ? 1 : 0)}</span>
-              <p className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Takipçiler</p>
-            </button>
-            <div className="w-px h-6 bg-[#2c3440]" />
+
             <button
               onClick={() => { setFollowerTab('following'); setShowFollowersModal(true); }}
               className="text-center hover:opacity-80 transition cursor-pointer group/stat"
             >
-              <span className="text-lg sm:text-2xl font-black text-[#00e054]">{following.length}</span>
-              <p className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Takip Edilen</p>
+              <div className="text-2xl sm:text-3xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
+                {following.length.toLocaleString('tr-TR')}
+              </div>
+              <div className="text-[10px] font-bold text-[#8a9096] uppercase tracking-widest mt-0.5">Takip</div>
+            </button>
+
+            <button
+              onClick={() => { setFollowerTab('followers'); setShowFollowersModal(true); }}
+              className="text-center hover:opacity-80 transition cursor-pointer group/stat"
+            >
+              <div className="text-2xl sm:text-3xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
+                {(followers.length + (!isOwnProfile && isFollowing ? 1 : 0)).toLocaleString('tr-TR')}
+              </div>
+              <div className="text-[10px] font-bold text-[#8a9096] uppercase tracking-widest mt-0.5">Takipçiler</div>
             </button>
           </div>
 
-          {/* ── TAB SWITCHER ── */}
-          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none pt-1">
-            {[
-              { id: 'profil', label: 'Profil' },
-              { id: 'movies', label: `Filmler (${moviesWatchedCount})` },
-              { id: 'tv', label: `Diziler (${tvShowsWatchedCount})` },
-              { id: 'reviews', label: `İncelemeler (${reviews.length})` },
-              { id: 'stats', label: 'İstatistik' }
-            ].map(tab => {
-              const isActive = activeSubTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveSubTab(tab.id as any)}
-                  className={`pb-3 px-3 sm:px-5 text-xs sm:text-sm font-bold whitespace-nowrap transition-all relative cursor-pointer ${
-                    isActive ? 'text-white font-extrabold' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTabUnderline"
-                      className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#00e054] rounded-full shadow-[0_0_8px_#00e054]"
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
         </div>
+
+        {/* ── TAB SWITCHER ── */}
+        <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
+          {[
+            { id: 'profil', label: 'Profil' },
+            { id: 'movies', label: `Filmler (${moviesWatchedCount})` },
+            { id: 'tv', label: `Diziler (${tvShowsWatchedCount})` },
+            { id: 'reviews', label: `İncelemeler (${reviews.length})` },
+            { id: 'stats', label: 'İstatistik' }
+          ].map(tab => {
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id as any)}
+                className={`pb-3 pt-4 px-4 sm:px-5 text-[13px] font-bold whitespace-nowrap transition-all relative cursor-pointer ${
+                  isActive ? 'text-white' : 'text-[#8a9096] hover:text-slate-200'
+                }`}
+              >
+                <span>{tab.label}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabUnderline"
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#40bcf4] rounded-full"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
       </div>
 
       {/* ── TAB CONTENT (max-width container) ── */}

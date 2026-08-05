@@ -237,7 +237,11 @@ export default function App() {
             review_text: r.review_text,
             contains_spoiler: r.contains_spoiler,
             created_at: r.created_at,
-            likes: r.likes || 0
+            media_title: r.media_title || r.title,
+            media_poster: r.media_poster || r.poster_path,
+            likes: r.likes || 0,
+            likes_count: r.likes_count || r.likes || 0,
+            comments_count: r.comments_count || 0
           })));
         }
       } catch (err) { console.warn('ratings_reviews fetch error:', err); }
@@ -502,8 +506,12 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [selectedMedia, isDrawerOpen, isSettingsOpen]);
 
-  const handleNavigateToProfile = (username: string) => {
+  const [profileSubTab, setProfileSubTab] = useState<'profil' | 'movies' | 'tv' | 'reviews' | 'stats'>('profil');
+
+  const handleNavigateToProfile = (username: string, subTab?: 'profil' | 'movies' | 'tv' | 'reviews' | 'stats') => {
     setViewingUsername(username);
+    if (subTab) setProfileSubTab(subTab);
+    else setProfileSubTab('profil');
     setActiveTab('profile');
     try {
       window.history.pushState({ tab: 'profile', viewingUsername: username }, '', `/user/${username}`);
@@ -587,7 +595,7 @@ export default function App() {
     } catch (e) {
       console.error('Failed to parse saved collections', e);
     }
-    return INITIAL_COLLECTIONS;
+    return [];
   });
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
@@ -1583,7 +1591,9 @@ export default function App() {
             media_type: newRev.media_type,
             rating: newRev.rating,
             review_text: newRev.review_text,
-            contains_spoiler: newRev.contains_spoiler
+            contains_spoiler: newRev.contains_spoiler,
+            media_title: newRev.media_title,
+            media_poster: newRev.media_poster
           });
 
         await supabase
@@ -1779,6 +1789,7 @@ export default function App() {
                     isFollowing={followingUserIds.includes(profileData.profile.id)}
                     onToggleFollowUser={handleToggleFollowUser}
                     onUpdateProfile={handleUpdateProfile}
+                    initialSubTab={profileSubTab}
                   />
                 );
               })()}
@@ -1803,6 +1814,7 @@ export default function App() {
                 setActiveTab={handleTabChange}
                 collections={collections}
                 favorites={favorites}
+                reviews={reviews}
                 onSelectCollection={setSelectedCollectionId}
                 onNavigateToProfile={handleNavigateToProfile}
               />

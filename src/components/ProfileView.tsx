@@ -27,6 +27,7 @@ interface ProfileViewProps {
   isFollowing?: boolean;
   onToggleFollowUser?: (userId: string) => void;
   onUpdateProfile?: (updated: Partial<Profile>) => void;
+  initialSubTab?: 'profil' | 'movies' | 'tv' | 'reviews' | 'stats';
 }
 
 // Default Fallback Pinned Reviews
@@ -107,19 +108,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  // Followers / Following Lists
-  const [followers, setFollowers] = useState([
-    { id: 'f1', name: 'Zeynep Kaya', username: 'zeynep_k', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80', isFollowing: true },
-    { id: 'f2', name: 'Ahmet Yılmaz', username: 'ahmet_y', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80', isFollowing: false },
-    { id: 'f3', name: 'Selin Demir', username: 'selin_d', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80', isFollowing: true },
-    { id: 'f4', name: 'Can Arslan', username: 'can_arslan', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80', isFollowing: true }
-  ]);
+  // Followers / Following Lists (Initialized empty, no test data)
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [following, setFollowing] = useState<any[]>([]);
 
-  const [following, setFollowing] = useState([
-    { id: 'g1', name: 'Can Arslan', username: 'can_arslan', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80', isFollowing: true },
-    { id: 'g2', name: 'Elif Şahin', username: 'elif_s', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80', isFollowing: true },
-    { id: 'g3', name: 'Mert Aksoy', username: 'mert_a', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=200&q=80', isFollowing: true }
-  ]);
+  // Helper to dynamically resolve title and poster from watchList if missing on review
+  const getReviewMediaInfo = (rev: RatingReview) => {
+    const watchItem = watchList.find(w => Number(w.media_id) === Number(rev.media_id));
+    const title = rev.media_title || watchItem?.title || (rev.media_type === 'tv' ? 'Dizi' : 'Film');
+    const rawPoster = rev.media_poster || watchItem?.poster_path;
+    const poster = rawPoster 
+      ? (rawPoster.startsWith('http') ? rawPoster : `https://image.tmdb.org/t/p/w500${rawPoster}`) 
+      : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80';
+    return { title, poster };
+  };
 
   // Real Counts & Filtered Lists (Excluding 'plan_to_watch', sorted by log/update date descending - newest first)
   const filteredMovies = [...watchList]
@@ -146,39 +148,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const totalMinutes = (moviesWatchedCount * 122) + (watchedEpsCount * 48);
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMins = totalMinutes % 60;
-  const totalDays = (totalHours / 24).toFixed(1);
 
-  // User Favorites Top 5 Selection
-  const displayedFavorites = (() => {
-    if (!favorites || favorites.length === 0) return [];
-    return favorites.slice(0, 5).map((fav, index) => ({
-      id: fav.media_id,
-      rank: index + 1,
-      type: fav.media_type,
-      title: fav.title || 'Yapım',
-      genre: fav.media_type === 'tv' ? 'Dizi' : 'Film',
-      rating: fav.vote_average || 8.5,
-      poster: fav.poster_path ? (fav.poster_path.startsWith('http') ? fav.poster_path : `https://image.tmdb.org/t/p/w500${fav.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'
-    }));
-  })();
-
-  // Recent Watched Activity (Top 4-5 sorted by log date descending)
-  const recentWatchedActivity = (() => {
-    const items = [...watchList]
-      .filter(w => w.status === 'watched' || w.status === 'watching')
-      .sort((a, b) => {
-        const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-        return timeB - timeA;
-      });
-
+  // Get Top 5 Recent Movies/TV Shows for Favorites
+  const userFavorites = (() => {
+    const items = [...filteredMovies, ...filteredTvShows].sort((a, b) => {
+      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
+      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
+      return timeB - timeA;
+    });
     return items.slice(0, 5).map(item => ({
       id: item.media_id,
       type: item.media_type,
       title: item.title || 'Yapım',
       rating: item.vote_average || 8.5,
-      poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-      date: item.updated_at ? new Date(item.updated_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : 'Son Zamanlarda'
+      poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'
     }));
   })();
 
@@ -190,8 +173,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
   })();
 
-  // User Reviews / Pinned Reviews
-  const displayReviews = reviews.length > 0 ? reviews : MOCK_PINNED_REVIEWS;
+  // Real User Reviews (No fallback to MOCK_PINNED_REVIEWS)
+  const displayReviews = reviews;
 
   return (
     <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-20 sm:-mt-24 -mb-12 min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24 overflow-x-hidden">
@@ -516,65 +499,72 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
 
               <div className="space-y-5">
-                {displayReviews.slice(0, 3).map(rev => (
-                  <div
-                    key={rev.id}
-                    className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
-                  >
-                    {/* Poster Thumbnail — Büyütüldü */}
-                    <div 
-                      onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                      className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md"
-                    >
-                      <img
-                        src={rev.media_poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
-                        alt={rev.media_title || 'Yapım'}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-
-                    {/* İnceleme Detayları — Büyütüldü */}
-                    <div className="flex-1 space-y-2 min-w-0">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <h3 
-                            onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                            className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
-                          >
-                            {rev.media_title || 'Yapım'}
-                          </h3>
-                          <span className="text-xs sm:text-sm text-[#9ab]">
-                            ({rev.media_type === 'tv' ? 'Dizi' : 'Film'})
-                          </span>
+                {displayReviews.length > 0 ? (
+                  displayReviews.slice(0, 3).map(rev => {
+                    const mediaInfo = getReviewMediaInfo(rev);
+                    return (
+                      <div
+                        key={rev.id}
+                        className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
+                      >
+                        {/* Poster Thumbnail */}
+                        <div 
+                          onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
+                          className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md"
+                        >
+                          <img
+                            src={mediaInfo.poster}
+                            alt={mediaInfo.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
                         </div>
 
-                        {/* Puan */}
-                        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
-                          <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
-                          <span>{rev.rating || 9.5} / 10</span>
+                        {/* İnceleme Detayları */}
+                        <div className="flex-1 space-y-2 min-w-0">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <h3 
+                                onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
+                                className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
+                              >
+                                {mediaInfo.title}
+                              </h3>
+                              <span className="text-xs sm:text-sm text-[#9ab]">
+                                ({rev.media_type === 'tv' ? 'Dizi' : 'Film'})
+                              </span>
+                            </div>
+
+                            {/* Puan */}
+                            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
+                              <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
+                              <span>{rev.rating || 10} / 10</span>
+                            </div>
+                          </div>
+
+                          <p className="text-sm sm:text-base text-slate-200 italic leading-relaxed font-normal">
+                            "{rev.review_text}"
+                          </p>
+
+                          <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
+                            <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
+                            <div className="flex items-center gap-4">
+                              <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
+                                <ThumbsUp className="w-4 h-4 text-[#00e054]" />
+                                <span>{rev.likes_count ?? rev.likes ?? 0}</span>
+                              </span>
+                              <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
+                                <MessageSquare className="w-4 h-4 text-[#9ab]" />
+                                <span>{rev.comments_count ?? 0}</span>
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-
-                      <p className="text-sm sm:text-base text-slate-200 italic leading-relaxed font-normal">
-                        "{rev.review_text}"
-                      </p>
-
-                      <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
-                        <span>{rev.created_at || 'Yakın Zamanda'}</span>
-                        <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
-                            <ThumbsUp className="w-4 h-4 text-[#00e054]" />
-                            <span>{rev.likes_count || 12}</span>
-                          </span>
-                          <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
-                            <MessageSquare className="w-4 h-4 text-[#9ab]" />
-                            <span>{rev.comments_count || 3}</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                ) : (
+                  <p className="text-xs sm:text-sm text-[#9ab] italic">Henüz eklenmiş bir inceleme yok.</p>
+                )}
               </div>
             </div>
 
@@ -674,60 +664,69 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             <div className="space-y-5">
-              {displayReviews.map(rev => (
-                <div
-                  key={rev.id}
-                  className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
-                >
-                  <div 
-                    onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                    className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md"
-                  >
-                    <img
-                      src={rev.media_poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
-                      alt={rev.media_title || 'Yapım'}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-
-                  <div className="flex-1 space-y-2 min-w-0">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <h3 
-                          onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                          className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
-                        >
-                          {rev.media_title || 'Yapım'}
-                        </h3>
-                        <span className="text-xs sm:text-sm text-[#9ab]">({rev.media_type === 'tv' ? 'Dizi' : 'Film'})</span>
+              {displayReviews.length > 0 ? (
+                displayReviews.map(rev => {
+                  const mediaInfo = getReviewMediaInfo(rev);
+                  return (
+                    <div
+                      key={rev.id}
+                      className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
+                    >
+                      <div 
+                        onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
+                        className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md"
+                      >
+                        <img
+                          src={mediaInfo.poster}
+                          alt={mediaInfo.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
-                        <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
-                        <span>{rev.rating || 9.0} / 10</span>
+                      <div className="flex-1 space-y-2 min-w-0">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <h3 
+                              onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
+                              className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
+                            >
+                              {mediaInfo.title}
+                            </h3>
+                            <span className="text-xs sm:text-sm text-[#9ab]">({rev.media_type === 'tv' ? 'Dizi' : 'Film'})</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
+                            <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
+                            <span>{rev.rating || 10} / 10</span>
+                          </div>
+                        </div>
+
+                        <p className="text-sm sm:text-base text-slate-200 leading-relaxed italic font-normal">
+                          "{rev.review_text}"
+                        </p>
+
+                        <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
+                          <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
+                          <div className="flex items-center gap-4">
+                            <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
+                              <ThumbsUp className="w-4 h-4 text-[#00e054]" />
+                              <span>{rev.likes_count ?? rev.likes ?? 0}</span>
+                            </span>
+                            <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
+                              <MessageSquare className="w-4 h-4 text-[#9ab]" />
+                              <span>{rev.comments_count ?? 0}</span>
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-
-                    <p className="text-sm sm:text-base text-slate-200 leading-relaxed italic font-normal">
-                      "{rev.review_text}"
-                    </p>
-
-                    <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
-                      <span>{rev.created_at || 'Yakın Zamanda'}</span>
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
-                          <ThumbsUp className="w-4 h-4 text-[#00e054]" />
-                          <span>{rev.likes_count || 8}</span>
-                        </span>
-                        <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
-                          <MessageSquare className="w-4 h-4 text-[#9ab]" />
-                          <span>{rev.comments_count || 2}</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  );
+                })
+              ) : (
+                <div className="py-12 text-center text-sm text-[#9ab] font-medium">
+                  Henüz bir inceleme yazmadınız.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}

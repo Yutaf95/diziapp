@@ -1,6 +1,6 @@
 import React from 'react';
-import { Tv, Film, Eye, Clock, CheckCircle2, Bookmark, CheckSquare, Activity, Compass, Calendar, Layers, Plus, Folder, Heart, Sparkles, Flame, Star } from 'lucide-react';
-import { Profile, WatchStatus, CustomCollection } from '../types';
+import { Tv, Film, Eye, Clock, CheckCircle2, Bookmark, CheckSquare, Activity, Compass, Calendar, Layers, Plus, Folder, Heart, Sparkles, Flame, Star, MessageSquare } from 'lucide-react';
+import { Profile, WatchStatus, CustomCollection, RatingReview } from '../types';
 
 interface LeftSidebarProps {
   user: Profile;
@@ -13,8 +13,9 @@ interface LeftSidebarProps {
   setActiveTab: (tab: string) => void;
   collections?: CustomCollection[];
   favorites?: WatchStatus[];
+  reviews?: RatingReview[];
   onSelectCollection?: (id: string | null) => void;
-  onNavigateToProfile?: (username: string) => void;
+  onNavigateToProfile?: (username: string, subTab?: 'profil' | 'movies' | 'tv' | 'reviews' | 'stats') => void;
 }
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -28,6 +29,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   setActiveTab,
   collections = [],
   favorites = [],
+  reviews = [],
   onSelectCollection,
   onNavigateToProfile
 }) => {
@@ -202,9 +204,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       {/* 4. Navigation Links */}
       <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-3.5 space-y-1.5 shadow-lg">
-        <div className="px-2 py-1 mb-1 text-xs uppercase font-extrabold tracking-wider text-slate-400">
-          Sayfalar
-        </div>
 
         <button
           onClick={() => setActiveTab('tracker')}
@@ -264,6 +263,29 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           </div>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-white/10 text-slate-300">
             {favorites.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => {
+            if (onNavigateToProfile && user.username) {
+              onNavigateToProfile(user.username, 'reviews');
+            } else {
+              setActiveTab('profile');
+            }
+          }}
+          className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-bold transition ${
+            activeTab === 'profile_reviews'
+              ? 'bg-[#E63946] text-white font-bold shadow-md shadow-[#E63946]/20'
+              : 'text-slate-300 hover:bg-[#0B0C0E] hover:text-white'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <MessageSquare className="w-4.5 h-4.5 text-amber-400" />
+            <span>İncelemelerin</span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-white/10 text-slate-300">
+            {reviews.length}
           </span>
         </button>
 

@@ -267,15 +267,9 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         </button>
 
         <button
-          onClick={() => {
-            if (onNavigateToProfile && user.username) {
-              onNavigateToProfile(user.username, 'reviews');
-            } else {
-              setActiveTab('profile');
-            }
-          }}
+          onClick={() => setActiveTab('reviews')}
           className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-bold transition ${
-            activeTab === 'profile_reviews'
+            activeTab === 'reviews'
               ? 'bg-[#E63946] text-white font-bold shadow-md shadow-[#E63946]/20'
               : 'text-slate-300 hover:bg-[#0B0C0E] hover:text-white'
           }`}

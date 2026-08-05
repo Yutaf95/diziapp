@@ -2192,6 +2192,121 @@ export default function App() {
                     </div>
                   )}
                 </div>
+              ) : activeTab === 'reviews' ? (
+                <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 space-y-5 shadow-lg">
+                  <div className="flex items-center justify-between pb-3.5 border-b border-[#232833]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-sm">
+                        <MessageSquare className="w-5 h-5 fill-amber-400/20" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-extrabold text-white">İncelemelerim</h2>
+                        <p className="text-xs text-slate-400">Değerlendirdiğiniz ve yorum yaptığınız tüm yapımlar</p>
+                      </div>
+                    </div>
+
+                    <span className="text-xs text-slate-300 font-bold bg-[#0B0C0E] px-3 py-1.5 rounded-xl border border-[#232833]">
+                      {reviews.length} İnceleme
+                    </span>
+                  </div>
+
+                  {reviews.length === 0 ? (
+                    <div className="py-16 text-center space-y-4">
+                      <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+                        <MessageSquare className="w-8 h-8" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-slate-200 font-bold text-base">Henüz bir inceleme yazmadınız</p>
+                        <p className="text-xs text-slate-400 max-w-md mx-auto">
+                          İzlediğiniz dizi veya filmler için puan ve detaylı yorum ekleyerek burada kendi incelemelerinizi oluşturabilirsiniz.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleTabChange('discover')}
+                        className="px-5 py-2.5 rounded-xl bg-[#E63946] hover:bg-[#d62839] text-white text-xs font-extrabold transition cursor-pointer shadow-md"
+                      >
+                        Yapımları Keşfet
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {reviews.map((rev) => {
+                        const watchItem = watchList.find(w => Number(w.media_id) === Number(rev.media_id));
+                        const title = rev.media_title || watchItem?.title || (rev.media_type === 'tv' ? 'Dizi' : 'Film');
+                        const rawPoster = rev.media_poster || watchItem?.poster_path;
+                        const poster = rawPoster 
+                          ? (rawPoster.startsWith('http') ? rawPoster : `https://image.tmdb.org/t/p/w500${rawPoster}`) 
+                          : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80';
+
+                        return (
+                          <div
+                            key={rev.id || `rev-${rev.media_id}`}
+                            className="bg-[#0B0C0E] border border-[#232833] hover:border-[#333a4a] rounded-xl p-4 transition shadow-sm space-y-3"
+                          >
+                            <div className="flex items-start gap-4">
+                              {/* Poster Thumbnail */}
+                              <div
+                                onClick={() => handleSelectMediaById(rev.media_id, rev.media_type)}
+                                className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md group relative"
+                              >
+                                <img
+                                  src={poster}
+                                  alt={title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                />
+                              </div>
+
+                              {/* İnceleme İçeriği */}
+                              <div className="flex-1 space-y-2 min-w-0">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <h3
+                                      onClick={() => handleSelectMediaById(rev.media_id, rev.media_type)}
+                                      className="text-sm sm:text-base font-extrabold text-white hover:text-[#E63946] cursor-pointer transition"
+                                    >
+                                      {title}
+                                    </h3>
+                                    <span className="text-xs text-slate-400 font-semibold px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                                      {rev.media_type === 'tv' ? 'Dizi' : 'Film'}
+                                    </span>
+                                    {rev.contains_spoiler && (
+                                      <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded">
+                                        Spoiler İçerir
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Puan Rozeti */}
+                                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-extrabold">
+                                    <Star className="w-3.5 h-3.5 fill-emerald-400" />
+                                    <span>{rev.rating} / 10</span>
+                                  </div>
+                                </div>
+
+                                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed italic font-normal bg-[#14171D]/60 p-3 rounded-xl border border-[#232833]">
+                                  "{rev.review_text}"
+                                </p>
+
+                                <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                                  <span>
+                                    {rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın zamanda'}
+                                  </span>
+
+                                  <div className="flex items-center gap-4">
+                                    <span className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition font-medium">
+                                      <ThumbsUp className="w-3.5 h-3.5 text-emerald-400" />
+                                      <span>{rev.likes_count ?? rev.likes ?? 0}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               ) : null}
                 </motion.div>
               </AnimatePresence>

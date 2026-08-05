@@ -221,10 +221,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <div className="max-w-[1150px] mx-auto px-4 sm:px-6">
 
         {/* ── Avatar + User Info + Stats Row ── */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 pb-5 border-b border-[#2c3440]">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 -mt-20 sm:-mt-24 pb-6 border-b border-[#2c3440]">
 
           {/* LEFT — Avatar + User Info */}
-          <div className="flex items-end gap-4 sm:gap-6">
+          <div className="flex items-end gap-5 sm:gap-7">
 
             {/* Avatar — enlarged, with hover overlay & file input */}
             <div className="relative shrink-0 z-10 group/avatar">
@@ -238,7 +238,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               
               <div 
                 onClick={handleAvatarClick}
-                className="relative w-[116px] h-[116px] sm:w-[144px] sm:h-[144px] rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl ring-2 ring-white/20 bg-[#2c3440] cursor-pointer"
+                className="relative w-[130px] h-[130px] sm:w-[160px] sm:h-[160px] rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl ring-2 ring-white/20 bg-[#2c3440] cursor-pointer"
               >
                 {user.avatar_url ? (
                   <img
@@ -248,7 +248,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-[#2c3440]">
-                    <span className="text-4xl sm:text-5xl font-black text-white/60">
+                    <span className="text-5xl sm:text-6xl font-black text-white/60">
                       {(user.full_name || user.username || '?').charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -256,8 +256,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                 {/* Hover overlay for changing profile photo */}
                 <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] opacity-0 group-hover/avatar:opacity-100 transition-all duration-200 flex flex-col items-center justify-center text-center p-2 z-20">
-                  <Camera className="w-6 h-6 sm:w-7 sm:h-7 text-white mb-1 drop-shadow" />
-                  <span className="text-[10px] sm:text-xs font-bold text-white leading-tight px-1 drop-shadow">
+                  <Camera className="w-7 h-7 sm:w-8 sm:h-8 text-white mb-1 drop-shadow" />
+                  <span className="text-xs sm:text-sm font-bold text-white leading-tight px-1 drop-shadow">
                     Profil fotoğrafını değiştir
                   </span>
                 </div>
@@ -265,26 +265,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             {/* User info */}
-            <div className="z-10 pb-1 space-y-1 min-w-0">
+            <div className="z-10 pb-1 space-y-1.5 min-w-0">
 
               {/* Top Row: Full Name (Ad Soyad) + ••• / Follow button */}
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-white font-black text-2xl sm:text-3xl leading-tight tracking-tight truncate max-w-[360px]">
+                <h1 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl leading-tight tracking-tight truncate max-w-[420px]">
                   {user.full_name || user.username}
                 </h1>
 
                 {isOwnProfile ? (
                   <button
                     onClick={() => setShowSettingsModal(true)}
-                    className="text-[#8a9096] hover:text-white transition cursor-pointer p-1 rounded-lg hover:bg-white/5"
+                    className="text-[#9ab] hover:text-white transition cursor-pointer p-1.5 rounded-lg hover:bg-white/5"
                     title="Profili Düzenle"
                   >
-                    <MoreHorizontal className="w-5 h-5" />
+                    <MoreHorizontal className="w-6 h-6" />
                   </button>
                 ) : (
                   <button
                     onClick={() => onToggleFollowUser && onToggleFollowUser(user.id)}
-                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-extrabold transition hover:scale-105 active:scale-95 ${
+                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-extrabold transition hover:scale-105 active:scale-95 ${
                       isFollowing
                         ? 'bg-[#2c3440] text-slate-300 border border-[#3e4856]'
                         : 'bg-[#40bcf4] text-slate-950'
@@ -296,14 +296,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 )}
               </div>
 
-              {/* Username: Thinner, smaller font */}
-              <p className="text-[#8a9096] font-normal text-xs sm:text-sm tracking-wide">
+              {/* Username: Thinner, larger font */}
+              <p className="text-[#9ab] font-medium text-sm sm:text-base tracking-wide">
                 @{user.username}
               </p>
 
               {/* Bio */}
               {user.bio && (
-                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-xs pt-0.5 truncate">
+                <p className="text-slate-200 text-sm sm:text-base leading-relaxed max-w-sm pt-0.5 truncate">
                   {user.bio}
                 </p>
               )}
@@ -312,52 +312,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* RIGHT — Stats (Films | This Year | Following | Followers) */}
-          <div className="flex items-center gap-5 sm:gap-8 pl-0 sm:pb-1 flex-wrap sm:flex-nowrap sm:self-end">
+          <div className="flex items-center gap-6 sm:gap-9 pl-0 sm:pb-1 flex-wrap sm:flex-nowrap sm:self-end">
             <button
               onClick={() => setActiveSubTab('movies')}
               className="text-center hover:opacity-80 transition cursor-pointer group/stat"
             >
-              <div className="text-2xl sm:text-3xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
+              <div className="text-3xl sm:text-4xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
                 {moviesWatchedCount.toLocaleString('tr-TR')}
               </div>
-              <div className="text-[10px] font-bold text-[#8a9096] uppercase tracking-widest mt-0.5">Filmler</div>
+              <div className="text-xs sm:text-[13px] font-bold text-[#9ab] uppercase tracking-widest mt-1">Filmler</div>
             </button>
 
             <button
               onClick={() => setActiveSubTab('tv')}
               className="text-center hover:opacity-80 transition cursor-pointer group/stat"
             >
-              <div className="text-2xl sm:text-3xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
+              <div className="text-3xl sm:text-4xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
                 {tvShowsWatchedCount.toLocaleString('tr-TR')}
               </div>
-              <div className="text-[10px] font-bold text-[#8a9096] uppercase tracking-widest mt-0.5">Diziler</div>
+              <div className="text-xs sm:text-[13px] font-bold text-[#9ab] uppercase tracking-widest mt-1">Diziler</div>
             </button>
 
             <button
               onClick={() => { setFollowerTab('following'); setShowFollowersModal(true); }}
               className="text-center hover:opacity-80 transition cursor-pointer group/stat"
             >
-              <div className="text-2xl sm:text-3xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
+              <div className="text-3xl sm:text-4xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
                 {following.length.toLocaleString('tr-TR')}
               </div>
-              <div className="text-[10px] font-bold text-[#8a9096] uppercase tracking-widest mt-0.5">Takip</div>
+              <div className="text-xs sm:text-[13px] font-bold text-[#9ab] uppercase tracking-widest mt-1">Takip</div>
             </button>
 
             <button
               onClick={() => { setFollowerTab('followers'); setShowFollowersModal(true); }}
               className="text-center hover:opacity-80 transition cursor-pointer group/stat"
             >
-              <div className="text-2xl sm:text-3xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
+              <div className="text-3xl sm:text-4xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
                 {(followers.length + (!isOwnProfile && isFollowing ? 1 : 0)).toLocaleString('tr-TR')}
               </div>
-              <div className="text-[10px] font-bold text-[#8a9096] uppercase tracking-widest mt-0.5">Takipçiler</div>
+              <div className="text-xs sm:text-[13px] font-bold text-[#9ab] uppercase tracking-widest mt-1">Takipçiler</div>
             </button>
           </div>
 
         </div>
 
         {/* ── TAB SWITCHER ── */}
-        <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
           {[
             { id: 'profil', label: 'Profil' },
             { id: 'movies', label: `Filmler (${moviesWatchedCount})` },
@@ -370,15 +370,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id as any)}
-                className={`pb-3 pt-4 px-4 sm:px-5 text-[13px] font-bold whitespace-nowrap transition-all relative cursor-pointer ${
-                  isActive ? 'text-white' : 'text-[#8a9096] hover:text-slate-200'
+                className={`pb-3.5 pt-5 px-5 sm:px-6 text-sm sm:text-base font-bold whitespace-nowrap transition-all relative cursor-pointer ${
+                  isActive ? 'text-white font-extrabold' : 'text-[#9ab] hover:text-slate-200'
                 }`}
               >
                 <span>{tab.label}</span>
                 {isActive && (
                   <motion.div
                     layoutId="activeTabUnderline"
-                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#40bcf4] rounded-full"
+                    className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#40bcf4] rounded-full"
                   />
                 )}
               </button>
@@ -397,31 +397,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* TAB 1: PROFIL (MAIN LANDING VIEW) */}
         {activeSubTab === 'profil' && (
-          <div className="space-y-10 animate-in fade-in duration-300">
+          <div className="space-y-12 animate-in fade-in duration-300">
             
             {/* 1. FAVORİLER */}
-            <div className="space-y-4">
+            <div className="space-y-5">
               {/* Bölüm Başlığı Deseni */}
-              <div className="border-b border-[#2c3440]/60 pb-2 space-y-0.5">
-                <h2 className="text-xs sm:text-[13px] font-bold text-white uppercase tracking-wider">
+              <div className="border-b border-[#2c3440]/60 pb-2.5 space-y-1">
+                <h2 className="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider">
                   FAVORİLER
                 </h2>
-                <p className="text-xs text-[#8a9096]">
+                <p className="text-xs sm:text-sm text-[#9ab]">
                   Profilde sergilenen en sevilen 5 yapım
                 </p>
               </div>
 
-              {/* Dinamik Poster Grid'i — Çerçevesiz, Rozetsiz, Boş Slot Yok */}
-              <div className="grid grid-cols-5 gap-2.5 sm:gap-4">
+              {/* Dinamik Poster Grid'i — Büyütüldü */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5 sm:gap-5">
                 {displayedFavorites.filter(Boolean).length > 0 ? (
                   displayedFavorites.filter(Boolean).map(item => (
                     <div
                       key={item.id}
                       onClick={() => onSelectMediaById?.(item.id, item.type)}
-                      className="group cursor-pointer min-w-0 space-y-1.5 transition-transform duration-300 hover:-translate-y-1"
+                      className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
                     >
-                      {/* Aspect 2:3 Poster — Rozetsiz, Derecelendirmesiz, Sade */}
-                      <div className="relative aspect-[2/3] w-full rounded-md overflow-hidden bg-black/40">
+                      {/* Aspect 2:3 Poster */}
+                      <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
                         <img
                           src={item.poster}
                           alt={item.title}
@@ -430,19 +430,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         />
                       </div>
 
-                      {/* Poster Altı Metinler — Sade & Rozetsiz */}
+                      {/* Poster Altı Metinler */}
                       <div className="space-y-0.5 min-w-0">
-                        <h4 className="text-xs font-bold text-white truncate group-hover:text-[#40bcf4] transition leading-tight">
+                        <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">
                           {item.title}
                         </h4>
-                        <p className="text-[11px] text-[#8a9096] truncate font-normal">
+                        <p className="text-xs sm:text-sm text-[#9ab] truncate font-medium">
                           {item.genre}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="col-span-5 text-xs text-[#8a9096] italic py-2">
+                  <p className="col-span-5 text-xs sm:text-sm text-[#9ab] italic py-2">
                     Henüz favori yapım eklenmemiş.
                   </p>
                 )}
@@ -450,27 +450,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             {/* 2. EN SON İZLENENLER */}
-            <div className="space-y-4 pt-2">
+            <div className="space-y-5 pt-2">
               {/* Bölüm Başlığı Deseni */}
-              <div className="border-b border-[#2c3440]/60 pb-2 space-y-0.5">
-                <h2 className="text-xs sm:text-[13px] font-bold text-white uppercase tracking-wider">
+              <div className="border-b border-[#2c3440]/60 pb-2.5 space-y-1">
+                <h2 className="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider">
                   EN SON İZLENENLER
                 </h2>
-                <p className="text-xs text-[#8a9096]">
+                <p className="text-xs sm:text-sm text-[#9ab]">
                   Yakın zamanda tamamlanan film ve bölümler
                 </p>
               </div>
 
-              {/* Poster Grid — Favoriler ile Birebir Aynı Desen */}
-              <div className="grid grid-cols-5 gap-2.5 sm:gap-4">
+              {/* Poster Grid — Büyütüldü */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5 sm:gap-5">
                 {recentWatchedActivity.length > 0 ? (
                   recentWatchedActivity.map(item => (
                     <div
                       key={item.id + item.title}
                       onClick={() => onSelectMediaById?.(item.id, item.type)}
-                      className="group cursor-pointer min-w-0 space-y-1.5 transition-transform duration-300 hover:-translate-y-1"
+                      className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
                     >
-                      <div className="relative aspect-[2/3] w-full rounded-md overflow-hidden bg-black/40">
+                      <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
                         <img
                           src={item.poster}
                           alt={item.title}
@@ -480,17 +480,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </div>
 
                       <div className="space-y-0.5 min-w-0">
-                        <h4 className="text-xs font-bold text-white truncate group-hover:text-[#40bcf4] transition leading-tight">
+                        <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">
                           {item.title}
                         </h4>
-                        <p className="text-[11px] text-[#8a9096] truncate font-normal">
+                        <p className="text-xs sm:text-sm text-[#9ab] truncate font-medium">
                           {item.date}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="col-span-5 text-xs text-[#8a9096] italic py-2">
+                  <p className="col-span-5 text-xs sm:text-sm text-[#9ab] italic py-2">
                     Henüz izlenmiş içerik bulunmuyor.
                   </p>
                 )}
@@ -498,27 +498,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             {/* 3. SABİTLENEN İNCELEMELER */}
-            <div className="space-y-4 pt-2">
+            <div className="space-y-5 pt-2">
               {/* Bölüm Başlığı Deseni */}
-              <div className="border-b border-[#2c3440]/60 pb-2 space-y-0.5">
-                <h2 className="text-xs sm:text-[13px] font-bold text-white uppercase tracking-wider">
+              <div className="border-b border-[#2c3440]/60 pb-2.5 space-y-1">
+                <h2 className="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider">
                   SABİTLENEN İNCELEMELER
                 </h2>
-                <p className="text-xs text-[#8a9096]">
+                <p className="text-xs sm:text-sm text-[#9ab]">
                   Öne çıkan detaylı eleştiri ve yorumlar
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {displayReviews.slice(0, 3).map(rev => (
                   <div
                     key={rev.id}
-                    className="flex items-start gap-4 pb-4 border-b border-[#2c3440]/40 last:border-b-0 group"
+                    className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
                   >
-                    {/* Small Poster Thumbnail — Sade, Çerçevesiz */}
+                    {/* Poster Thumbnail — Büyütüldü */}
                     <div 
                       onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                      className="w-14 h-20 sm:w-16 sm:h-24 rounded-md overflow-hidden bg-black/40 shrink-0 cursor-pointer"
+                      className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md"
                     >
                       <img
                         src={rev.media_poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
@@ -527,41 +527,41 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       />
                     </div>
 
-                    {/* İnceleme Detayları */}
-                    <div className="flex-1 space-y-1.5 min-w-0">
+                    {/* İnceleme Detayları — Büyütüldü */}
+                    <div className="flex-1 space-y-2 min-w-0">
                       <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <h3 
                             onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                            className="text-xs sm:text-sm font-bold text-white hover:text-[#40bcf4] cursor-pointer transition"
+                            className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
                           >
                             {rev.media_title || 'Yapım'}
                           </h3>
-                          <span className="text-xs text-[#8a9096]">
+                          <span className="text-xs sm:text-sm text-[#9ab]">
                             ({rev.media_type === 'tv' ? 'Dizi' : 'Film'})
                           </span>
                         </div>
 
-                        {/* Puan — Düz Metin + Yıldız İkonu (Kutusal rozet kaldırıldı) */}
-                        <div className="flex items-center gap-1 text-xs font-bold text-white">
-                          <Star className="w-3.5 h-3.5 fill-[#00e054] text-[#00e054]" />
+                        {/* Puan */}
+                        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
+                          <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
                           <span>{rev.rating || 9.5} / 10</span>
                         </div>
                       </div>
 
-                      <p className="text-xs sm:text-sm text-slate-300 italic leading-relaxed font-normal">
+                      <p className="text-sm sm:text-base text-slate-200 italic leading-relaxed font-normal">
                         "{rev.review_text}"
                       </p>
 
-                      <div className="flex items-center justify-between text-[11px] text-[#8a9096] pt-1">
+                      <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
                         <span>{rev.created_at || 'Yakın Zamanda'}</span>
-                        <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1 hover:text-white transition cursor-pointer">
-                            <ThumbsUp className="w-3.5 h-3.5 text-[#00e054]" />
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
+                            <ThumbsUp className="w-4 h-4 text-[#00e054]" />
                             <span>{rev.likes_count || 12}</span>
                           </span>
-                          <span className="flex items-center gap-1 hover:text-white transition cursor-pointer">
-                            <MessageSquare className="w-3.5 h-3.5 text-[#8a9096]" />
+                          <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
+                            <MessageSquare className="w-4 h-4 text-[#9ab]" />
                             <span>{rev.comments_count || 3}</span>
                           </span>
                         </div>
@@ -577,39 +577,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* TAB 2: MOVIES (FİLMLER) */}
         {activeSubTab === 'movies' && (
-          <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-5 sm:p-6 space-y-5 animate-in fade-in duration-300 shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#2c3440] pb-3">
-              <h2 className="text-base font-black text-white uppercase tracking-wider">İzlenen Filmler ({filteredMovies.length})</h2>
-              <span className="text-xs text-slate-400 font-medium">Son eklenenden eskiye doğru sıralı</span>
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="border-b border-[#2c3440]/60 pb-3 flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">İzlenen Filmler ({filteredMovies.length})</h2>
+              <span className="text-xs sm:text-sm text-[#9ab] font-medium">Son eklenenden eskiye doğru sıralı</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
               {filteredMovies.length > 0 ? (
                 filteredMovies.map(item => (
                   <div
                     key={item.media_id}
                     onClick={() => onSelectMediaById?.(item.media_id, 'movie')}
-                    className="bg-[#14181c] border border-[#2c3440] hover:border-[#00e054] rounded-xl p-2 space-y-2 cursor-pointer transition duration-300 group hover:-translate-y-1 shadow-lg"
+                    className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
                   >
-                    <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/50">
+                    <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
                       <img
                         src={item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
                         alt={item.title || 'Film'}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute bottom-1.5 right-1.5 bg-black/90 text-[#00e054] font-mono text-xs font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5">
-                        <Star className="w-2.5 h-2.5 fill-[#00e054] text-[#00e054]" />
+                        <Star className="w-3 h-3 fill-[#00e054] text-[#00e054]" />
                         {item.vote_average || 8.0}
                       </div>
                     </div>
-                    <div className="text-center min-w-0">
-                      <h4 className="text-xs font-black text-white truncate group-hover:text-[#00e054] transition">{item.title}</h4>
-                      <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mt-0.5">Tamamlandı</p>
+                    <div className="space-y-0.5 min-w-0">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
+                      <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Tamamlandı</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="col-span-5 py-12 text-center text-xs text-slate-400 font-semibold">
+                <div className="col-span-5 py-12 text-center text-sm text-[#9ab] font-medium">
                   Kütüphanenizde henüz izlenmiş film bulunmuyor.
                 </div>
               )}
@@ -619,39 +619,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* TAB 3: TV (DİZİLER) */}
         {activeSubTab === 'tv' && (
-          <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-5 sm:p-6 space-y-5 animate-in fade-in duration-300 shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#2c3440] pb-3">
-              <h2 className="text-base font-black text-white uppercase tracking-wider">İzlenen & Takip Edilen Diziler ({filteredTvShows.length})</h2>
-              <span className="text-xs text-slate-400 font-medium">Son eklenenden eskiye doğru sıralı</span>
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="border-b border-[#2c3440]/60 pb-3 flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">İzlenen & Takip Edilen Diziler ({filteredTvShows.length})</h2>
+              <span className="text-xs sm:text-sm text-[#9ab] font-medium">Son eklenenden eskiye doğru sıralı</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
               {filteredTvShows.length > 0 ? (
                 filteredTvShows.map(item => (
                   <div
                     key={item.media_id}
                     onClick={() => onSelectMediaById?.(item.media_id, 'tv')}
-                    className="bg-[#14181c] border border-[#2c3440] hover:border-[#00e054] rounded-xl p-2 space-y-2 cursor-pointer transition duration-300 group hover:-translate-y-1 shadow-lg"
+                    className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
                   >
-                    <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/50">
+                    <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
                       <img
                         src={item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
                         alt={item.title || 'Dizi'}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute bottom-1.5 right-1.5 bg-black/90 text-[#00e054] font-mono text-xs font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5">
-                        <Star className="w-2.5 h-2.5 fill-[#00e054] text-[#00e054]" />
+                        <Star className="w-3 h-3 fill-[#00e054] text-[#00e054]" />
                         {item.vote_average || 8.5}
                       </div>
                     </div>
-                    <div className="text-center min-w-0">
-                      <h4 className="text-xs font-black text-white truncate group-hover:text-[#00e054] transition">{item.title}</h4>
-                      <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mt-0.5">{item.status === 'watched' ? 'Tamamlandı' : 'İzleniyor'}</p>
+                    <div className="space-y-0.5 min-w-0">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
+                      <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">{item.status === 'watched' ? 'Tamamlandı' : 'İzleniyor'}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="col-span-5 py-12 text-center text-xs text-slate-400 font-semibold">
+                <div className="col-span-5 py-12 text-center text-sm text-[#9ab] font-medium">
                   Kütüphanenizde henüz takip edilen dizi bulunmuyor.
                 </div>
               )}
@@ -661,26 +661,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* TAB 4: REVIEWS (İNCELEMELER) */}
         {activeSubTab === 'reviews' && (
-          <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-5 sm:p-6 space-y-5 animate-in fade-in duration-300 shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#2c3440] pb-3">
-              <h2 className="text-base font-black text-white uppercase tracking-wider">Tüm İncelemelerin ({displayReviews.length})</h2>
-              <span className="text-xs text-slate-400 font-medium">Topluluğa kattığın tüm değerlendirmeler</span>
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="border-b border-[#2c3440]/60 pb-3 flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">Tüm İncelemelerin ({displayReviews.length})</h2>
+              <span className="text-xs sm:text-sm text-[#9ab] font-medium">Topluluğa kattığın tüm değerlendirmeler</span>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {displayReviews.map(rev => (
                 <div
                   key={rev.id}
-                  className="bg-[#14181c] border border-[#2c3440] hover:border-[#00e054]/60 rounded-xl p-4 transition duration-300 flex flex-col sm:flex-row items-start gap-4 shadow-lg group"
+                  className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
                 >
                   <div 
                     onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                    className="w-16 h-24 rounded-lg overflow-hidden bg-black/50 shrink-0 border border-[#2c3440] cursor-pointer group-hover:border-[#00e054] transition"
+                    className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md"
                   >
                     <img
                       src={rev.media_poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
                       alt={rev.media_title || 'Yapım'}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
 
@@ -689,32 +689,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <div className="flex items-center gap-2">
                         <h3 
                           onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                          className="text-sm sm:text-base font-black text-white hover:text-[#00e054] cursor-pointer transition"
+                          className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
                         >
                           {rev.media_title || 'Yapım'}
                         </h3>
-                        <span className="text-xs text-slate-400 font-mono">({rev.media_type === 'tv' ? 'Dizi' : 'Film'})</span>
+                        <span className="text-xs sm:text-sm text-[#9ab]">({rev.media_type === 'tv' ? 'Dizi' : 'Film'})</span>
                       </div>
 
-                      <div className="flex items-center gap-1 bg-[#00e054]/10 border border-[#00e054]/30 px-2.5 py-0.5 rounded-lg text-[#00e054] font-mono text-xs font-black">
-                        <Star className="w-3.5 h-3.5 fill-[#00e054] text-[#00e054]" />
+                      <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
+                        <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
                         <span>{rev.rating || 9.0} / 10</span>
                       </div>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed italic font-normal">
+                    <p className="text-sm sm:text-base text-slate-200 leading-relaxed italic font-normal">
                       "{rev.review_text}"
                     </p>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-[#2c3440]/60">
+                    <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
                       <span>{rev.created_at || 'Yakın Zamanda'}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1 hover:text-white transition cursor-pointer">
-                          <ThumbsUp className="w-3.5 h-3.5 text-[#00e054]" />
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
+                          <ThumbsUp className="w-4 h-4 text-[#00e054]" />
                           <span>{rev.likes_count || 8}</span>
                         </span>
-                        <span className="flex items-center gap-1 hover:text-white transition cursor-pointer">
-                          <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
+                          <MessageSquare className="w-4 h-4 text-[#9ab]" />
                           <span>{rev.comments_count || 2}</span>
                         </span>
                       </div>

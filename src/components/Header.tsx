@@ -303,7 +303,11 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#14171D]/95 backdrop-blur-md border-b border-[#232833] text-white transition-all pt-[env(safe-area-inset-top,0px)]">
+    <header className={`sticky top-0 z-50 transition-all pt-[env(safe-area-inset-top,0px)] ${
+      activeTab === 'profile'
+        ? 'bg-black/20 backdrop-blur-md border-b border-white/5'
+        : 'bg-[#14171D]/95 backdrop-blur-md border-b border-[#232833]'
+    }`}>
       {/* ========================================== */}
       {/* DESKTOP HEADER (MD & UP)                   */}
       {/* ========================================== */}

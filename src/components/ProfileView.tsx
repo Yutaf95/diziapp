@@ -194,18 +194,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const displayReviews = reviews.length > 0 ? reviews : MOCK_PINNED_REVIEWS;
 
   return (
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 -mb-12 min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24 overflow-x-hidden">
-
-      {/* ================================================================ */}
-      {/* PROFILE HEADER — Letterboxd / Cinema Reference Style             */}
-      {/* ================================================================ */}
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-20 sm:-mt-24 -mb-12 min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24 overflow-x-hidden">
 
       {/* ================================================================ */}
       {/* PROFILE HEADER — Letterboxd Overlap & Gradient Style             */}
       {/* ================================================================ */}
 
-      {/* 1. FULL-WIDTH COVER BANNER (220px - 350px height) */}
-      <div className="relative w-full h-[220px] sm:h-[290px] md:h-[350px] overflow-hidden bg-[#0e1116] group/banner">
+      {/* 1. FULL-WIDTH COVER BANNER (Desktop: ~480-540px, Mobile: ~240px) */}
+      <div className="relative w-full h-[240px] sm:h-[380px] md:h-[480px] lg:h-[540px] overflow-hidden bg-[#0e1116] group/banner">
         {/* Banner backdrop image */}
         <img
           src={user.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1920&q=90'}
@@ -214,16 +210,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           style={{ filter: 'grayscale(85%) brightness(0.7)' }}
         />
         
-        {/* Linear gradient transition: transparent to #14181c page background */}
+        {/* Multi-stop linear gradient transition (spreads over bottom 60-70%) */}
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'linear-gradient(to bottom, transparent 0%, transparent 45%, #14181c 100%)'
+            background: 'linear-gradient(to bottom, transparent 0%, transparent 25%, rgba(20, 24, 28, 0.4) 55%, rgba(20, 24, 28, 0.85) 80%, #14181c 100%)'
           }}
         />
         
-        {/* Subtle top vignette */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent pointer-events-none" />
+        {/* Top vignette to ensure transparent navbar items pop cleanly */}
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 via-black/25 to-transparent pointer-events-none" />
       </div>
 
       {/* 2. CONTENT AREA — Avatar Overlaps Banner Bottom Boundary */}

@@ -310,7 +310,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="hidden md:block w-full px-4 md:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16 gap-4">
           
-          {/* Sol taraf: Logo */}
+          {/* Sol taraf: Logo / Ana Sayfa */}
           <div 
             onClick={() => {
               if (onGoHome) onGoHome();
@@ -322,40 +322,50 @@ export const Header: React.FC<HeaderProps> = ({
               <Tv className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <span className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 group-hover:text-slate-100 transition">
-                TV Time <span className="text-xs font-semibold text-[#E63946] bg-[#E63946]/10 px-2 py-0.5 rounded border border-[#E63946]/30 uppercase tracking-widest">TR</span>
-              </span>
+              {activeTab === 'profile' ? (
+                <span className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2 group-hover:text-slate-100 transition">
+                  Ana Sayfa
+                </span>
+              ) : (
+                <span className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 group-hover:text-slate-100 transition">
+                  TV Time <span className="text-xs font-semibold text-[#E63946] bg-[#E63946]/10 px-2 py-0.5 rounded border border-[#E63946]/30 uppercase tracking-widest">TR</span>
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Orta alan: 'Film veya dizi ara...' arama çubuğu + Dropdown Pop-up */}
-          <div ref={searchContainerRef} className="flex-1 max-w-lg relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => {
-                if (searchQuery.trim()) setIsSearchOpen(true);
-              }}
-              placeholder="Film veya dizi ara..."
-              className="w-full bg-[#0B0C0E] border border-[#2B313E] focus:border-[#E63946] rounded-full pl-10 pr-10 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#E63946] transition"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setIsSearchOpen(false);
+          {/* Orta alan: 'Film veya dizi ara...' arama çubuğu (Profil sayfasında gizlenir) */}
+          {activeTab !== 'profile' ? (
+            <div ref={searchContainerRef} className="flex-1 max-w-lg relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  if (searchQuery.trim()) setIsSearchOpen(true);
                 }}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white bg-[#232833] hover:bg-[#E63946] w-5 h-5 rounded-full flex items-center justify-center transition"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
+                placeholder="Film veya dizi ara..."
+                className="w-full bg-[#0B0C0E] border border-[#2B313E] focus:border-[#E63946] rounded-full pl-10 pr-10 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#E63946] transition"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setIsSearchOpen(false);
+                  }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white bg-[#232833] hover:bg-[#E63946] w-5 h-5 rounded-full flex items-center justify-center transition"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
 
-            {/* Pop-up Search Results */}
-            {renderSearchDropdown()}
-          </div>
+              {/* Pop-up Search Results */}
+              {renderSearchDropdown()}
+            </div>
+          ) : (
+            <div className="flex-1 max-w-lg" />
+          )}
 
           {/* Sağ taraf: Bildirim zili, Profil simgesi ve Çıkış Yap (Log Out) */}
           <div className="flex items-center gap-2 sm:gap-3">
@@ -415,16 +425,16 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Profil simgesi */}
             <div 
               onClick={() => onOpenProfile && onOpenProfile()} 
-              className="flex items-center gap-2 pl-2 border-l border-[#232833] cursor-pointer group hover:opacity-90 transition"
+              className="flex items-center gap-3 pl-3 border-l border-[#232833] cursor-pointer group hover:opacity-90 transition"
               title="Profil Sayfasına Git"
             >
               <div className="relative group shrink-0">
-                <UserAvatar user={user} size="sm" />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#14171D] z-20" />
+                <UserAvatar user={user} size="md" />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#14171D] z-20" />
               </div>
               <div className="hidden sm:block text-left min-w-0">
-                <p className="text-xs font-bold text-white leading-none truncate group-hover:text-[#E63946] transition">{user.full_name}</p>
-                <p className="text-[10px] text-slate-400 leading-tight mt-0.5 truncate">@{user.username}</p>
+                <p className="text-sm sm:text-base font-extrabold text-white leading-none truncate group-hover:text-[#E63946] transition">{user.full_name}</p>
+                <p className="text-xs text-slate-300 font-medium leading-tight mt-1 truncate">@{user.username}</p>
               </div>
             </div>
 
@@ -437,10 +447,10 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsSettingsOpen(true);
                 }
               }}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-[#232833] transition ml-1.5 flex items-center justify-center border border-[#232833] bg-[#0B0C0E] hover:border-[#E63946]/50 cursor-pointer shadow-md"
+              className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-[#232833] transition ml-1.5 flex items-center justify-center border border-[#232833] bg-[#0B0C0E] hover:border-[#E63946]/50 cursor-pointer shadow-md"
               title="Ayarlar (⚙️)"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-5 h-5" />
             </button>
 
             {/* Çıkış Yap (Log Out) butonu */}
@@ -452,10 +462,10 @@ export const Header: React.FC<HeaderProps> = ({
                   alert("Çıkış yapıldı (Oturum kapatıldı).");
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-[#0B0C0E] border border-[#232833] hover:border-[#E63946] hover:bg-[#E63946]/10 transition ml-1"
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-200 hover:text-white bg-[#0B0C0E] border border-[#232833] hover:border-[#E63946] hover:bg-[#E63946]/10 transition ml-1"
               title="Çıkış Yap"
             >
-              <LogOut className="w-4 h-4 text-[#E63946]" />
+              <LogOut className="w-4.5 h-4.5 text-[#E63946]" />
               <span className="hidden md:inline">Çıkış Yap</span>
             </button>
 

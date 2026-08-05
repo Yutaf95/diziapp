@@ -131,7 +131,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     });
 
   const filteredTvShows = [...watchList]
-    .filter(w => w.media_type === 'tv' && (w.status === 'watched' || w.status === 'watching'))
+    .filter(w => w.media_type === 'tv' && w.status === 'watched')
     .sort((a, b) => {
       const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
       const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
@@ -200,161 +200,172 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* PROFILE HEADER — Letterboxd / Cinema Reference Style             */}
       {/* ================================================================ */}
 
-      {/* 1. FULL-WIDTH COVER BANNER */}
-      <div className="relative w-full h-[260px] sm:h-[320px] md:h-[380px] overflow-hidden bg-[#0e1116] group/banner">
-        {/* Banner image — grayscale via CSS filter */}
+      {/* ================================================================ */}
+      {/* PROFILE HEADER — Letterboxd / Cinema Reference Style             */}
+      {/* ================================================================ */}
+
+      {/* 1. FULL-WIDTH TALL COVER BANNER */}
+      <div className="relative w-full min-h-[440px] sm:min-h-[520px] md:min-h-[580px] flex flex-col justify-end overflow-hidden bg-[#0e1116] group/banner">
+        
+        {/* Banner backdrop image — grayscale via CSS filter */}
         <img
           src={user.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1920&q=90'}
           alt="Profile Cover"
-          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover/banner:scale-105"
-          style={{ filter: 'grayscale(85%) brightness(0.7)' }}
+          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover/banner:scale-105"
+          style={{ filter: 'grayscale(85%) brightness(0.65)' }}
         />
-        {/* Bottom-to-top heavy gradient → page background color */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/55 to-transparent" />
-        {/* Slight left darkening */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#14181c]/60 via-transparent to-transparent" />
-        {/* Top vignette */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-transparent" />
-      </div>
+        
+        {/* Bottom-to-top heavy gradient fading to #14181c */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/80 to-transparent" />
+        
+        {/* Left side shade */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#14181c]/70 via-transparent to-transparent" />
+        
+        {/* Top subtle vignette */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
 
-      {/* 2. CONTENT AREA — Avatar overlaps banner bottom */}
-      <div className="max-w-[1150px] mx-auto px-4 sm:px-6">
+        {/* ── OVERLAID AVATAR, USER INFO & STATS ROW (Letterboxd Bottom Overlay) ── */}
+        <div className="relative z-10 max-w-[1150px] mx-auto px-4 sm:px-6 w-full pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
 
-        {/* ── Avatar + User Info + Stats Row ── */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 -mt-20 sm:-mt-24 pb-6 border-b border-[#2c3440]">
+            {/* LEFT — Avatar + User Info */}
+            <div className="flex items-end gap-5 sm:gap-7">
 
-          {/* LEFT — Avatar + User Info */}
-          <div className="flex items-end gap-5 sm:gap-7">
+              {/* Avatar — enlarged with hover overlay & file input */}
+              <div className="relative shrink-0 group/avatar">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleAvatarFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                
+                <div 
+                  onClick={handleAvatarClick}
+                  className="relative w-[130px] h-[130px] sm:w-[160px] sm:h-[160px] rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl ring-2 ring-white/20 bg-[#2c3440] cursor-pointer"
+                >
+                  {user.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt={user.username}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover/avatar:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-[#2c3440]">
+                      <span className="text-5xl sm:text-6xl font-black text-white/60">
+                        {(user.full_name || user.username || '?').charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
 
-            {/* Avatar — enlarged, with hover overlay & file input */}
-            <div className="relative shrink-0 z-10 group/avatar">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleAvatarFileChange}
-                accept="image/*"
-                className="hidden"
-              />
-              
-              <div 
-                onClick={handleAvatarClick}
-                className="relative w-[130px] h-[130px] sm:w-[160px] sm:h-[160px] rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl ring-2 ring-white/20 bg-[#2c3440] cursor-pointer"
-              >
-                {user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={user.username}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover/avatar:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-[#2c3440]">
-                    <span className="text-5xl sm:text-6xl font-black text-white/60">
-                      {(user.full_name || user.username || '?').charAt(0).toUpperCase()}
+                  {/* Hover overlay for changing profile photo */}
+                  <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] opacity-0 group-hover/avatar:opacity-100 transition-all duration-200 flex flex-col items-center justify-center text-center p-2 z-20">
+                    <Camera className="w-7 h-7 sm:w-8 sm:h-8 text-white mb-1 drop-shadow" />
+                    <span className="text-xs sm:text-sm font-bold text-white leading-tight px-1 drop-shadow">
+                      Profil fotoğrafını değiştir
                     </span>
                   </div>
-                )}
-
-                {/* Hover overlay for changing profile photo */}
-                <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] opacity-0 group-hover/avatar:opacity-100 transition-all duration-200 flex flex-col items-center justify-center text-center p-2 z-20">
-                  <Camera className="w-7 h-7 sm:w-8 sm:h-8 text-white mb-1 drop-shadow" />
-                  <span className="text-xs sm:text-sm font-bold text-white leading-tight px-1 drop-shadow">
-                    Profil fotoğrafını değiştir
-                  </span>
                 </div>
               </div>
-            </div>
 
-            {/* User info */}
-            <div className="z-10 pb-1 space-y-1.5 min-w-0">
+              {/* User info */}
+              <div className="pb-1 space-y-1.5 min-w-0">
 
-              {/* Top Row: Full Name (Ad Soyad) + ••• / Follow button */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl leading-tight tracking-tight truncate max-w-[420px]">
-                  {user.full_name || user.username}
-                </h1>
+                {/* Top Row: Full Name (Ad Soyad) + ••• / Follow button */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl leading-tight tracking-tight truncate max-w-[420px] drop-shadow-md">
+                    {user.full_name || user.username}
+                  </h1>
 
-                {isOwnProfile ? (
-                  <button
-                    onClick={() => setShowSettingsModal(true)}
-                    className="text-[#9ab] hover:text-white transition cursor-pointer p-1.5 rounded-lg hover:bg-white/5"
-                    title="Profili Düzenle"
-                  >
-                    <MoreHorizontal className="w-6 h-6" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => onToggleFollowUser && onToggleFollowUser(user.id)}
-                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-extrabold transition hover:scale-105 active:scale-95 ${
-                      isFollowing
-                        ? 'bg-[#2c3440] text-slate-300 border border-[#3e4856]'
-                        : 'bg-[#40bcf4] text-slate-950'
-                    }`}
-                  >
-                    {isFollowing ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                    <span>{isFollowing ? 'Takiptesin' : 'Takip Et'}</span>
-                  </button>
-                )}
-              </div>
+                  {isOwnProfile ? (
+                    <button
+                      onClick={() => setShowSettingsModal(true)}
+                      className="text-[#9ab] hover:text-white transition cursor-pointer p-1.5 rounded-lg hover:bg-white/10 backdrop-blur-sm"
+                      title="Profili Düzenle"
+                    >
+                      <MoreHorizontal className="w-6 h-6" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onToggleFollowUser && onToggleFollowUser(user.id)}
+                      className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-extrabold transition hover:scale-105 active:scale-95 ${
+                        isFollowing
+                          ? 'bg-[#2c3440] text-slate-300 border border-[#3e4856]'
+                          : 'bg-[#40bcf4] text-slate-950'
+                      }`}
+                    >
+                      {isFollowing ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                      <span>{isFollowing ? 'Takiptesin' : 'Takip Et'}</span>
+                    </button>
+                  )}
+                </div>
 
-              {/* Username: Thinner, larger font */}
-              <p className="text-[#9ab] font-medium text-sm sm:text-base tracking-wide">
-                @{user.username}
-              </p>
-
-              {/* Bio */}
-              {user.bio && (
-                <p className="text-slate-200 text-sm sm:text-base leading-relaxed max-w-sm pt-0.5 truncate">
-                  {user.bio}
+                {/* Username */}
+                <p className="text-[#9ab] font-semibold text-sm sm:text-base tracking-wide drop-shadow">
+                  @{user.username}
                 </p>
-              )}
 
+                {/* Bio */}
+                {user.bio && (
+                  <p className="text-slate-200 text-sm sm:text-base leading-relaxed max-w-sm pt-0.5 truncate drop-shadow">
+                    {user.bio}
+                  </p>
+                )}
+
+              </div>
             </div>
+
+            {/* RIGHT — Stats (Films | This Year / Series | Following | Followers) */}
+            <div className="flex items-center gap-4 sm:gap-8 pl-0 flex-wrap sm:flex-nowrap sm:self-end pb-1">
+              <button
+                onClick={() => setActiveSubTab('movies')}
+                className="text-center hover:bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl transition cursor-pointer group/stat"
+              >
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tabular-nums leading-none pt-1 pb-1 group-hover/stat:text-[#40bcf4] transition drop-shadow-md">
+                  {moviesWatchedCount.toLocaleString('tr-TR')}
+                </div>
+                <div className="text-xs sm:text-[13px] font-extrabold text-[#9ab] uppercase tracking-widest mt-2 drop-shadow">Filmler</div>
+              </button>
+
+              <button
+                onClick={() => setActiveSubTab('tv')}
+                className="text-center hover:bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl transition cursor-pointer group/stat"
+              >
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tabular-nums leading-none pt-1 pb-1 group-hover/stat:text-[#40bcf4] transition drop-shadow-md">
+                  {tvShowsWatchedCount.toLocaleString('tr-TR')}
+                </div>
+                <div className="text-xs sm:text-[13px] font-extrabold text-[#9ab] uppercase tracking-widest mt-2 drop-shadow">Diziler</div>
+              </button>
+
+              <button
+                onClick={() => { setFollowerTab('following'); setShowFollowersModal(true); }}
+                className="text-center hover:bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl transition cursor-pointer group/stat"
+              >
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tabular-nums leading-none pt-1 pb-1 group-hover/stat:text-[#40bcf4] transition drop-shadow-md">
+                  {following.length.toLocaleString('tr-TR')}
+                </div>
+                <div className="text-xs sm:text-[13px] font-extrabold text-[#9ab] uppercase tracking-widest mt-2 drop-shadow">Takip</div>
+              </button>
+
+              <button
+                onClick={() => { setFollowerTab('followers'); setShowFollowersModal(true); }}
+                className="text-center hover:bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl transition cursor-pointer group/stat"
+              >
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tabular-nums leading-none pt-1 pb-1 group-hover/stat:text-[#40bcf4] transition drop-shadow-md">
+                  {(followers.length + (!isOwnProfile && isFollowing ? 1 : 0)).toLocaleString('tr-TR')}
+                </div>
+                <div className="text-xs sm:text-[13px] font-extrabold text-[#9ab] uppercase tracking-widest mt-2 drop-shadow">Takipçiler</div>
+              </button>
+            </div>
+
           </div>
-
-          {/* RIGHT — Stats (Films | This Year | Following | Followers) */}
-          <div className="flex items-center gap-6 sm:gap-9 pl-0 sm:pb-1 flex-wrap sm:flex-nowrap sm:self-end">
-            <button
-              onClick={() => setActiveSubTab('movies')}
-              className="text-center hover:opacity-80 transition cursor-pointer group/stat"
-            >
-              <div className="text-3xl sm:text-4xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
-                {moviesWatchedCount.toLocaleString('tr-TR')}
-              </div>
-              <div className="text-xs sm:text-[13px] font-bold text-[#9ab] uppercase tracking-widest mt-1">Filmler</div>
-            </button>
-
-            <button
-              onClick={() => setActiveSubTab('tv')}
-              className="text-center hover:opacity-80 transition cursor-pointer group/stat"
-            >
-              <div className="text-3xl sm:text-4xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
-                {tvShowsWatchedCount.toLocaleString('tr-TR')}
-              </div>
-              <div className="text-xs sm:text-[13px] font-bold text-[#9ab] uppercase tracking-widest mt-1">Diziler</div>
-            </button>
-
-            <button
-              onClick={() => { setFollowerTab('following'); setShowFollowersModal(true); }}
-              className="text-center hover:opacity-80 transition cursor-pointer group/stat"
-            >
-              <div className="text-3xl sm:text-4xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
-                {following.length.toLocaleString('tr-TR')}
-              </div>
-              <div className="text-xs sm:text-[13px] font-bold text-[#9ab] uppercase tracking-widest mt-1">Takip</div>
-            </button>
-
-            <button
-              onClick={() => { setFollowerTab('followers'); setShowFollowersModal(true); }}
-              className="text-center hover:opacity-80 transition cursor-pointer group/stat"
-            >
-              <div className="text-3xl sm:text-4xl font-black text-white tabular-nums group-hover/stat:text-[#40bcf4] transition">
-                {(followers.length + (!isOwnProfile && isFollowing ? 1 : 0)).toLocaleString('tr-TR')}
-              </div>
-              <div className="text-xs sm:text-[13px] font-bold text-[#9ab] uppercase tracking-widest mt-1">Takipçiler</div>
-            </button>
-          </div>
-
         </div>
+      </div>
+
+      {/* 2. CONTENT CONTAINER — Tab switcher & sections */}
+      <div className="max-w-[1150px] mx-auto px-4 sm:px-6 pt-4">
+        <div className="border-b border-[#2c3440] pb-4">
 
         {/* ── TAB SWITCHER ── */}
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
@@ -621,7 +632,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {activeSubTab === 'tv' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="border-b border-[#2c3440]/60 pb-3 flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">İzlenen & Takip Edilen Diziler ({filteredTvShows.length})</h2>
+              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">İzlenen Diziler ({filteredTvShows.length})</h2>
               <span className="text-xs sm:text-sm text-[#9ab] font-medium">Son eklenenden eskiye doğru sıralı</span>
             </div>
 
@@ -646,13 +657,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                     <div className="space-y-0.5 min-w-0">
                       <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
-                      <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">{item.status === 'watched' ? 'Tamamlandı' : 'İzleniyor'}</p>
+                      <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Tamamlandı</p>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="col-span-5 py-12 text-center text-sm text-[#9ab] font-medium">
-                  Kütüphanenizde henüz takip edilen dizi bulunmuyor.
+                  Kütüphanenizde henüz izlenmiş dizi bulunmuyor.
                 </div>
               )}
             </div>
@@ -976,6 +987,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         onSelectMediaById={onSelectMediaById}
       />
 
+      </div>
     </div>
   );
 };

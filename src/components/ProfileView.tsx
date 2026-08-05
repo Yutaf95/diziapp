@@ -271,12 +271,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </p>
               )}
 
-              {/* Social link */}
-              <div className="flex items-center gap-1 text-[#40bcf4] text-xs font-medium pt-0.5">
-                <Link className="w-3 h-3 shrink-0" />
-                <span className="truncate max-w-[200px]">instagram.com/{user.username}</span>
-              </div>
-
             </div>
           </div>
 

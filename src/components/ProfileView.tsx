@@ -87,6 +87,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [formFullName, setFormFullName] = useState(user.full_name || '');
   const [formBio, setFormBio] = useState(user.bio || '');
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newAvatarUrl = reader.result as string;
+        if (onUpdateProfile) {
+          onUpdateProfile({ avatar_url: newAvatarUrl });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Followers / Following Lists
   const [followers, setFollowers] = useState([
     { id: 'f1', name: 'Zeynep Kaya', username: 'zeynep_k', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80', isFollowing: true },
@@ -201,72 +221,89 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <div className="max-w-[1150px] mx-auto px-4 sm:px-6">
 
         {/* ── Avatar + User Info + Stats Row ── */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 sm:-mt-14 pb-5 border-b border-[#2c3440]">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 pb-5 border-b border-[#2c3440]">
 
           {/* LEFT — Avatar + User Info */}
-          <div className="flex items-end gap-4 sm:gap-5">
+          <div className="flex items-end gap-4 sm:gap-6">
 
-            {/* Avatar — overlaps the banner (negative margin) */}
-            <div className="relative shrink-0 z-10">
-              {user.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.username}
-                  className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-full object-cover border-2 border-white/30 shadow-2xl ring-1 ring-white/10"
-                />
-              ) : (
-                <div className="w-[88px] h-[88px] sm:w-[104px] sm:h-[104px] rounded-full bg-[#2c3440] border-2 border-white/20 flex items-center justify-center shadow-2xl">
-                  <span className="text-3xl font-black text-white/60">
-                    {(user.full_name || user.username || '?').charAt(0).toUpperCase()}
+            {/* Avatar — enlarged, with hover overlay & file input */}
+            <div className="relative shrink-0 z-10 group/avatar">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleAvatarFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+              
+              <div 
+                onClick={handleAvatarClick}
+                className="relative w-[116px] h-[116px] sm:w-[144px] sm:h-[144px] rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl ring-2 ring-white/20 bg-[#2c3440] cursor-pointer"
+              >
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.username}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover/avatar:scale-105"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-[#2c3440]">
+                    <span className="text-4xl sm:text-5xl font-black text-white/60">
+                      {(user.full_name || user.username || '?').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+
+                {/* Hover overlay for changing profile photo */}
+                <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] opacity-0 group-hover/avatar:opacity-100 transition-all duration-200 flex flex-col items-center justify-center text-center p-2 z-20">
+                  <Camera className="w-6 h-6 sm:w-7 sm:h-7 text-white mb-1 drop-shadow" />
+                  <span className="text-[10px] sm:text-xs font-bold text-white leading-tight px-1 drop-shadow">
+                    Profil fotoğrafını değiştir
                   </span>
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* User info: name, badge, bio, link */}
+            {/* User info */}
             <div className="z-10 pb-1 space-y-1 min-w-0">
 
-              {/* Name row + PATRON badge + ••• */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] font-black text-white/60 tracking-widest uppercase">
-                  {user.username?.charAt(0)?.toUpperCase() || 'J'}
-                </span>
-                {isOwnProfile && (
-                  <span className="bg-[#40bcf4] text-slate-950 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider leading-none">
-                    ÜYEM
-                  </span>
-                )}
+              {/* Top Row: Full Name (Ad Soyad) + ••• / Follow button */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-white font-black text-2xl sm:text-3xl leading-tight tracking-tight truncate max-w-[360px]">
+                  {user.full_name || user.username}
+                </h1>
+
                 {isOwnProfile ? (
                   <button
                     onClick={() => setShowSettingsModal(true)}
-                    className="text-[#8a9096] hover:text-white transition cursor-pointer"
+                    className="text-[#8a9096] hover:text-white transition cursor-pointer p-1 rounded-lg hover:bg-white/5"
                     title="Profili Düzenle"
                   >
-                    <MoreHorizontal className="w-4 h-4" />
+                    <MoreHorizontal className="w-5 h-5" />
                   </button>
                 ) : (
                   <button
                     onClick={() => onToggleFollowUser && onToggleFollowUser(user.id)}
-                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[11px] font-extrabold transition hover:scale-105 active:scale-95 ${
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-extrabold transition hover:scale-105 active:scale-95 ${
                       isFollowing
                         ? 'bg-[#2c3440] text-slate-300 border border-[#3e4856]'
                         : 'bg-[#40bcf4] text-slate-950'
                     }`}
                   >
-                    {isFollowing ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+                    {isFollowing ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
                     <span>{isFollowing ? 'Takiptesin' : 'Takip Et'}</span>
                   </button>
                 )}
               </div>
 
-              {/* Full Name (bold, large) */}
-              <h1 className="text-white font-black text-xl sm:text-2xl leading-tight tracking-tight truncate max-w-[340px]">
-                {user.full_name || user.username}
-              </h1>
+              {/* Username: Thinner, smaller font */}
+              <p className="text-[#8a9096] font-normal text-xs sm:text-sm tracking-wide">
+                @{user.username}
+              </p>
 
               {/* Bio */}
               {user.bio && (
-                <p className="text-[#8a9096] text-xs sm:text-sm leading-relaxed max-w-xs truncate">
+                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-xs pt-0.5 truncate">
                   {user.bio}
                 </p>
               )}
@@ -360,200 +397,163 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* TAB 1: PROFIL (MAIN LANDING VIEW) */}
         {activeSubTab === 'profil' && (
-          <div className="space-y-8 animate-in fade-in duration-300">
+          <div className="space-y-10 animate-in fade-in duration-300">
             
-            {/* 1. FAVORİLER (TOP 5 SHOWCASE) */}
-            <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-[#2c3440] pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-[#ff8000]/15 text-[#ff8000] border border-[#ff8000]/30">
-                    <Heart className="w-4 h-4 fill-current" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">Favoriler</h2>
-                    <p className="text-[11px] text-slate-400">Profilde sergilenen En Sevilen 5 Yapım</p>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-[#00e054] bg-[#00e054]/10 px-2.5 py-1 rounded-lg border border-[#00e054]/20">
-                  Top 5 Seçkisi
-                </span>
+            {/* 1. FAVORİLER */}
+            <div className="space-y-4">
+              {/* Bölüm Başlığı Deseni */}
+              <div className="border-b border-[#2c3440]/60 pb-2 space-y-0.5">
+                <h2 className="text-xs sm:text-[13px] font-bold text-white uppercase tracking-wider">
+                  FAVORİLER
+                </h2>
+                <p className="text-xs text-[#8a9096]">
+                  Profilde sergilenen en sevilen 5 yapım
+                </p>
               </div>
 
-              {/* 5-Column Compact Grid */}
-              <div className="grid grid-cols-5 gap-2 sm:gap-4">
-                {Array.from({ length: 5 }).map((_, index) => {
-                  const rank = index + 1;
-                  const item = displayedFavorites[index];
-
-                  if (item) {
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => onSelectMediaById?.(item.id, item.type)}
-                        className="relative bg-[#14181c] border border-[#2c3440] hover:border-[#00e054] rounded-xl p-1.5 sm:p-2 space-y-1.5 transition duration-300 group cursor-pointer hover:-translate-y-1 shadow-lg min-w-0 flex flex-col justify-between"
-                      >
-                        {/* Rank Badge */}
-                        <div className="absolute -top-1.5 -left-1.5 z-20 w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-[#00e054] text-slate-950 font-mono font-black text-[9px] sm:text-xs flex items-center justify-center border border-[#00e054] shadow">
-                          #{rank}
-                        </div>
-
-                        {/* Aspect 2:3 Poster */}
-                        <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/50">
-                          <img
-                            src={item.poster}
-                            alt={item.title}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                          <div className="absolute bottom-1 right-1 bg-black/90 backdrop-blur-md text-[#00e054] font-mono text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5 shadow-md">
-                            <Star className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-[#00e054] text-[#00e054]" />
-                            {item.rating}
-                          </div>
-                        </div>
-
-                        <div className="space-y-0.5 text-center min-w-0 pt-0.5">
-                          <h4 className="text-[10px] sm:text-xs font-black text-white truncate group-hover:text-[#00e054] transition-colors leading-tight">
-                            {item.title}
-                          </h4>
-                          <p className="text-[8.5px] sm:text-[10px] text-slate-400 truncate font-medium">
-                            {item.genre}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
+              {/* Dinamik Poster Grid'i — Çerçevesiz, Rozetsiz, Boş Slot Yok */}
+              <div className="grid grid-cols-5 gap-2.5 sm:gap-4">
+                {displayedFavorites.filter(Boolean).length > 0 ? (
+                  displayedFavorites.filter(Boolean).map(item => (
                     <div
-                      key={`empty-fav-${rank}`}
-                      className="relative bg-[#14181c]/50 border border-dashed border-[#2c3440] rounded-xl p-1.5 sm:p-2 space-y-1.5 flex flex-col justify-between shadow-inner select-none"
+                      key={item.id}
+                      onClick={() => onSelectMediaById?.(item.id, item.type)}
+                      className="group cursor-pointer min-w-0 space-y-1.5 transition-transform duration-300 hover:-translate-y-1"
                     >
-                      <div className="absolute -top-1.5 -left-1.5 z-20 w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-[#2c3440] text-slate-400 font-mono text-[9px] sm:text-xs flex items-center justify-center border border-[#3e4856]">
-                        #{rank}
+                      {/* Aspect 2:3 Poster — Rozetsiz, Derecelendirmesiz, Sade */}
+                      <div className="relative aspect-[2/3] w-full rounded-md overflow-hidden bg-black/40">
+                        <img
+                          src={item.poster}
+                          alt={item.title}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
-                      <div className="relative aspect-[2/3] w-full rounded-lg bg-black/20 border border-[#2c3440] flex flex-col items-center justify-center gap-1.5 text-slate-600">
-                        <Heart className="w-4 h-4 sm:w-6 sm:h-6 text-slate-600 fill-none" />
-                        <span className="text-[8.5px] sm:text-[10.5px] text-slate-500 font-bold">Boş Slot</span>
-                      </div>
-                      <div className="text-center py-0.5">
-                        <span className="text-[7px] sm:text-[9px] text-slate-600">• • •</span>
+
+                      {/* Poster Altı Metinler — Sade & Rozetsiz */}
+                      <div className="space-y-0.5 min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate group-hover:text-[#40bcf4] transition leading-tight">
+                          {item.title}
+                        </h4>
+                        <p className="text-[11px] text-[#8a9096] truncate font-normal">
+                          {item.genre}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
+                  ))
+                ) : (
+                  <p className="col-span-5 text-xs text-[#8a9096] italic py-2">
+                    Henüz favori yapım eklenmemiş.
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* 2. EN SON İZLENENLER (RECENT ACTIVITY) */}
-            <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-[#2c3440] pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-[#00e054]/15 text-[#00e054] border border-[#00e054]/30">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">En Son İzlenenler</h2>
-                    <p className="text-[11px] text-slate-400">Yakın zamanda tamamlanan film ve bölümler</p>
-                  </div>
-                </div>
+            {/* 2. EN SON İZLENENLER */}
+            <div className="space-y-4 pt-2">
+              {/* Bölüm Başlığı Deseni */}
+              <div className="border-b border-[#2c3440]/60 pb-2 space-y-0.5">
+                <h2 className="text-xs sm:text-[13px] font-bold text-white uppercase tracking-wider">
+                  EN SON İZLENENLER
+                </h2>
+                <p className="text-xs text-[#8a9096]">
+                  Yakın zamanda tamamlanan film ve bölümler
+                </p>
               </div>
 
-              <div className="grid grid-cols-5 gap-2 sm:gap-4">
+              {/* Poster Grid — Favoriler ile Birebir Aynı Desen */}
+              <div className="grid grid-cols-5 gap-2.5 sm:gap-4">
                 {recentWatchedActivity.length > 0 ? (
                   recentWatchedActivity.map(item => (
                     <div
                       key={item.id + item.title}
                       onClick={() => onSelectMediaById?.(item.id, item.type)}
-                      className="bg-[#14181c] border border-[#2c3440] hover:border-[#00e054] rounded-xl p-1.5 sm:p-2 space-y-1.5 transition duration-300 group cursor-pointer hover:-translate-y-1 shadow-lg min-w-0 flex flex-col justify-between"
+                      className="group cursor-pointer min-w-0 space-y-1.5 transition-transform duration-300 hover:-translate-y-1"
                     >
-                      <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/50">
+                      <div className="relative aspect-[2/3] w-full rounded-md overflow-hidden bg-black/40">
                         <img
                           src={item.poster}
                           alt={item.title}
                           referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
-                        <div className="absolute bottom-1 right-1 bg-black/90 backdrop-blur-md text-[#00e054] font-mono text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5 shadow-md">
-                          <Star className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-[#00e054] text-[#00e054]" />
-                          {item.rating}
-                        </div>
                       </div>
 
-                      <div className="space-y-0.5 text-center min-w-0 pt-0.5">
-                        <h4 className="text-[10px] sm:text-xs font-black text-white truncate group-hover:text-[#00e054] transition-colors leading-tight">
+                      <div className="space-y-0.5 min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate group-hover:text-[#40bcf4] transition leading-tight">
                           {item.title}
                         </h4>
-                        <p className="text-[8.5px] sm:text-[10px] text-slate-400 truncate font-medium">
+                        <p className="text-[11px] text-[#8a9096] truncate font-normal">
                           {item.date}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="col-span-5 bg-[#14181c]/40 border border-dashed border-[#2c3440] rounded-xl p-6 text-center text-xs text-slate-400">
+                  <p className="col-span-5 text-xs text-[#8a9096] italic py-2">
                     Henüz izlenmiş içerik bulunmuyor.
-                  </div>
+                  </p>
                 )}
               </div>
             </div>
 
-            {/* 3. SABİTLENEN İNCELEMELER (PINNED REVIEWS) */}
-            <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-[#2c3440] pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                    <MessageSquare className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">Sabitlenen İncelemeler</h2>
-                    <p className="text-[11px] text-slate-400">Öne çıkan detaylı eleştiri ve yorumlar</p>
-                  </div>
-                </div>
+            {/* 3. SABİTLENEN İNCELEMELER */}
+            <div className="space-y-4 pt-2">
+              {/* Bölüm Başlığı Deseni */}
+              <div className="border-b border-[#2c3440]/60 pb-2 space-y-0.5">
+                <h2 className="text-xs sm:text-[13px] font-bold text-white uppercase tracking-wider">
+                  SABİTLENEN İNCELEMELER
+                </h2>
+                <p className="text-xs text-[#8a9096]">
+                  Öne çıkan detaylı eleştiri ve yorumlar
+                </p>
               </div>
 
               <div className="space-y-4">
                 {displayReviews.slice(0, 3).map(rev => (
                   <div
                     key={rev.id}
-                    className="bg-[#14181c] border border-[#2c3440] hover:border-[#00e054]/60 rounded-xl p-4 transition duration-300 flex flex-col sm:flex-row items-start gap-4 shadow-lg group"
+                    className="flex items-start gap-4 pb-4 border-b border-[#2c3440]/40 last:border-b-0 group"
                   >
-                    {/* Small Poster Thumbnail */}
+                    {/* Small Poster Thumbnail — Sade, Çerçevesiz */}
                     <div 
                       onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                      className="w-16 h-24 rounded-lg overflow-hidden bg-black/50 shrink-0 border border-[#2c3440] cursor-pointer group-hover:border-[#00e054] transition"
+                      className="w-14 h-20 sm:w-16 sm:h-24 rounded-md overflow-hidden bg-black/40 shrink-0 cursor-pointer"
                     >
                       <img
                         src={rev.media_poster || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
                         alt={rev.media_title || 'Yapım'}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
 
-                    {/* Review Details */}
-                    <div className="flex-1 space-y-2 min-w-0">
+                    {/* İnceleme Detayları */}
+                    <div className="flex-1 space-y-1.5 min-w-0">
                       <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <h3 
                             onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                            className="text-sm sm:text-base font-black text-white hover:text-[#00e054] cursor-pointer transition"
+                            className="text-xs sm:text-sm font-bold text-white hover:text-[#40bcf4] cursor-pointer transition"
                           >
                             {rev.media_title || 'Yapım'}
                           </h3>
-                          <span className="text-xs text-slate-400 font-mono">({rev.media_type === 'tv' ? 'Dizi' : 'Film'})</span>
+                          <span className="text-xs text-[#8a9096]">
+                            ({rev.media_type === 'tv' ? 'Dizi' : 'Film'})
+                          </span>
                         </div>
 
-                        {/* Green Rating Stars */}
-                        <div className="flex items-center gap-1 bg-[#00e054]/10 border border-[#00e054]/30 px-2 py-0.5 rounded-lg text-[#00e054] font-mono text-xs font-black">
+                        {/* Puan — Düz Metin + Yıldız İkonu (Kutusal rozet kaldırıldı) */}
+                        <div className="flex items-center gap-1 text-xs font-bold text-white">
                           <Star className="w-3.5 h-3.5 fill-[#00e054] text-[#00e054]" />
                           <span>{rev.rating || 9.5} / 10</span>
                         </div>
                       </div>
 
-                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed italic font-normal">
+                      <p className="text-xs sm:text-sm text-slate-300 italic leading-relaxed font-normal">
                         "{rev.review_text}"
                       </p>
 
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-[#2c3440]/60">
+                      <div className="flex items-center justify-between text-[11px] text-[#8a9096] pt-1">
                         <span>{rev.created_at || 'Yakın Zamanda'}</span>
                         <div className="flex items-center gap-3">
                           <span className="flex items-center gap-1 hover:text-white transition cursor-pointer">
@@ -561,7 +561,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             <span>{rev.likes_count || 12}</span>
                           </span>
                           <span className="flex items-center gap-1 hover:text-white transition cursor-pointer">
-                            <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
+                            <MessageSquare className="w-3.5 h-3.5 text-[#8a9096]" />
                             <span>{rev.comments_count || 3}</span>
                           </span>
                         </div>

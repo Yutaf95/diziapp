@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Film, Tv, Clock, Star, Calendar, Trophy, User, Download, 
   Share2, X, ChevronRight, ChevronLeft, Flame, Award, Heart, CheckCircle2,
-  Play, BarChart2
+  Play, BarChart2, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import html2canvas from 'html2canvas';
@@ -225,7 +225,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.93, y: 20 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
-          className="bg-[#0F1117] border border-[#2B313E] rounded-3xl p-5 sm:p-8 max-w-xl w-full relative cursor-default shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+          className="bg-[#0F1117] border border-[#2B313E] rounded-3xl p-6 sm:p-10 max-w-2xl sm:max-w-3xl w-full relative cursor-default shadow-2xl overflow-hidden flex flex-col max-h-[94vh]"
         >
           {/* Background Ambient Glow */}
           <div className="absolute -top-24 -left-24 w-72 h-72 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
@@ -533,7 +533,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                     {/* VERTICAL SUMMARY STORY CARD (Larger, Super Readable, High Impact) */}
                     <div 
                       ref={cardRef}
-                      className="bg-gradient-to-b from-[#0F121C] via-[#0B0D13] to-[#08090D] border-2 border-amber-500/50 rounded-3xl p-6 space-y-5 shadow-2xl relative overflow-hidden w-full max-w-md mx-auto my-2 text-white ring-1 ring-white/10"
+                      className="bg-gradient-to-b from-[#0F121C] via-[#0B0D13] to-[#08090D] border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden w-full max-w-lg sm:max-w-xl mx-auto my-2 text-white ring-1 ring-white/10"
                     >
                       {/* Background Ambient Glows */}
                       <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />

@@ -335,7 +335,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               ) : (
                 <span className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 group-hover:text-slate-100 transition">
-                  TV Time <span className="text-xs font-semibold text-[#E63946] bg-[#E63946]/10 px-2 py-0.5 rounded border border-[#E63946]/30 uppercase tracking-widest">TR</span>
+                  ttime <span className="text-xs font-semibold text-[#E63946] bg-[#E63946]/10 px-2 py-0.5 rounded border border-[#E63946]/30 uppercase tracking-widest">TR</span>
                 </span>
               )}
             </div>

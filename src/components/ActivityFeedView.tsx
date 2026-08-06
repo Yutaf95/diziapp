@@ -210,7 +210,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
           }
 
           return validActivities.map((item) => {
-          const profile = item.profile || { username: 'Kullanıcı', full_name: 'TV Time Üyesi', avatar_url: '' };
+          const profile = item.profile || { username: 'Kullanıcı', full_name: 'ttime Üyesi', avatar_url: '' };
           const details = item.details || {};
           const isSpoiler = details.contains_spoiler;
           const isRevealed = revealedSpoilers[item.id];

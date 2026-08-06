@@ -7,7 +7,7 @@ export const CURRENT_USER: Profile = {
   avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
   banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
   featured_media_title: 'Severance',
-  bio: 'Sinema ve dizi tutkunu 🎬 TV Time bağımlısı!'
+  bio: 'Sinema ve dizi tutkunu 🎬 ttime bağımlısı!'
 };
 
 export const MOCK_FRIENDS: Profile[] = [];

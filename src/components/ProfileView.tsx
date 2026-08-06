@@ -146,6 +146,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   // Watch Time calculation
   const totalMinutes = (moviesWatchedCount * 122) + (watchedEpsCount * 48);
+  const totalDays = Math.floor(totalMinutes / 1440);
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMins = totalMinutes % 60;
 

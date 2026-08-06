@@ -1,6 +1,6 @@
 {
-  "name": "TV Time - Dizi ve Film Takip Platformu",
-  "description": "TV Time benzeri dizi ve film takip platformu. TMDB entegrasyonu, bölüm takibi, watch status, spoiler destekli yorumlar ve aktivite akışı.",
+  "name": "Dizi&Film Takip",
+  "description": "ttime dizi ve film takip platformu. TMDB entegrasyonu, bölüm takibi, watch status, spoiler destekli yorumlar ve aktivite akışı.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

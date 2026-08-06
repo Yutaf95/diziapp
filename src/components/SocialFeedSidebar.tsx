@@ -47,30 +47,30 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
     <aside className="w-full space-y-4">
       
       {/* Header Card */}
-      <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-4 shadow-lg flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#E63946]/15 border border-[#E63946]/30 flex items-center justify-center text-[#E63946]">
-            <Activity className="w-4 h-4" />
+      <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-4.5 shadow-lg flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#E63946]/15 border border-[#E63946]/30 flex items-center justify-center text-[#E63946] shadow-sm">
+            <Activity className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="font-extrabold text-sm text-white">Sosyal Akış</h2>
-            <p className="text-[10px] text-slate-400">Arkadaşlarının canlı aktiviteleri</p>
+            <h2 className="font-black text-base text-white tracking-tight">Sosyal Akış</h2>
+            <p className="text-xs text-slate-400 font-medium">Arkadaşlarının canlı aktiviteleri</p>
           </div>
         </div>
 
-        <span className="text-[10px] bg-[#E63946] text-white font-bold px-2 py-0.5 rounded-full shadow-sm">
+        <span className="text-xs bg-[#E63946] text-white font-black px-2.5 py-1 rounded-full shadow-md tracking-wide">
           Canlı
         </span>
       </div>
 
       {/* Quick Status / Post Input Box */}
-      <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-3 shadow-lg space-y-2">
-        <div className="flex items-center gap-2">
+      <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-4 shadow-lg space-y-3">
+        <div className="flex items-center gap-3">
           {currentUser?.avatar_url && (
             <img
               src={currentUser.avatar_url}
               alt={currentUser.full_name}
-              className="w-7 h-7 rounded-full object-cover border border-[#E63946]"
+              className="w-8 h-8 rounded-full object-cover border-2 border-[#E63946] shadow-sm shrink-0"
             />
           )}
           <input
@@ -78,7 +78,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
             value={quickPostText}
             onChange={(e) => setQuickPostText(e.target.value)}
             placeholder="Ne izliyorsun? Arkadaşlarınla paylaş..."
-            className="w-full bg-[#0B0C0E] border border-[#232833] rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#E63946]"
+            className="w-full bg-[#0B0C0E] border border-[#232833] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#E63946] transition"
           />
         </div>
         {quickPostText.trim() && (
@@ -92,16 +92,16 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                 }
                 setQuickPostText('');
               }}
-              className="flex items-center gap-1.5 px-3 py-1 bg-[#E63946] text-white text-xs font-bold rounded-lg shadow"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#E63946] hover:bg-[#d62839] text-white text-xs font-extrabold rounded-xl shadow-md transition cursor-pointer"
             >
-              <Send className="w-3 h-3" /> Paylaş
+              <Send className="w-3.5 h-3.5" /> Paylaş
             </button>
           </div>
         )}
       </div>
 
       {/* Activity List - Chronological Vertical Cards */}
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {(() => {
           const now = new Date().getTime();
           const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 48 hours
@@ -124,9 +124,9 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
 
           if (validActivities.length === 0) {
             return (
-              <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 text-center space-y-1.5">
-                <p className="text-xs font-bold text-slate-300">Henüz aktivite bulunmuyor</p>
-                <p className="text-[11px] text-slate-500">Arkadaşlarınızın paylaşımları ve izleme hareketleri burada görünecektir.</p>
+              <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-6 text-center space-y-2">
+                <p className="text-sm font-bold text-slate-200">Henüz aktivite bulunmuyor</p>
+                <p className="text-xs text-slate-400">Arkadaşlarınızın paylaşımları ve izleme hareketleri burada görünecektir.</p>
               </div>
             );
           }
@@ -143,10 +143,10 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
               <div
                 key={item.id}
                 onClick={() => item.media_id && item.media_type && onSelectMediaById(item.media_id, item.media_type)}
-                className="bg-[#14171D] border border-[#232833] hover:border-[#E63946]/50 rounded-xl p-2.5 shadow-sm hover:shadow-md transition cursor-pointer group space-y-2"
+                className="bg-[#14171D] border border-[#232833] hover:border-[#E63946]/50 rounded-2xl p-3.5 sm:p-4 shadow-md hover:shadow-lg transition cursor-pointer group space-y-3"
               >
                 {/* User Avatar & Header */}
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2.5">
                   <div 
                     onClick={(e) => {
                       if (displayUsername && onNavigateToProfile) {
@@ -154,7 +154,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                         onNavigateToProfile(displayUsername);
                       }
                     }}
-                    className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer p-0.5 rounded-lg hover:bg-white/5"
+                    className="flex items-center gap-2.5 hover:opacity-90 transition cursor-pointer p-1 rounded-xl hover:bg-white/5"
                     title={`${displayFullName} profilini gör`}
                   >
                     <UserAvatar
@@ -163,31 +163,31 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                         username: displayUsername,
                         avatar_url: displayAvatar
                       }}
-                      size="xs"
+                      size="sm"
                     />
                     <div>
-                      <h4 className="text-xs font-bold text-white leading-tight hover:text-[#E63946] transition-colors">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-white leading-tight hover:text-[#E63946] transition-colors">
                         {displayFullName}
                       </h4>
-                      <span className="text-[10px] text-[#E63946] font-semibold hover:underline">@{displayUsername}</span>
+                      <span className="text-xs text-[#E63946] font-bold hover:underline">@{displayUsername}</span>
                     </div>
                   </div>
 
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-xs text-slate-400 font-mono font-medium">
                     {formatTimestamp(item.created_at)}
                   </span>
                 </div>
 
                 {/* Action Details Card */}
-                <div className="bg-[#0B0C0E] border border-[#232833] rounded-lg p-2 flex items-center justify-between gap-2.5">
-                  <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="bg-[#0B0C0E] border border-[#232833] rounded-xl p-3 flex items-center justify-between gap-3 shadow-inner">
+                  <div className="space-y-1 min-w-0 flex-1">
                     
                     {/* Action Description */}
                     {item.action_type === 'episode_watched' && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
-                        <Eye className="w-3 h-3 text-[#E63946] shrink-0" />
+                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
+                        <Eye className="w-4 h-4 text-[#E63946] shrink-0" />
                         <span className="truncate">
-                          <strong className="text-white">{mediaTitle}</strong>
+                          <strong className="text-white font-bold">{mediaTitle}</strong>
                           {item.details?.season_number && item.details?.episode_number
                             ? ` S${item.details.season_number.toString().padStart(2, '0')}E${item.details.episode_number.toString().padStart(2, '0')}`
                             : ''} izledi
@@ -196,15 +196,15 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     )}
 
                     {item.action_type === 'review_added' && (
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
-                          <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
+                          <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
                           <span className="truncate">
-                            <strong className="text-white">{mediaTitle}</strong> <span className="text-amber-400 font-bold">{item.details?.rating || 10}/10</span>
+                            <strong className="text-white font-bold">{mediaTitle}</strong> <span className="text-amber-400 font-black">{item.details?.rating || 10}/10</span>
                           </span>
                         </div>
                         {item.details?.review_text && (
-                          <p className="text-[10px] text-slate-400 italic line-clamp-1 pl-1.5 border-l border-[#E63946]">
+                          <p className="text-xs text-slate-300 italic line-clamp-2 pl-2 border-l-2 border-[#E63946] font-normal">
                             "{item.details.review_text}"
                           </p>
                         )}
@@ -212,24 +212,24 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     )}
 
                     {item.action_type === 'rating_given' && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
-                        <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
+                        <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
                         <span className="truncate">
-                          <strong className="text-white">{mediaTitle}</strong> <span className="text-amber-400 font-bold">{item.details?.rating}/10</span>
+                          <strong className="text-white font-bold">{mediaTitle}</strong> <span className="text-amber-400 font-black">{item.details?.rating}/10</span>
                         </span>
                       </div>
                     )}
 
                     {item.action_type === 'status_update' && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
-                        <Sparkles className="w-3 h-3 text-[#E63946] shrink-0" />
+                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
+                        <Sparkles className="w-4 h-4 text-[#E63946] shrink-0" />
                         <span className="truncate">
                           {item.media_id ? (
                             <>
-                              <strong className="text-white">{mediaTitle}</strong> listesine eklendi
+                              <strong className="text-white font-bold">{mediaTitle}</strong> listesine eklendi
                             </>
                           ) : (
-                            <strong className="text-white">{mediaTitle}</strong>
+                            <strong className="text-white font-bold">{mediaTitle}</strong>
                           )}
                         </span>
                       </div>
@@ -242,7 +242,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     <img
                       src={mediaPoster}
                       alt={mediaTitle}
-                      className="w-7 h-10 rounded object-cover border border-[#232833] shrink-0"
+                      className="w-10 h-14 sm:w-11 sm:h-16 rounded-lg object-cover border border-[#232833] shrink-0 shadow-md group-hover:scale-105 transition duration-300"
                     />
                   )}
                 </div>

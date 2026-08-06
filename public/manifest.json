@@ -1,6 +1,6 @@
 {
-  "name": "DiziApp - Dizi ve Film Takip",
-  "short_name": "DiziApp",
+  "name": "Dizi&Film Takip",
+  "short_name": "Dizi&Film Takip",
   "description": "Dizi ve film izleme takibi, yayın takvimi ve sosyal akış uygulaması",
   "start_url": "/",
   "display": "standalone",

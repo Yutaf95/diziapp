@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                TV Time
+                ttime
               </span>
               <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-wider text-amber-400 ml-2 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
                 TR

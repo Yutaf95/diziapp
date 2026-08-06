@@ -618,7 +618,7 @@ export default function App() {
   // Favorites State (saved in localStorage)
   const [favorites, setFavorites] = useState<WatchStatus[]>(() => {
     try {
-      const stored = localStorage.getItem('tvtime_favorites');
+      const stored = localStorage.getItem('ttime_favorites');
       return stored ? JSON.parse(stored) : [];
     } catch (e) {
       return [];
@@ -629,7 +629,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('tvtime_favorites', JSON.stringify(favorites));
+      localStorage.setItem('ttime_favorites', JSON.stringify(favorites));
     } catch (e) {}
   }, [favorites]);
 
@@ -1023,7 +1023,7 @@ export default function App() {
       setSession(null);
     } else {
       setCurrentUser(CURRENT_USER);
-      alert('Yerel oturum kapatıldı. TV Time hesabınızdan güvenle çıkış yaptınız.');
+      alert('Yerel oturum kapatıldı. ttime hesabınızdan güvenle çıkış yaptınız.');
     }
   };
 
@@ -2364,8 +2364,8 @@ export default function App() {
 
             </div>
 
-            {/* Sağ Sidebar (360px - 380px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
-            <div className="hidden lg:block w-[360px] xl:w-[380px] shrink-0 space-y-4">
+            {/* Sağ Sidebar (390px - 420px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
+            <div className="hidden lg:block w-[390px] xl:w-[420px] shrink-0 space-y-4">
               <SocialFeedSidebar
                 activities={activityFeed}
                 onSelectMediaById={handleSelectMediaById}

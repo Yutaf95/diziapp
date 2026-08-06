@@ -2327,8 +2327,8 @@ export default function App() {
 
             </div>
 
-            {/* Sağ Sidebar (~320px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
-            <div className="hidden lg:block w-[320px] shrink-0 space-y-4">
+            {/* Sağ Sidebar (360px - 380px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
+            <div className="hidden lg:block w-[360px] xl:w-[380px] shrink-0 space-y-4">
               <SocialFeedSidebar
                 activities={activityFeed}
                 onSelectMediaById={handleSelectMediaById}

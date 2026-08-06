@@ -44,7 +44,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
   };
 
   return (
-    <aside className="w-full lg:w-[320px] shrink-0 space-y-4">
+    <aside className="w-full space-y-4">
       
       {/* Header Card */}
       <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-4 shadow-lg flex items-center justify-between">
@@ -103,10 +103,23 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
       {/* Activity List - Chronological Vertical Cards */}
       <div className="space-y-2.5">
         {(() => {
+          const now = new Date().getTime();
+          const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 48 hours
+
           const validActivities = activities
-            .filter(a => 
-              a.details?.media_title || a.media_title || a.action_type === 'status_update'
-            )
+            .filter(a => {
+              const hasMedia = a.details?.media_title || a.media_title || a.action_type === 'status_update';
+              if (!hasMedia) return false;
+
+              // Filter out activities older than 2 days
+              if (a.created_at) {
+                const actTime = new Date(a.created_at).getTime();
+                if (!isNaN(actTime) && (now - actTime) > TWO_DAYS_MS) {
+                  return false;
+                }
+              }
+              return true;
+            })
             .slice(0, 6);
 
           if (validActivities.length === 0) {

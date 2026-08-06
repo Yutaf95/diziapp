@@ -25,7 +25,7 @@ import { sortFranchiseAlphabetical } from './lib/sorting';
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
 import { getTrending, search, getDetails, getSeasonDetails } from './lib/tmdb';
 import { CURRENT_USER, INITIAL_USER_WATCH_STATUSES, INITIAL_ACTIVITIES, INITIAL_REVIEWS, INITIAL_COLLECTIONS, getMockProfileData } from './data/mockData';
-import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles } from 'lucide-react';
+import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
 

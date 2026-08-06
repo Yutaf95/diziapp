@@ -655,141 +655,152 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                       </h3>
                     </div>
 
-                    {/* VERTICAL SUMMARY STORY CARD (Larger, Super Readable, High Impact) */}
+                    {/* VERTICAL SUMMARY STORY CARD (Refined to match exact reference design language) */}
                     <div 
                       ref={cardRef}
-                      className="bg-gradient-to-b from-[#0F121C] via-[#0B0D13] to-[#08090D] border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden w-full max-w-lg sm:max-w-xl mx-auto my-2 text-white ring-1 ring-white/10"
+                      className="bg-gradient-to-b from-[#12141C] via-[#0D0F17] to-[#08090E] border-2 border-amber-500/50 rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl relative overflow-hidden w-full max-w-lg sm:max-w-xl mx-auto my-2 text-white ring-1 ring-white/10"
                     >
                       {/* Background Ambient Glows */}
                       <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
                       <div className="absolute top-1/2 -left-24 w-64 h-64 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
-                      <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-purple-600/25 rounded-full blur-3xl pointer-events-none" />
 
-                      {/* Header Title Bar */}
-                      <div className="relative z-10 flex items-center justify-between border-b border-white/15 pb-3.5">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-5 h-5 text-amber-400" />
-                          <span className="text-base font-black tracking-wider text-white uppercase">
-                            {formattedMonthTitle} ÖZETİ
+                      {/* 1. HEADER TITLE */}
+                      <div className="text-center space-y-1">
+                        <h1 className="text-3xl sm:text-4xl font-black tracking-widest text-amber-400 uppercase font-mono drop-shadow-md">
+                          {formattedMonthTitle}
+                        </h1>
+                      </div>
+
+                      <div className="border-t border-dashed border-white/20 my-2" />
+
+                      {/* 2. MAIN HERO EKRAN SÜRESİ */}
+                      <div className="text-center space-y-1 my-3">
+                        <div className="text-5xl sm:text-6xl font-black text-amber-400 font-mono tracking-tight drop-shadow-lg">
+                          {totalHours}
+                        </div>
+                        <div className="text-xs font-black uppercase tracking-widest text-slate-200">
+                          SAAT EKRAN SÜRESİ
+                        </div>
+                        <div className="text-xs italic text-slate-400 font-medium">
+                          "bu ay ekrana resmen kilitlendin"
+                        </div>
+                      </div>
+
+                      <div className="border-t border-dashed border-white/20 my-2" />
+
+                      {/* 3. SUB-STATS BAR (3 Columns with vertical dashed dividers) */}
+                      <div className="bg-[#141722]/80 border border-white/10 rounded-2xl p-3.5 flex items-center justify-between text-center backdrop-blur-md shadow-md">
+                        <div className="flex-1">
+                          <span className="text-xl sm:text-2xl font-black text-white font-mono block">{episodeCount}</span>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">BÖLÜM</span>
+                        </div>
+                        <div className="w-px h-8 border-r border-dashed border-white/20" />
+                        <div className="flex-1">
+                          <span className="text-xl sm:text-2xl font-black text-white font-mono block">{movieCount}</span>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">FİLM</span>
+                        </div>
+                        <div className="w-px h-8 border-r border-dashed border-white/20" />
+                        <div className="flex-1">
+                          <span className="text-xl sm:text-2xl font-black text-white font-mono block">{reviews.length}</span>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">İNCELEME</span>
+                        </div>
+                      </div>
+
+                      {/* 4. HAFTALIK RİTİM (7-Day Cards) */}
+                      <div className="space-y-2 pt-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">HAFTALIK RİTİM</span>
+                        <div className="grid grid-cols-7 gap-1.5">
+                          {daysMap.map((d, idx) => {
+                            const cnt = weeklyCounts[idx];
+                            const isPeak = idx === peakDayIdx;
+                            return (
+                              <div
+                                key={d.short}
+                                className={`rounded-xl p-2 flex flex-col items-center justify-between h-16 text-center transition border ${
+                                  isPeak
+                                    ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-lg shadow-amber-400/30'
+                                    : 'bg-[#141722]/80 text-slate-300 border-white/10'
+                                }`}
+                              >
+                                <span className={`text-[10px] font-bold ${isPeak ? 'text-slate-950 font-black' : 'text-slate-400'}`}>
+                                  {d.short}
+                                </span>
+                                {isPeak && <Sparkles className="w-3 h-3 text-slate-950 fill-slate-950" />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 5. EN YOĞUN ANIN CALLOUT BANNER */}
+                      <div className="bg-[#2A1418]/90 border border-[#E63946]/40 rounded-2xl p-3.5 flex items-center gap-2.5 text-xs text-white shadow-md">
+                        <span className="text-base shrink-0">🔥</span>
+                        <p className="leading-snug text-slate-200 text-[11px]">
+                          <strong className="text-amber-400">En yoğun anın:</strong> <span className="font-bold text-white">{peakDayName}</span> günü yüksek tempolu izleme maratonu gerçekleştirdin.
+                        </p>
+                      </div>
+
+                      {/* 6. TÜR & ORT. PUAN GRID */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-[#141722]/80 border border-white/10 rounded-2xl p-3 text-center space-y-0.5">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">TÜR</span>
+                          <span className="text-sm font-black text-white uppercase block font-mono">DRAM / AKSİYON</span>
+                          <span className="text-[9px] text-slate-400 font-medium block">içeriklerin ağırlığı</span>
+                        </div>
+
+                        <div className="bg-[#141722]/80 border border-white/10 rounded-2xl p-3 text-center space-y-0.5">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">ORT. PUAN</span>
+                          <div className="flex items-center justify-center gap-0.5 text-amber-400 text-xs">
+                            ★★★★★
+                          </div>
+                          <span className="text-xs font-black text-white font-mono block">
+                            {topUserReview?.rating ? `${topUserReview.rating} / 10` : '8.4 / 10'}
                           </span>
                         </div>
-                        <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
-                          2026
-                        </span>
                       </div>
 
-                      {/* User Profile Bar */}
-                      <div className="relative z-10 flex items-center justify-between bg-white/5 border border-white/10 p-3 rounded-2xl backdrop-blur-md">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={user.avatar_url}
-                            alt={user.username}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-amber-400 shadow-md"
-                          />
-                          <div>
-                            <h4 className="text-sm font-black text-white leading-tight flex items-center gap-1.5">
-                              <span>{user.full_name || user.username}</span>
-                              <CheckCircle2 className="w-4 h-4 text-cyan-400 fill-cyan-400/20" />
-                            </h4>
-                            <span className="text-xs text-slate-300 font-semibold">
-                              @{user.username} • TTime Üyesi
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 1. EN BEĞENDİĞİN YAPIM (Top Rated Showcase) */}
+                      {/* 7. EN BEĞENDİĞİN YAPIM */}
                       {spotlightDetails && (
-                        <div className="relative z-10 border border-amber-500/40 rounded-2xl p-4 flex gap-4 items-center shadow-xl backdrop-blur-md bg-gradient-to-r from-[#181B26] to-[#12141D] group">
-                          <img 
-                            src={spotlightDetails.poster} 
-                            alt={spotlightDetails.title}
-                            className="w-20 h-28 sm:w-22 sm:h-32 rounded-xl object-cover border-2 border-amber-400/50 shadow-lg shrink-0" 
-                          />
-                          <div className="space-y-1.5 min-w-0 flex-1">
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border text-amber-300 bg-amber-500/20 border-amber-500/40 inline-flex items-center gap-1">
-                              <Trophy className="w-3 h-3 text-amber-400 fill-amber-400" /> EN BEĞENDİĞİN YAPIM
-                            </span>
-                            <h4 className="text-base sm:text-lg font-black text-white truncate">
-                              {spotlightDetails.title}
-                            </h4>
-                            {spotlightDetails.reviewText && (
-                              <p className="text-xs text-slate-300 italic line-clamp-2 bg-white/5 p-2 rounded-lg border border-white/5">
-                                "{spotlightDetails.reviewText}"
-                              </p>
-                            )}
-                            <div className="pt-0.5">
-                              {spotlightDetails.rating ? (
-                                <span className="text-xs font-black text-slate-950 bg-amber-400 px-2.5 py-1 rounded-md font-mono shadow-md inline-block">
-                                  ★ {spotlightDetails.rating}/10 Kişisel Puanın
-                                </span>
-                              ) : (
-                                <span className="text-xs font-bold text-slate-300 bg-white/10 px-2.5 py-1 rounded-md font-mono inline-block">
-                                  {spotlightDetails.badge}
-                                </span>
-                              )}
+                        <div className="space-y-1 pt-1">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">EN BEĞENDİĞİN YAPIM</span>
+                          <div className="bg-[#141722]/90 border border-amber-500/40 rounded-2xl p-3 flex items-center gap-3 shadow-xl">
+                            <img
+                              src={spotlightDetails.poster}
+                              alt={spotlightDetails.title}
+                              className="w-10 h-14 rounded-lg object-cover border border-amber-400/50 shrink-0 shadow-md"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-sm font-black text-white uppercase tracking-wide truncate">{spotlightDetails.title}</h4>
+                              <div className="flex items-center gap-1 text-amber-400 text-[11px] mt-0.5">
+                                ★★★★★ <span className="text-slate-400 text-[10px] ml-1">verdiğin puan</span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {/* 2. DYNAMIC WRAPPED STATS GRID (4 Large Clear Stat Cards) */}
-                      <div className="relative z-10 grid grid-cols-2 gap-3">
-                        
-                        {/* Bu Ay İzlediğin Bölüm Sayısı */}
-                        <div className="bg-white/5 border border-white/10 hover:border-purple-500/40 rounded-2xl p-3.5 space-y-1.5 backdrop-blur-md shadow-md transition">
-                          <div className="flex items-center justify-between text-purple-400">
-                            <Tv className="w-4 h-4" />
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300">BÖLÜM SAYISI</span>
+                      {/* 8. EKRANINI EN ÇOK SÜSLEYEN OYUNCU */}
+                      {topActor && (
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">EKRANINI EN ÇOK SÜSLEYEN</span>
+                          <div className="bg-[#141722]/90 border border-purple-500/40 rounded-2xl p-3 flex items-center gap-3 shadow-xl">
+                            <img
+                              src={topActor.photo}
+                              alt={topActor.name}
+                              className="w-10 h-10 rounded-full object-cover border border-purple-400/50 shrink-0 shadow-md"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-sm font-black text-white uppercase tracking-wide truncate">{topActor.name}</h4>
+                              <p className="text-[10px] text-slate-300 font-medium truncate">{topActor.role}</p>
+                            </div>
                           </div>
-                          <div className="text-xl font-black text-white font-mono">
-                            {episodeCount} <span className="text-xs font-bold text-purple-300">Bölüm</span>
-                          </div>
-                          <span className="text-[10px] text-slate-400 block font-medium">Bu ay izlendi</span>
                         </div>
-
-                        {/* Bu Ay İzlediğin Film Sayısı */}
-                        <div className="bg-white/5 border border-white/10 hover:border-emerald-500/40 rounded-2xl p-3.5 space-y-1.5 backdrop-blur-md shadow-md transition">
-                          <div className="flex items-center justify-between text-emerald-400">
-                            <Film className="w-4 h-4" />
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300">FİLM SAYISI</span>
-                          </div>
-                          <div className="text-xl font-black text-white font-mono">
-                            {movieCount} <span className="text-xs font-bold text-emerald-300">Film</span>
-                          </div>
-                          <span className="text-[10px] text-slate-400 block font-medium">Sinema yapımı</span>
-                        </div>
-
-                        {/* Bu Ay İncelediğin Yapım Sayısı */}
-                        <div className="bg-white/5 border border-white/10 hover:border-sky-500/40 rounded-2xl p-3.5 space-y-1.5 backdrop-blur-md shadow-md transition">
-                          <div className="flex items-center justify-between text-sky-400">
-                            <MessageSquare className="w-4 h-4" />
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300">İNCELEME SAYISI</span>
-                          </div>
-                          <div className="text-xl font-black text-white font-mono">
-                            {reviews.length} <span className="text-xs font-bold text-sky-300">İnceleme</span>
-                          </div>
-                          <span className="text-[10px] text-slate-400 block font-medium">Eleştiri ve yorum</span>
-                        </div>
-
-                        {/* Toplam Ekran Süresi */}
-                        <div className="bg-white/5 border border-white/10 hover:border-amber-500/40 rounded-2xl p-3.5 space-y-1.5 backdrop-blur-md shadow-md transition">
-                          <div className="flex items-center justify-between text-amber-400">
-                            <Clock className="w-4 h-4" />
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">EKRAN SÜRESİ</span>
-                          </div>
-                          <div className="text-base font-black text-white font-mono">
-                            {totalHours}s {remainingMinutes}dk
-                          </div>
-                          <span className="text-[10px] text-slate-400 block font-medium">Toplam izleme</span>
-                        </div>
-
-                      </div>
+                      )}
 
                       {/* Card Footer Brand Bar */}
-                      <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-white/10 font-bold">
+                      <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/10 font-bold">
                         <span>TTime • Film & Dizi Takip</span>
-                        <span className="text-amber-400">ttime.app</span>
+                        <span className="text-amber-400 font-mono">ttime.app</span>
                       </div>
                     </div>
                   </motion.div>

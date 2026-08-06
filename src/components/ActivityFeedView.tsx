@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Star, Eye, CheckCircle2, MessageSquare, AlertTriangle, UserPlus, UserCheck, Flame, Heart, Search, X, Users, ArrowRight } from 'lucide-react';
 import { ActivityFeedItem, Profile } from '../types';
 import { EmptyState } from './EmptyState';
+import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix } from '../utils/textUtils';
 
 interface ActivityFeedViewProps {
   activities: ActivityFeedItem[];
@@ -269,9 +270,9 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                     </h4>
 
                     {details.season_number && details.episode_number && (
-                      <div className="text-xs text-slate-300 font-medium mt-0.5">
-                        Sezon {details.season_number}, Bölüm {details.episode_number}
-                        {details.episode_name && <span className="text-slate-400"> - "{details.episode_name}"</span>}
+                      <div className="text-xs text-slate-300 font-bold mt-0.5">
+                        S{details.season_number}B{details.episode_number}{getEpisodeAccusativeSuffix(details.episode_number)} izledi
+                        {details.episode_name && <span className="text-slate-400 font-normal"> - "{details.episode_name}"</span>}
                       </div>
                     )}
 

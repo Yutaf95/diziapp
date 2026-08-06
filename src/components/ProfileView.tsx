@@ -89,6 +89,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [formBio, setFormBio] = useState(user.bio || '');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
+  const threeDotsRef = useRef<HTMLDivElement>(null);
+  const [isThreeDotsMenuOpen, setIsThreeDotsMenuOpen] = useState(false);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -107,6 +110,34 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       reader.readAsDataURL(file);
     }
   };
+
+  const handleBannerClick = () => {
+    bannerFileInputRef.current?.click();
+  };
+
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newBannerUrl = reader.result as string;
+        if (onUpdateProfile) {
+          onUpdateProfile({ banner_url: newBannerUrl });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (threeDotsRef.current && !threeDotsRef.current.contains(event.target as Node)) {
+        setIsThreeDotsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Followers / Following Lists (Initialized empty, no test data)
   const [followers, setFollowers] = useState<any[]>([]);
@@ -201,6 +232,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 1. FULL-WIDTH COVER BANNER (Desktop: ~480-540px, Mobile: ~240px) */}
       <div className="relative w-full h-[240px] sm:h-[380px] md:h-[480px] lg:h-[540px] overflow-hidden bg-[#0e1116] group/banner">
+        <input
+          type="file"
+          ref={bannerFileInputRef}
+          onChange={handleBannerFileChange}
+          accept="image/*"
+          className="hidden"
+        />
+
         {/* Banner backdrop image */}
         <img
           src={user.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1920&q=90'}
@@ -208,6 +247,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           className="w-full h-full object-cover object-center transition-transform duration-700 group-hover/banner:scale-105"
           style={{ filter: 'grayscale(85%) brightness(0.7)', transform: 'translateZ(0)', willChange: 'transform' }}
         />
+
+        {isOwnProfile && (
+          <button
+            onClick={handleBannerClick}
+            className="absolute top-24 right-4 sm:top-28 sm:right-8 z-20 opacity-0 group-hover/banner:opacity-100 transition-all duration-300 px-3.5 py-2 rounded-xl bg-black/70 hover:bg-black/90 backdrop-blur-md text-white text-xs font-extrabold border border-white/20 flex items-center gap-2 cursor-pointer shadow-xl hover:scale-105 active:scale-95"
+            title="Kapak Fotoğrafını Değiştir"
+          >
+            <Camera className="w-4 h-4 text-[#00e054]" />
+            <span>Kapak Fotoğrafını Değiştir</span>
+          </button>
+        )}
         
         {/* Multi-stop linear gradient transition (spreads over bottom 60-70%) */}
         <div 
@@ -278,13 +328,51 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </h1>
 
                 {isOwnProfile ? (
-                  <button
-                    onClick={() => setShowSettingsModal(true)}
-                    className="text-[#9ab] hover:text-white transition cursor-pointer p-1.5 rounded-lg hover:bg-white/5"
-                    title="Profili Düzenle"
-                  >
-                    <MoreHorizontal className="w-6 h-6" />
-                  </button>
+                  <div ref={threeDotsRef} className="relative">
+                    <button
+                      onClick={() => setIsThreeDotsMenuOpen(prev => !prev)}
+                      className="text-[#9ab] hover:text-white transition cursor-pointer p-1.5 rounded-xl hover:bg-white/10 active:bg-white/20 border border-transparent hover:border-[#2c3440]"
+                      title="Profil Ayarları & Seçenekler"
+                    >
+                      <MoreHorizontal className="w-6 h-6" />
+                    </button>
+
+                    {isThreeDotsMenuOpen && (
+                      <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 w-60 bg-[#181e23] border border-[#2c3440] rounded-2xl shadow-2xl overflow-hidden z-50 p-2 space-y-1 animate-in fade-in slide-in-from-top-2">
+                        <button
+                          onClick={() => {
+                            setIsThreeDotsMenuOpen(false);
+                            handleBannerClick();
+                          }}
+                          className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-white/10 flex items-center gap-3 transition cursor-pointer"
+                        >
+                          <Camera className="w-4 h-4 text-[#00e054] shrink-0" />
+                          <span>Kapak Fotoğrafını Değiştir</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsThreeDotsMenuOpen(false);
+                            handleAvatarClick();
+                          }}
+                          className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-white/10 flex items-center gap-3 transition cursor-pointer"
+                        >
+                          <ImageIcon className="w-4 h-4 text-[#40bcf4] shrink-0" />
+                          <span>Profil Fotoğrafını Değiştir</span>
+                        </button>
+                        <div className="border-t border-[#2c3440] my-1" />
+                        <button
+                          onClick={() => {
+                            setIsThreeDotsMenuOpen(false);
+                            setShowSettingsModal(true);
+                          }}
+                          className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-white/10 flex items-center gap-3 transition cursor-pointer"
+                        >
+                          <Settings className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span>Profili Düzenle</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <button
                     onClick={() => onToggleFollowUser && onToggleFollowUser(user.id)}
@@ -853,6 +941,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             <div className="space-y-4 py-2 text-xs">
+              {/* Kapak Fotoğrafı Yükle / Değiştir */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-300 font-bold">Kapak Fotoğrafı</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSettingsModal(false);
+                      handleBannerClick();
+                    }}
+                    className="text-xs font-bold text-[#00e054] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Camera className="w-3.5 h-3.5" /> Değiştir
+                  </button>
+                </div>
+                <div 
+                  onClick={() => {
+                    setShowSettingsModal(false);
+                    handleBannerClick();
+                  }}
+                  className="w-full h-24 rounded-2xl overflow-hidden border border-[#2c3440] relative group cursor-pointer shadow-inner bg-[#14181c]"
+                >
+                  <img
+                    src={user.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=600&q=80'}
+                    alt="Cover Banner"
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition duration-200 flex items-center justify-center text-xs font-extrabold text-white gap-2">
+                    <Camera className="w-4 h-4 text-[#00e054]" /> Kapak Fotoğrafı Seç
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-slate-300 font-bold">Kullanıcı Adı</label>
                 <input

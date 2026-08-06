@@ -354,7 +354,7 @@ export default function App() {
   const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
   
   // Left Sidebar Filter States
-  const [mediaFilter, setMediaFilter] = useState<'all' | 'tv' | 'movie'>('all');
+  const [mediaFilter, setMediaFilter] = useState<'all' | 'tv' | 'movie'>('tv');
   const [statusFilter, setStatusFilter] = useState<'all' | 'watching' | 'plan_to_watch' | 'watched'>('all');
 
   // Dynamic Profile Navigation & Follow State
@@ -1773,7 +1773,8 @@ export default function App() {
         onSelectMedia={(m) => setSelectedMedia(m)}
         onOpenProfile={() => handleNavigateToProfile(currentUser.username)}
         onGoHome={() => {
-          handleTabChange('tracker');
+          setActiveTab('discover');
+          setStatusFilter('all');
           try { window.history.pushState({}, '', '/'); } catch(e){}
         }}
         onLogout={handleLogout}
@@ -2365,7 +2366,7 @@ export default function App() {
             </div>
 
             {/* Sağ Sidebar (390px - 420px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
-            <div className="hidden lg:block w-[390px] xl:w-[420px] shrink-0 space-y-4">
+            <div className="hidden lg:block w-[390px] xl:w-[420px] shrink-0 space-y-4 sticky top-24 h-fit">
               <SocialFeedSidebar
                 activities={activityFeed}
                 onSelectMediaById={handleSelectMediaById}

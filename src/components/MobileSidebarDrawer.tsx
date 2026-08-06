@@ -127,7 +127,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
               {/* Drawer Top Header & Close Button */}
               <div className="flex items-center justify-between pb-1">
                 <span className="text-[10px] font-black tracking-widest text-[#E63946] uppercase bg-[#E63946]/10 border border-[#E63946]/20 px-2.5 py-1 rounded-full">
-                  ttime
+                  TTime
                 </span>
                 <button
                   type="button"
@@ -300,7 +300,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
               </button>
 
               <div className="text-[10px] text-neutral-500 text-center font-medium">
-                ttime Mobile v2.4.0 • Türkiye
+                TTime Mobile v2.4.0 • Türkiye
               </div>
             </div>
 

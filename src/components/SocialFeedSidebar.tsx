@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Activity, Star, Eye, MessageSquare, ThumbsUp, Send, Sparkles, UserPlus } from 'lucide-react';
 import { ActivityFeedItem, Profile } from '../types';
 import { UserAvatar } from './UserAvatar';
+import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix } from '../utils/textUtils';
 
 interface SocialFeedSidebarProps {
   activities: ActivityFeedItem[];
@@ -63,45 +64,10 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
         </span>
       </div>
 
-      {/* Quick Status / Post Input Box */}
-      <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-4 shadow-lg space-y-3">
-        <div className="flex items-center gap-3">
-          {currentUser?.avatar_url && (
-            <img
-              src={currentUser.avatar_url}
-              alt={currentUser.full_name}
-              className="w-8 h-8 rounded-full object-cover border-2 border-[#E63946] shadow-sm shrink-0"
-            />
-          )}
-          <input
-            type="text"
-            value={quickPostText}
-            onChange={(e) => setQuickPostText(e.target.value)}
-            placeholder="Ne izliyorsun? Arkadaşlarınla paylaş..."
-            className="w-full bg-[#0B0C0E] border border-[#232833] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#E63946] transition"
-          />
-        </div>
-        {quickPostText.trim() && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                if (onAddActivity) {
-                  onAddActivity(quickPostText.trim());
-                } else {
-                  alert(`Paylaşıldı: "${quickPostText}"`);
-                }
-                setQuickPostText('');
-              }}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#E63946] hover:bg-[#d62839] text-white text-xs font-extrabold rounded-xl shadow-md transition cursor-pointer"
-            >
-              <Send className="w-3.5 h-3.5" /> Paylaş
-            </button>
-          </div>
-        )}
-      </div>
 
-      {/* Activity List - Chronological Vertical Cards */}
-      <div className="space-y-3">
+
+      {/* Activity List - Scrollable Dedicated Container (Max ~6 cards height, independent inner scroll) */}
+      <div className="max-h-[620px] xl:max-h-[680px] overflow-y-auto pr-1.5 space-y-3 custom-scrollbar">
         {(() => {
           const now = new Date().getTime();
           const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 48 hours
@@ -120,7 +86,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
               }
               return true;
             })
-            .slice(0, 6);
+            .slice(0, 30);
 
           if (validActivities.length === 0) {
             return (
@@ -189,8 +155,8 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                         <span className="truncate">
                           <strong className="text-white font-bold">{mediaTitle}</strong>
                           {item.details?.season_number && item.details?.episode_number
-                            ? ` S${item.details.season_number.toString().padStart(2, '0')}E${item.details.episode_number.toString().padStart(2, '0')}`
-                            : ''} izledi
+                            ? ` S${item.details.season_number}B${item.details.episode_number}${getEpisodeAccusativeSuffix(item.details.episode_number)} izledi`
+                            : `${getTurkishAccusativeSuffix(mediaTitle)} bir bölümünü izledi`}
                         </span>
                       </div>
                     )}
@@ -224,12 +190,18 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                       <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
                         <Sparkles className="w-4 h-4 text-[#E63946] shrink-0" />
                         <span className="truncate">
-                          {item.media_id ? (
+                          {item.details?.status === 'watched' ? (
                             <>
-                              <strong className="text-white font-bold">{mediaTitle}</strong> listesine eklendi
+                              <strong className="text-white font-bold">{mediaTitle}</strong>{getTurkishAccusativeSuffix(mediaTitle)} izledi
+                            </>
+                          ) : item.details?.status === 'watching' ? (
+                            <>
+                              <strong className="text-white font-bold">{mediaTitle}</strong> izlemeye başladı
                             </>
                           ) : (
-                            <strong className="text-white font-bold">{mediaTitle}</strong>
+                            <>
+                              <strong className="text-white font-bold">{mediaTitle}</strong> izlenecekler listesine ekledi
+                            </>
                           )}
                         </span>
                       </div>

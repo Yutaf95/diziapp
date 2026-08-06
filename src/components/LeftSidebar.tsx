@@ -108,7 +108,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         <button
           onClick={() => setActiveMediaType('tv')}
           className={`flex-1 py-2.5 px-3.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 ${
-            activeMediaType === 'tv' || activeMediaType === 'all'
+            activeMediaType === 'tv'
               ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/20'
               : 'text-slate-400 hover:text-white hover:bg-[#0B0C0E]/50'
           }`}

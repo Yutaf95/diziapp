@@ -125,7 +125,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
             <Tv className="w-7 h-7 stroke-[2.5]" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
-            ttime <span className="text-xs bg-[#E63946]/15 text-[#E63946] border border-[#E63946]/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">Bulut</span>
+            TTime <span className="text-xs bg-[#E63946]/15 text-[#E63946] border border-[#E63946]/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">Bulut</span>
           </h1>
           <p className="text-xs text-slate-400 max-w-xs mx-auto">
             Dizi ve filmleri arkadaşlarınızla birlikte eş zamanlı takip edin, yorumlayın ve istatistiklerinizi paylaşın.

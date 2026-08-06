@@ -126,29 +126,29 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="absolute top-full left-0 right-0 mt-2.5 bg-[#14171D]/98 backdrop-blur-xl border border-[#2B313E] rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 ring-1 ring-black/50">
         
         {/* Header section of dropdown */}
-        <div className="p-3 border-b border-[#232833] flex items-center justify-between text-xs font-bold text-slate-400 bg-[#0B0C0E]/50">
-          <span className="flex items-center gap-1.5">
-            <Search className="w-3.5 h-3.5 text-[#E63946]" />
-            <span className="text-slate-200">ARAMA SONUÇLARI</span>
+        <div className="p-3.5 sm:p-4 border-b border-[#232833] flex items-center justify-between text-xs sm:text-sm font-extrabold text-slate-400 bg-[#0B0C0E]/50">
+          <span className="flex items-center gap-2">
+            <Search className="w-4 h-4 text-[#E63946]" />
+            <span className="text-white tracking-wider">ARAMA SONUÇLARI</span>
           </span>
           {isSearching ? (
-            <span className="flex items-center gap-1.5 text-[#E63946] font-semibold">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span className="flex items-center gap-2 text-[#E63946] font-semibold text-xs">
+              <Loader2 className="w-4 h-4 animate-spin" />
               <span>TMDB'de aranıyor...</span>
             </span>
           ) : (
-            <span className="text-[10px] bg-[#232833] text-slate-300 px-2 py-0.5 rounded-full font-extrabold border border-[#2B313E]">
+            <span className="text-xs bg-[#232833] text-slate-200 px-3 py-1 rounded-full font-black border border-[#2B313E]">
               {searchResults.length} Yapım
             </span>
           )}
         </div>
 
         {/* Results List */}
-        <div ref={searchScrollRef} className="max-h-96 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
+        <div ref={searchScrollRef} className="max-h-[32rem] overflow-y-auto p-2.5 sm:p-3 space-y-2.5 custom-scrollbar">
           {isSearching && searchResults.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2.5">
-              <Loader2 className="w-6 h-6 text-[#E63946] animate-spin" />
-              <span className="font-medium">TMDB veritabanında film ve diziler taranıyor...</span>
+            <div className="py-12 text-center text-sm text-slate-300 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-7 h-7 text-[#E63946] animate-spin" />
+              <span className="font-semibold">TMDB veritabanında film ve diziler taranıyor...</span>
             </div>
           ) : searchResults.length > 0 ? (
             searchResults.map((item) => {
@@ -162,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
               return (
                 <div
                   key={`${item.id}-${item.media_type || (isTv ? 'tv' : 'movie')}`}
-                  className="relative flex items-center gap-3.5 p-2.5 rounded-xl bg-[#0B0C0E]/70 hover:bg-[#232833] border border-[#232833]/50 hover:border-[#E63946]/50 cursor-pointer transition-all duration-200 group shadow-sm"
+                  className="relative flex items-center gap-4 p-3.5 sm:p-4 rounded-2xl bg-[#0B0C0E]/80 hover:bg-[#232833] border border-[#232833] hover:border-[#E63946]/50 cursor-pointer transition-all duration-200 group shadow-md"
                 >
                   {/* Clickable overlay for opening detail */}
                   <div
@@ -183,34 +183,34 @@ export const Header: React.FC<HeaderProps> = ({
                         (e.target as HTMLImageElement).src =
                           'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80';
                       }}
-                      className="w-11 h-16 object-cover rounded-lg border border-[#232833] group-hover:scale-105 transition-transform duration-300 shadow-md"
+                      className="w-16 h-24 sm:w-20 sm:h-28 object-cover rounded-xl border border-[#232833] group-hover:scale-105 transition-transform duration-300 shadow-md"
                     />
-                    <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10" />
+                    <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/10" />
                   </div>
 
                   {/* Information Details */}
-                  <div className="min-w-0 flex-1 space-y-1 z-10 pointer-events-none">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-extrabold text-xs text-white truncate group-hover:text-[#E63946] transition-colors">
+                  <div className="min-w-0 flex-1 space-y-1.5 z-10 pointer-events-none">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <h4 className="font-extrabold text-sm sm:text-base text-white truncate group-hover:text-[#E63946] transition-colors leading-snug">
                         {title}
                       </h4>
                       {item.vote_average && item.vote_average > 0 ? (
-                        <span className="flex items-center gap-1 text-[11px] font-black text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                        <span className="flex items-center gap-1.5 text-xs sm:text-sm font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20 shrink-0">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                           {item.vote_average.toFixed(1)}
                         </span>
                       ) : null}
                     </div>
 
                     {item.overview && (
-                      <p className="text-[10px] text-slate-400 line-clamp-1 font-medium leading-relaxed">
+                      <p className="text-xs sm:text-sm text-slate-300 line-clamp-2 font-normal leading-relaxed">
                         {item.overview}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-2 text-[10px] pt-0.5">
+                    <div className="flex items-center gap-2 text-xs pt-1 flex-wrap">
                       <span
-                        className={`px-2 py-0.5 rounded font-black uppercase text-[9px] tracking-wider ${
+                        className={`px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider ${
                           isTv 
                             ? 'bg-[#E63946]/20 text-[#E63946] border border-[#E63946]/30' 
                             : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
@@ -219,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
                         {isTv ? 'Dizi' : 'Film'}
                       </span>
                       {year && (
-                        <span className="text-slate-400 font-bold bg-[#14171D] px-1.5 py-0.5 rounded border border-[#232833]">
+                        <span className="text-slate-300 font-bold bg-[#14171D] px-2 py-0.5 rounded-lg border border-[#232833]">
                           {year}
                         </span>
                       )}
@@ -227,21 +227,21 @@ export const Header: React.FC<HeaderProps> = ({
                         const status = getUserWatchStatus ? getUserWatchStatus(item.id, isTv ? 'tv' : 'movie') : null;
                         if (status === 'watching') {
                           return (
-                            <span className="px-2 py-0.5 rounded font-black uppercase text-[9px] tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                               İzliyorum
                             </span>
                           );
                         }
                         if (status === 'plan_to_watch') {
                           return (
-                            <span className="px-2 py-0.5 rounded font-black uppercase text-[9px] tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
                               İzleyeceğim
                             </span>
                           );
                         }
                         if (status === 'watched') {
                           return (
-                            <span className="px-2 py-0.5 rounded font-black uppercase text-[9px] tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                            <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
                               Tamamlandı
                             </span>
                           );
@@ -253,17 +253,17 @@ export const Header: React.FC<HeaderProps> = ({
 
                   {/* Quick Action Buttons (visible on hover) */}
                   {onUpdateWatchStatus && (
-                    <div className="absolute right-2 bottom-2 z-20 hidden group-hover:flex items-center gap-1">
+                    <div className="absolute right-3 bottom-3 z-20 hidden group-hover:flex items-center gap-1.5">
                       {isTv && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onUpdateWatchStatus(item, 'watching');
                           }}
-                          className="p-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all duration-150 active:scale-90"
+                          className="p-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all duration-150 active:scale-90 shadow-md"
                           title="İzliyorum"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-4 h-4" />
                         </button>
                       )}
                       <button
@@ -271,20 +271,20 @@ export const Header: React.FC<HeaderProps> = ({
                           e.stopPropagation();
                           onUpdateWatchStatus(item, 'plan_to_watch');
                         }}
-                        className="p-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 transition-all duration-150 active:scale-90"
+                        className="p-2 rounded-xl bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 transition-all duration-150 active:scale-90 shadow-md"
                         title="İzleyeceğim"
                       >
-                        <Clock className="w-3.5 h-3.5" />
+                        <Clock className="w-4 h-4" />
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           onUpdateWatchStatus(item, 'watched');
                         }}
-                        className="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/30 transition-all duration-150 active:scale-90"
+                        className="p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/30 transition-all duration-150 active:scale-90 shadow-md"
                         title="Tamamlandı"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <CheckCircle2 className="w-4 h-4" />
                       </button>
                     </div>
                   )}
@@ -335,7 +335,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               ) : (
                 <span className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 group-hover:text-slate-100 transition">
-                  ttime <span className="text-xs font-semibold text-[#E63946] bg-[#E63946]/10 px-2 py-0.5 rounded border border-[#E63946]/30 uppercase tracking-widest">TR</span>
+                  TTime <span className="text-xs font-semibold text-[#E63946] bg-[#E63946]/10 px-2 py-0.5 rounded border border-[#E63946]/30 uppercase tracking-widest">TR</span>
                 </span>
               )}
             </div>

@@ -174,6 +174,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       if (!user?.id) return;
 
       try {
+        let fetchedFollowing: Profile[] = [];
+        let fetchedFollowers: Profile[] = [];
+
         if (isSupabaseConfigured) {
           // 1. Fetch IDs of users THIS user is following
           const { data: followRows } = await supabase
@@ -188,17 +191,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               .select('id, username, full_name, avatar_url, bio')
               .in('id', targetIds);
 
-            if (isMounted && pList) {
-              setFollowing(pList.map((p: any) => ({
+            if (pList) {
+              fetchedFollowing = pList.map((p: any) => ({
                 id: p.id,
                 username: p.username,
                 full_name: p.full_name || p.username,
-                avatar_url: p.avatar_url || DEFAULT_AVATAR_URL,
+                avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
                 bio: p.bio || ''
-              })));
+              }));
             }
-          } else if (isMounted) {
-            setFollowing([]);
           }
 
           // 2. Fetch IDs of users that follow THIS user
@@ -214,33 +215,42 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               .select('id, username, full_name, avatar_url, bio')
               .in('id', targetIds);
 
-            if (isMounted && pList) {
-              setFollowers(pList.map((p: any) => ({
+            if (pList) {
+              fetchedFollowers = pList.map((p: any) => ({
                 id: p.id,
                 username: p.username,
                 full_name: p.full_name || p.username,
-                avatar_url: p.avatar_url || DEFAULT_AVATAR_URL,
+                avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
                 bio: p.bio || ''
-              })));
+              }));
             }
-          } else if (isMounted) {
-            setFollowers([]);
           }
-        } else {
-          // Local fallback
-          if (isOwnProfile && currentUserProfile && followingUserIds) {
-            const localFollowing = followingUserIds.map(id => ({
-              id,
-              username: id,
-              full_name: id,
-              avatar_url: DEFAULT_AVATAR_URL,
-              bio: ''
-            }));
-            if (isMounted) setFollowing(localFollowing);
+        }
+
+        // Merge local state (followingUserIds and isFollowing) to guarantee immediate UI reactivity
+        if (isOwnProfile && followingUserIds && followingUserIds.length > 0) {
+          for (const fId of followingUserIds) {
+            if (!fetchedFollowing.some(p => p.id === fId || p.username === fId)) {
+              fetchedFollowing.push({
+                id: fId,
+                username: fId,
+                full_name: fId,
+                avatar_url: DEFAULT_AVATAR_URL,
+                bio: ''
+              });
+            }
           }
-          if (!isOwnProfile && isFollowing && currentUserProfile) {
-            if (isMounted) setFollowers([currentUserProfile]);
+        }
+
+        if (!isOwnProfile && isFollowing && currentUserProfile) {
+          if (!fetchedFollowers.some(p => p.id === currentUserProfile.id || p.username === currentUserProfile.username)) {
+            fetchedFollowers.push(currentUserProfile);
           }
+        }
+
+        if (isMounted) {
+          setFollowing(fetchedFollowing);
+          setFollowers(fetchedFollowers);
         }
       } catch (err) {
         console.error('Error fetching social connections:', err);

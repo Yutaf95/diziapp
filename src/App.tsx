@@ -224,8 +224,8 @@ export default function App() {
           .select('*, profiles(username, full_name, avatar_url)')
           .order('created_at', { ascending: false });
 
-        if (revData) {
-          setReviews(revData.map((r: any) => ({
+        if (revData && revData.length > 0) {
+          const fetchedReviews: RatingReview[] = revData.map((r: any) => ({
             id: r.id,
             user_id: r.user_id,
             username: r.profiles?.username || 'kullanıcı',
@@ -243,7 +243,18 @@ export default function App() {
             likes: r.likes || 0,
             likes_count: r.likes_count || r.likes || 0,
             comments_count: r.comments_count || 0
-          })));
+          }));
+
+          setReviews(prev => {
+            const map = new Map<string, RatingReview>();
+            prev.forEach(r => map.set(String(r.id), r));
+            fetchedReviews.forEach(r => map.set(String(r.id), r));
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem('diziapp_reviews', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
         }
       } catch (err) { console.warn('ratings_reviews fetch error:', err); }
 
@@ -604,7 +615,23 @@ export default function App() {
     } catch {}
   }, [episodeProgress]);
 
-  const [reviews, setReviews] = useState<RatingReview[]>([]);
+  const [reviews, setReviews] = useState<RatingReview[]>(() => {
+    try {
+      const stored = localStorage.getItem('diziapp_reviews');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return INITIAL_REVIEWS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('diziapp_reviews', JSON.stringify(reviews));
+    } catch (e) {}
+  }, [reviews]);
+
   const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
 
   // Custom Collections State (saved in localStorage)

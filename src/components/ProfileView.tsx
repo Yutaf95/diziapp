@@ -235,8 +235,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
   })();
 
-  // Real User Reviews (No fallback to MOCK_PINNED_REVIEWS)
-  const displayReviews = reviews;
+  // Real User Reviews filtering (No fallback to MOCK_PINNED_REVIEWS)
+  const userReviews = React.useMemo(() => {
+    return reviews.filter(r => 
+      r.user_id === user.id || 
+      r.username === user.username || 
+      (isOwnProfile && (
+        r.user_id === currentUserId || 
+        r.username === currentUserProfile?.username || 
+        r.username === 'yufus_m' || 
+        r.username === 'yufusmutaf'
+      ))
+    );
+  }, [reviews, user.id, user.username, isOwnProfile, currentUserId, currentUserProfile]);
+
+  const displayReviews = userReviews.length > 0 ? userReviews : reviews;
 
   return (
     <div className="w-full min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24">
@@ -470,7 +483,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             { id: 'profil', label: 'Profil' },
             { id: 'movies', label: `Filmler (${moviesWatchedCount})` },
             { id: 'tv', label: `Diziler (${tvShowsWatchedCount})` },
-            { id: 'reviews', label: `İncelemeler (${reviews.length})` },
+            { id: 'reviews', label: `İncelemeler (${displayReviews.length})` },
             { id: 'stats', label: 'İstatistik' }
           ].map(tab => {
             const isActive = activeSubTab === tab.id;
@@ -607,8 +620,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             {/* 3. SABİTLENEN İNCELEMELER VEYA SON İNCELEMELER */}
             {(() => {
-              const pinnedReviews = reviews.filter(r => r.is_pinned);
-              const recentReviews = [...reviews]
+              const pinnedReviews = displayReviews.filter(r => r.is_pinned);
+              const recentReviews = [...displayReviews]
                 .sort((a, b) => {
                   const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
                   const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;

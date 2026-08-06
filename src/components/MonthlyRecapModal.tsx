@@ -266,33 +266,47 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   // Check if user has sufficient data (at least 1 watched episode or movie)
   const hasData = (episodeCount + movieCount) > 0;
 
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
   return (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-90 bg-black/90 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 cursor-pointer touch-none overscroll-none"
+        className="fixed inset-0 z-90 bg-black/92 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 cursor-pointer touch-none select-none overscroll-none overflow-hidden"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.93, y: 20 }}
+          initial={{ opacity: 0, scale: 0.94, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.93, y: 20 }}
-          transition={{ duration: 0.22, ease: 'easeOut' }}
-          className="bg-[#0D0F17] border border-[#2B313E] rounded-3xl p-4 sm:p-6 max-w-lg sm:max-w-xl w-full relative cursor-default shadow-2xl overflow-y-auto max-h-[94vh] custom-scrollbar touch-pan-y overscroll-contain"
+          exit={{ opacity: 0, scale: 0.94, y: 15 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="bg-[#0D0F17] border-2 border-[#2B313E] rounded-3xl p-5 sm:p-7 max-w-xl sm:max-w-2xl w-full relative cursor-default shadow-2xl overflow-y-auto overflow-x-hidden max-h-[92vh] custom-scrollbar touch-pan-y overscroll-contain"
         >
           {/* Background Ambient Glow */}
-          <div className="absolute -top-24 -left-24 w-72 h-72 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-24 -left-24 w-80 h-80 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Top Bar Navigation: Title & Close */}
-          <div className="relative z-10 flex items-center justify-between gap-4 mb-4 pb-3 border-b border-white/10">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-400" />
-              <h2 className="text-sm sm:text-base font-extrabold text-white">
+          <div className="relative z-10 flex items-center justify-between gap-4 mb-4 pb-3 border-b border-white/15">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-6 h-6 text-amber-400 shrink-0" />
+              <h2 className="text-base sm:text-lg font-black text-white tracking-wide">
                 {formattedMonthTitle} İzleme Özeti
               </h2>
             </div>
@@ -300,7 +314,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition border border-white/10 shrink-0 cursor-pointer"
+              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition border border-white/15 shrink-0 cursor-pointer"
               title="Kapat"
             >
               <X className="w-5 h-5" />
@@ -310,98 +324,101 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
           {/* MAIN RECAP CONTENT */}
           {!hasData ? (
             /* EMPTY STATE IF USER HAS NO DATA FOR MONTH */
-            <div className="py-12 px-4 text-center space-y-5">
-              <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-xl shadow-amber-500/10">
-                <Sparkles className="w-10 h-10" />
+            <div className="py-14 px-4 text-center space-y-6">
+              <div className="w-24 h-24 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-xl shadow-amber-500/10">
+                <Sparkles className="w-12 h-12" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-extrabold text-white">
+                <h3 className="text-2xl font-black text-white">
                   {formattedMonthTitle} Özetin İçin Henüz Erken!
                 </h3>
-                <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+                <p className="text-sm sm:text-base text-slate-300 max-w-md mx-auto leading-relaxed font-medium">
                   Bu ay henüz izleme verin bulunmuyor. Dizi ve film izledikçe kişisel özetin burada şekillenecektir! 🎬
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-3 rounded-2xl bg-[#E63946] hover:bg-[#d62839] text-white font-extrabold text-xs shadow-xl shadow-[#E63946]/30 transition hover:scale-105 active:scale-95 cursor-pointer"
+                className="px-7 py-3.5 rounded-2xl bg-[#E63946] hover:bg-[#d62839] text-white font-black text-sm shadow-xl shadow-[#E63946]/30 transition hover:scale-105 active:scale-95 cursor-pointer"
               >
                 Hemen İçerik Keşfet & Ekle 🚀
               </button>
             </div>
           ) : (
-            /* VERTICAL SUMMARY STORY CARD (Refined to match exact reference design language) */
+            /* VERTICAL SUMMARY STORY CARD (Large readable text & images) */
             <div 
               ref={cardRef}
-              className="bg-gradient-to-b from-[#12141C] via-[#0D0F17] to-[#08090E] border-2 border-amber-500/50 rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl relative overflow-hidden w-full text-white ring-1 ring-white/10"
+              className="bg-gradient-to-b from-[#131622] via-[#0E101A] to-[#090A10] border-2 border-amber-500/60 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl relative overflow-hidden w-full text-white ring-1 ring-white/10"
             >
               {/* Background Ambient Glows */}
-              <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute top-1/2 -left-24 w-64 h-64 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-20 -right-20 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute top-1/2 -left-24 w-72 h-72 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
 
               {/* 1. HEADER TITLE */}
-              <div className="text-center space-y-1">
-                <h1 className="text-3xl sm:text-4xl font-black tracking-widest text-amber-400 uppercase font-mono drop-shadow-md">
+              <div className="text-center space-y-1.5 pt-1">
+                <h1 className="text-4xl sm:text-5xl font-black tracking-widest text-amber-400 uppercase font-mono drop-shadow-lg">
                   {formattedMonthTitle}
                 </h1>
               </div>
 
-              <div className="border-t border-dashed border-white/20 my-2" />
+              <div className="border-t-2 border-dashed border-white/20 my-3" />
 
               {/* 2. MAIN HERO EKRAN SÜRESİ */}
-              <div className="text-center space-y-1 my-3">
-                <div className="text-5xl sm:text-6xl font-black text-amber-400 font-mono tracking-tight drop-shadow-lg">
+              <div className="text-center space-y-2 my-4">
+                <div className="text-6xl sm:text-7xl font-black text-amber-400 font-mono tracking-tight drop-shadow-xl">
                   {totalHours}
                 </div>
-                <div className="text-xs font-black uppercase tracking-widest text-slate-200">
+                <div className="text-sm font-black uppercase tracking-widest text-slate-100">
                   SAAT EKRAN SÜRESİ
                 </div>
-                <div className="text-xs italic text-slate-400 font-medium">
+                <div className="text-sm sm:text-base italic text-slate-300 font-bold">
                   "bu ay ekrana resmen kilitlendin"
                 </div>
               </div>
 
-              <div className="border-t border-dashed border-white/20 my-2" />
+              <div className="border-t-2 border-dashed border-white/20 my-3" />
 
               {/* 3. SUB-STATS BAR (3 Columns with vertical dashed dividers) */}
-              <div className="bg-[#141722]/80 border border-white/10 rounded-2xl p-3.5 flex items-center justify-between text-center backdrop-blur-md shadow-md">
-                <div className="flex-1">
-                  <span className="text-xl sm:text-2xl font-black text-white font-mono block">{episodeCount}</span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">BÖLÜM</span>
+              <div className="bg-[#161926]/90 border border-white/15 rounded-2xl p-4 sm:p-5 flex items-center justify-between text-center backdrop-blur-md shadow-lg">
+                <div className="flex-1 space-y-1">
+                  <span className="text-2xl sm:text-3xl font-black text-white font-mono block">{episodeCount}</span>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-300 block">BÖLÜM</span>
                 </div>
-                <div className="w-px h-8 border-r border-dashed border-white/20" />
-                <div className="flex-1">
-                  <span className="text-xl sm:text-2xl font-black text-white font-mono block">{movieCount}</span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">FİLM</span>
+                <div className="w-px h-10 border-r-2 border-dashed border-white/25" />
+                <div className="flex-1 space-y-1">
+                  <span className="text-2xl sm:text-3xl font-black text-white font-mono block">{movieCount}</span>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-300 block">FİLM</span>
                 </div>
-                <div className="w-px h-8 border-r border-dashed border-white/20" />
-                <div className="flex-1">
-                  <span className="text-xl sm:text-2xl font-black text-white font-mono block">{reviews.length}</span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">İNCELEME</span>
+                <div className="w-px h-10 border-r-2 border-dashed border-white/25" />
+                <div className="flex-1 space-y-1">
+                  <span className="text-2xl sm:text-3xl font-black text-white font-mono block">{reviews.length}</span>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-300 block">İNCELEME</span>
                 </div>
               </div>
 
               {/* 4. HAFTALIK RİTİM (7-Day Cards) */}
-              <div className="space-y-2 pt-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">HAFTALIK RİTİM</span>
-                <div className="grid grid-cols-7 gap-1.5">
+              <div className="space-y-2.5 pt-2">
+                <span className="text-xs font-black uppercase tracking-widest text-amber-400 block">HAFTALIK RİTİM</span>
+                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                   {daysMap.map((d, idx) => {
-                    const cnt = weeklyCounts[idx];
                     const isPeak = idx === peakDayIdx;
                     return (
                       <div
                         key={d.short}
-                        className={`rounded-xl p-2 flex flex-col items-center justify-between h-16 text-center transition border ${
+                        className={`rounded-2xl p-2 flex flex-col items-center justify-between h-20 text-center transition border-2 ${
                           isPeak
-                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-lg shadow-amber-400/30'
-                            : 'bg-[#141722]/80 text-slate-300 border-white/10'
+                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-xl shadow-amber-400/40 font-black'
+                            : 'bg-[#161926]/90 text-slate-200 border-white/15 font-bold'
                         }`}
                       >
-                        <span className={`text-[10px] font-bold ${isPeak ? 'text-slate-950 font-black' : 'text-slate-400'}`}>
+                        <span className={`text-xs sm:text-sm ${isPeak ? 'text-slate-950 font-black' : 'text-slate-300'}`}>
                           {d.short}
                         </span>
-                        {isPeak && <Sparkles className="w-3 h-3 text-slate-950 fill-slate-950" />}
+                        {isPeak ? (
+                          <Sparkles className="w-4 h-4 text-slate-950 fill-slate-950" />
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+                        )}
                       </div>
                     );
                   })}
@@ -409,27 +426,27 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               </div>
 
               {/* 5. EN YOĞUN ANIN CALLOUT BANNER */}
-              <div className="bg-[#2A1418]/90 border border-[#E63946]/40 rounded-2xl p-3.5 flex items-center gap-2.5 text-xs text-white shadow-md">
-                <span className="text-base shrink-0">🔥</span>
-                <p className="leading-snug text-slate-200 text-[11px]">
-                  <strong className="text-amber-400">En yoğun anın:</strong> <span className="font-bold text-white">{peakDayName}</span> günü yüksek tempolu izleme maratonu gerçekleştirdin.
+              <div className="bg-[#2E151A]/95 border-2 border-[#E63946]/50 rounded-2xl p-4 flex items-center gap-3 shadow-lg">
+                <span className="text-2xl shrink-0">🔥</span>
+                <p className="leading-relaxed text-slate-100 text-xs sm:text-sm font-semibold">
+                  <strong className="text-amber-400 font-extrabold">En yoğun anın:</strong> <span className="font-black text-white">{peakDayName}</span> günü yüksek tempolu izleme maratonu gerçekleştirdin.
                 </p>
               </div>
 
               {/* 6. TÜR & ORT. PUAN GRID */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#141722]/80 border border-white/10 rounded-2xl p-3 text-center space-y-0.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">TÜR</span>
-                  <span className="text-sm font-black text-white uppercase block font-mono">DRAM / AKSİYON</span>
-                  <span className="text-[9px] text-slate-400 font-medium block">içeriklerin ağırlığı</span>
+              <div className="grid grid-cols-2 gap-3.5 pt-1">
+                <div className="bg-[#161926]/90 border border-white/15 rounded-2xl p-4 text-center space-y-1">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-400 block">TÜR</span>
+                  <span className="text-base sm:text-lg font-black text-white uppercase block font-mono">DRAM / AKSİYON</span>
+                  <span className="text-xs text-slate-300 font-medium block">içeriklerin ağırlığı</span>
                 </div>
 
-                <div className="bg-[#141722]/80 border border-white/10 rounded-2xl p-3 text-center space-y-0.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">ORT. PUAN</span>
-                  <div className="flex items-center justify-center gap-0.5 text-amber-400 text-xs">
+                <div className="bg-[#161926]/90 border border-white/15 rounded-2xl p-4 text-center space-y-1">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-400 block">ORT. PUAN</span>
+                  <div className="flex items-center justify-center gap-1 text-amber-400 text-base">
                     ★★★★★
                   </div>
-                  <span className="text-xs font-black text-white font-mono block">
+                  <span className="text-sm sm:text-base font-black text-white font-mono block">
                     {topUserReview?.rating ? `${topUserReview.rating} / 10` : '8.4 / 10'}
                   </span>
                 </div>
@@ -442,19 +459,21 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                     if (onSelectMediaById && spotlightDetails.id) onSelectMediaById(spotlightDetails.id, spotlightDetails.type);
                     onClose();
                   }}
-                  className="space-y-1 pt-1 cursor-pointer group"
+                  className="space-y-1.5 pt-2 cursor-pointer group"
                 >
-                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">EN BEĞENDİĞİN YAPIM</span>
-                  <div className="bg-[#141722]/90 border border-amber-500/40 rounded-2xl p-3 flex items-center gap-3 shadow-xl group-hover:border-amber-400 transition">
+                  <span className="text-xs font-black uppercase tracking-widest text-amber-400 block">EN BEĞENDİĞİN YAPIM</span>
+                  <div className="bg-[#161926]/95 border-2 border-amber-500/50 rounded-2xl p-4 flex items-center gap-4 shadow-xl group-hover:border-amber-400 transition">
                     <img
                       src={spotlightDetails.poster}
                       alt={spotlightDetails.title}
-                      className="w-10 h-14 rounded-lg object-cover border border-amber-400/50 shrink-0 shadow-md group-hover:scale-105 transition"
+                      className="w-14 h-20 sm:w-16 sm:h-24 rounded-xl object-cover border-2 border-amber-400/60 shrink-0 shadow-lg group-hover:scale-105 transition"
                     />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-black text-white uppercase tracking-wide truncate group-hover:text-amber-300 transition">{spotlightDetails.title}</h4>
-                      <div className="flex items-center gap-1 text-amber-400 text-[11px] mt-0.5">
-                        ★★★★★ <span className="text-slate-400 text-[10px] ml-1">verdiğin puan</span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <h4 className="text-base sm:text-lg font-black text-white uppercase tracking-wide truncate group-hover:text-amber-300 transition">
+                        {spotlightDetails.title}
+                      </h4>
+                      <div className="flex items-center gap-1 text-amber-400 text-sm font-black">
+                        ★★★★★ <span className="text-slate-300 text-xs font-bold ml-1">verdiğin puan</span>
                       </div>
                     </div>
                   </div>
@@ -463,26 +482,26 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
 
               {/* 8. EKRANINI EN ÇOK SÜSLEYEN OYUNCU */}
               {topActor && (
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">EKRANINI EN ÇOK SÜSLEYEN</span>
-                  <div className="bg-[#141722]/90 border border-purple-500/40 rounded-2xl p-3 flex items-center gap-3 shadow-xl">
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-xs font-black uppercase tracking-widest text-amber-400 block">EKRANINI EN ÇOK SÜSLEYEN</span>
+                  <div className="bg-[#161926]/95 border-2 border-purple-500/50 rounded-2xl p-4 flex items-center gap-4 shadow-xl">
                     <img
                       src={topActor.photo}
                       alt={topActor.name}
-                      className="w-10 h-10 rounded-full object-cover border border-purple-400/50 shrink-0 shadow-md"
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-purple-400/60 shrink-0 shadow-lg"
                     />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-black text-white uppercase tracking-wide truncate">{topActor.name}</h4>
-                      <p className="text-[10px] text-slate-300 font-medium truncate">{topActor.role}</p>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <h4 className="text-base sm:text-lg font-black text-white uppercase tracking-wide truncate">{topActor.name}</h4>
+                      <p className="text-xs sm:text-sm text-slate-200 font-bold truncate">{topActor.role}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Card Footer Brand Bar */}
-              <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/10 font-bold">
+              <div className="relative z-10 flex items-center justify-between text-xs font-black text-slate-300 pt-3 border-t-2 border-white/15">
                 <span>TTime • Film & Dizi Takip</span>
-                <span className="text-amber-400 font-mono">ttime.app</span>
+                <span className="text-amber-400 font-mono font-black">ttime.app</span>
               </div>
             </div>
           )}

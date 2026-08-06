@@ -440,6 +440,77 @@ export default function App() {
     return currentUser.username;
   });
 
+  // External Profile Data State & Fetcher
+  const [externalProfileData, setExternalProfileData] = useState<{
+    profile: Profile;
+    watchList: WatchStatus[];
+    episodeProgress: EpisodeProgress[];
+    reviews: RatingReview[];
+    collections: CustomCollection[];
+  } | null>(null);
+
+  useEffect(() => {
+    const isOwn = !viewingUsername || viewingUsername === currentUser.username || viewingUsername === 'me' || viewingUsername === currentUser.id;
+    if (isOwn) {
+      setExternalProfileData(null);
+      return;
+    }
+
+    let isMounted = true;
+    async function loadExternalProfile() {
+      try {
+        if (isSupabaseConfigured) {
+          // Fetch target profile by username or ID
+          const { data: pData } = await supabase
+            .from('profiles')
+            .select('*')
+            .or(`username.eq.${viewingUsername},id.eq.${viewingUsername}`)
+            .maybeSingle();
+
+          if (pData && isMounted) {
+            const extProfile: Profile = {
+              id: pData.id,
+              username: pData.username,
+              full_name: pData.full_name || pData.username,
+              avatar_url: pData.avatar_url || DEFAULT_AVATAR_URL,
+              banner_url: pData.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
+              featured_media_title: pData.featured_media_title || 'Severance',
+              bio: pData.bio || ''
+            };
+
+            // Fetch target user's watchlist, progress, reviews
+            const [{ data: extWl }, { data: extEp }, { data: extRev }] = await Promise.all([
+              supabase.from('watch_status').select('*').eq('user_id', pData.id),
+              supabase.from('episode_progress').select('*').eq('user_id', pData.id),
+              supabase.from('ratings_reviews').select('*').eq('user_id', pData.id)
+            ]);
+
+            if (isMounted) {
+              setExternalProfileData({
+                profile: extProfile,
+                watchList: extWl || [],
+                episodeProgress: extEp || [],
+                reviews: extRev || [],
+                collections: []
+              });
+            }
+          } else if (isMounted) {
+            setExternalProfileData(getMockProfileData(viewingUsername));
+          }
+        } else if (isMounted) {
+          setExternalProfileData(getMockProfileData(viewingUsername));
+        }
+      } catch (e) {
+        console.error('Error fetching external profile:', e);
+        if (isMounted) {
+          setExternalProfileData(getMockProfileData(viewingUsername));
+        }
+      }
+    }
+
+    loadExternalProfile();
+  }, [viewingUsername, currentUser.username, currentUser.id]);
+
   const [followingUserIds, setFollowingUserIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('cine_following_user_ids');
@@ -1776,6 +1847,13 @@ export default function App() {
     }
   });
 
+  // Filter Activity Feed strictly to followed users and own activities
+  const followedActivities = activityFeed.filter(a => {
+    if (a.user_id === currentUser.id) return true;
+    if (followingUserIds && followingUserIds.includes(a.user_id)) return true;
+    return false;
+  });
+
   const rawFilteredGridMedia = allAvailableMedia.filter(item => {
     const isTv = item.media_type === 'tv' || !!item.first_air_date;
     const type: MediaType = isTv ? 'tv' : 'movie';
@@ -1876,7 +1954,7 @@ export default function App() {
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               {(() => {
-                const isOwnProfile = !viewingUsername || viewingUsername === currentUser.username || viewingUsername === 'me' || viewingUsername === 'yufus_m' || viewingUsername === 'yufusmutaf' || (session?.user && currentUser.id === session.user.id);
+                const isOwnProfile = !viewingUsername || viewingUsername === currentUser.username || viewingUsername === 'me' || viewingUsername === currentUser.id;
                 const profileData = isOwnProfile 
                   ? {
                       profile: currentUser,
@@ -1885,7 +1963,7 @@ export default function App() {
                       reviews,
                       collections
                     }
-                  : getMockProfileData(viewingUsername);
+                  : (externalProfileData || getMockProfileData(viewingUsername));
 
                 return (
                   <ProfileView
@@ -2131,7 +2209,7 @@ export default function App() {
                 />
               ) : activeTab === 'activity' ? (
                 <ActivityFeedView
-                  activities={activityFeed}
+                  activities={followedActivities}
                   onSelectMediaById={handleSelectMediaById}
                   onNavigateToProfile={handleNavigateToProfile}
                   followingUserIds={followingUserIds}
@@ -2439,7 +2517,7 @@ export default function App() {
             {/* Sağ Sidebar (390px - 420px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
             <div className="hidden lg:block w-[390px] xl:w-[420px] shrink-0 space-y-4 sticky top-24 h-fit">
               <SocialFeedSidebar
-                activities={activityFeed}
+                activities={followedActivities}
                 onSelectMediaById={handleSelectMediaById}
                 currentUser={currentUser}
                 onNavigateToProfile={handleNavigateToProfile}

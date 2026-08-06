@@ -152,14 +152,14 @@ export const Header: React.FC<HeaderProps> = ({
           
           {/* USER SEARCH RESULTS SECTION */}
           {userSearchResults && userSearchResults.length > 0 && (
-            <div className="space-y-2 pb-3 mb-2 border-b border-[#232833]">
-              <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-1 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[#40bcf4]">
-                  <User className="w-3.5 h-3.5" />
+            <div className="space-y-3 pb-4 mb-3 border-b border-[#232833]">
+              <div className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#40bcf4] px-1 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-[#40bcf4]" />
                   <span>KULLANICILAR ({userSearchResults.length})</span>
                 </span>
               </div>
-              <div className="grid grid-cols-1 gap-1.5">
+              <div className="grid grid-cols-1 gap-2.5">
                 {userSearchResults.map((u) => (
                   <div
                     key={u.id}
@@ -168,18 +168,23 @@ export const Header: React.FC<HeaderProps> = ({
                       setIsSearchOpen(false);
                       setSearchQuery('');
                     }}
-                    className="flex items-center gap-3 p-2.5 rounded-xl bg-[#0B0C0E]/90 hover:bg-[#232833] border border-[#232833] hover:border-[#40bcf4]/50 cursor-pointer transition group"
+                    className="flex items-center gap-3.5 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-[#0B0C0E]/95 hover:bg-[#1E2430] border border-[#232833] hover:border-[#40bcf4]/60 cursor-pointer transition-all duration-200 group shadow-lg"
                   >
-                    <UserAvatar user={u} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <h5 className="text-xs font-bold text-white group-hover:text-[#40bcf4] transition truncate">
+                    <UserAvatar user={u} size="lg" />
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <h5 className="text-sm sm:text-base font-black text-white group-hover:text-[#40bcf4] transition-colors leading-tight truncate">
                         {u.full_name || u.username}
                       </h5>
-                      <span className="text-[10px] text-slate-400 font-mono block truncate">
+                      <span className="text-xs sm:text-sm font-bold text-[#40bcf4] block truncate">
                         @{u.username}
                       </span>
+                      {u.bio && (
+                        <p className="text-xs text-slate-400 font-medium truncate pt-0.5">
+                          {u.bio}
+                        </p>
+                      )}
                     </div>
-                    <span className="text-[10px] font-bold text-[#40bcf4] bg-[#40bcf4]/10 px-2 py-0.5 rounded border border-[#40bcf4]/20 group-hover:bg-[#40bcf4] group-hover:text-black transition">
+                    <span className="text-xs font-black text-[#40bcf4] bg-[#40bcf4]/15 px-3.5 py-1.5 rounded-xl border border-[#40bcf4]/30 group-hover:bg-[#40bcf4] group-hover:text-black transition-all shrink-0 flex items-center gap-1 shadow-sm">
                       Profil →
                     </span>
                   </div>

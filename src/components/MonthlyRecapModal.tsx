@@ -32,6 +32,17 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   // ALL HOOKS DECLARED UNCONDITIONALLY AT TOP
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const [spotlightDetails, setSpotlightDetails] = useState<{
+    id: number;
+    type: 'movie' | 'tv';
+    title: string;
+    poster: string;
+    rating: number | null;
+    reviewText: string;
+    badge: string;
+  } | null>(null);
+
   const [topActor, setTopActor] = useState<{
     name: string;
     role: string;
@@ -39,6 +50,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     appearances: string;
     description: string;
   } | null>(null);
+
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Month & Year string
@@ -75,84 +87,112 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     ? [...userRatedWatchItems].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0]
     : null;
 
-  // Compute 100% Dynamic Zirve Yapım
-  const zirveYapim = topUserReview
-    ? {
-        id: topUserReview.media_id,
-        type: topUserReview.media_type,
-        title: topUserReview.media_title || 'Yapım',
-        poster: topUserReview.media_poster || (anyWatchedItem?.poster_path ? (anyWatchedItem.poster_path.startsWith('http') ? anyWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${anyWatchedItem.poster_path}`) : defaultPoster),
-        userRating: topUserReview.rating,
-        reviewText: topUserReview.review_text || 'Bu ay değerlendirdiğin en yüksek puanlı yapım.',
-        badge: `★ ${topUserReview.rating}/10 Kişisel Puanın`
-      }
-    : (topRatedWatchItem
-        ? {
-            id: topRatedWatchItem.media_id,
-            type: topRatedWatchItem.media_type,
-            title: topRatedWatchItem.title || 'Yapım',
-            poster: topRatedWatchItem.poster_path ? (topRatedWatchItem.poster_path.startsWith('http') ? topRatedWatchItem.poster_path : `https://image.tmdb.org/t/p/w500${topRatedWatchItem.poster_path}`) : defaultPoster,
-            userRating: topRatedWatchItem.rating || null,
-            reviewText: 'Kütüphanende kendi verdiğin puanla öne çıkan içerik.',
-            badge: `★ ${topRatedWatchItem.rating}/10 Puanın`
-          }
-        : (anyWatchedItem
-            ? {
-                id: anyWatchedItem.media_id,
-                type: anyWatchedItem.media_type,
-                title: anyWatchedItem.title || 'Yapım',
-                poster: anyWatchedItem.poster_path ? (anyWatchedItem.poster_path.startsWith('http') ? anyWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${anyWatchedItem.poster_path}`) : defaultPoster,
-                userRating: null, // NO fake rating if user hasn't rated!
-                reviewText: 'Bu ay kütüphanende en çok vakit geçirdiğin içerik.',
-                badge: anyWatchedItem.status === 'watched' ? 'Tamamlandı' : 'İzleniyor'
-              }
-            : null
-          )
-      );
-
-  // Dynamic Actor details from user's actual watched items
+  // Dynamic fetch for Spotlight Media & Lead Actor (Matches exact media_id)
   useEffect(() => {
     let isMounted = true;
-    async function loadActorDetails() {
-      const targetItem = anyWatchedItem;
-      if (!targetItem || !targetItem.media_id) {
-        if (isMounted) setTopActor(null);
+
+    async function loadSpotlightAndActor() {
+      let targetId: number | null = null;
+      let targetType: 'movie' | 'tv' = 'movie';
+      let userRating: number | null = null;
+      let reviewText = '';
+      let badge = '';
+
+      if (topUserReview && topUserReview.media_id) {
+        targetId = Number(topUserReview.media_id);
+        targetType = topUserReview.media_type;
+        userRating = topUserReview.rating;
+        reviewText = topUserReview.review_text || 'Bu ay değerlendirdiğin en yüksek puanlı yapım.';
+        badge = `★ ${topUserReview.rating}/10 Kişisel Puanın`;
+      } else if (topRatedWatchItem && topRatedWatchItem.media_id) {
+        targetId = Number(topRatedWatchItem.media_id);
+        targetType = topRatedWatchItem.media_type;
+        userRating = topRatedWatchItem.rating || null;
+        reviewText = 'Kütüphanende kendi verdiğin puanla öne çıkan içerik.';
+        badge = topRatedWatchItem.rating ? `★ ${topRatedWatchItem.rating}/10 Puanın` : 'Tamamlandı';
+      } else if (anyWatchedItem && anyWatchedItem.media_id) {
+        targetId = Number(anyWatchedItem.media_id);
+        targetType = anyWatchedItem.media_type;
+        userRating = null;
+        reviewText = 'Bu ay kütüphanende en çok vakit geçirdiğin içerik.';
+        badge = anyWatchedItem.status === 'watched' ? 'Tamamlandı' : 'İzleniyor';
+      }
+
+      if (!targetId) {
+        if (isMounted) {
+          setSpotlightDetails(null);
+          setTopActor(null);
+        }
         return;
       }
 
-      try {
-        const details = await getDetails(targetItem.media_id, targetItem.media_type);
-        if (details?.cast && details.cast.length > 0 && isMounted) {
-          const firstCast = details.cast[0];
-          const photoUrl = firstCast.profile_path
-            ? (firstCast.profile_path.startsWith('http') ? firstCast.profile_path : `https://image.tmdb.org/t/p/w500${firstCast.profile_path}`)
-            : null;
+      // Look up existing info in watchList or review
+      const watchItem = watchList.find(w => Number(w.media_id) === Number(targetId));
+      let title = (topUserReview?.media_id === targetId ? topUserReview.media_title : '') || watchItem?.title || '';
+      let rawPoster = (topUserReview?.media_id === targetId ? topUserReview.media_poster : '') || watchItem?.poster_path || '';
+      let poster = rawPoster ? (rawPoster.startsWith('http') ? rawPoster : `https://image.tmdb.org/t/p/w500${rawPoster}`) : defaultPoster;
 
-          if (firstCast.name) {
+      try {
+        const details = await getDetails(targetId, targetType);
+        if (details && isMounted) {
+          if (details.title || details.name) {
+            title = details.title || details.name || title;
+          }
+          if (details.poster_path) {
+            poster = details.poster_path.startsWith('http') 
+              ? details.poster_path 
+              : `https://image.tmdb.org/t/p/w500${details.poster_path}`;
+          }
+
+          setSpotlightDetails({
+            id: targetId,
+            type: targetType,
+            title: title || 'Yapım',
+            poster: poster || defaultPoster,
+            rating: userRating,
+            reviewText,
+            badge
+          });
+
+          // Extract lead actor for THIS EXACT media_id
+          if (details.cast && details.cast.length > 0) {
+            const firstCast = details.cast[0];
+            const photoUrl = firstCast.profile_path
+              ? (firstCast.profile_path.startsWith('http') ? firstCast.profile_path : `https://image.tmdb.org/t/p/w500${firstCast.profile_path}`)
+              : poster;
+
             setTopActor({
               name: firstCast.name,
-              role: `${firstCast.character ? `${firstCast.character} • ` : ''}${targetItem.title || 'Yapım'}`,
-              photo: photoUrl || (targetItem.poster_path ? (targetItem.poster_path.startsWith('http') ? targetItem.poster_path : `https://image.tmdb.org/t/p/w500${targetItem.poster_path}`) : defaultPoster),
-              appearances: targetItem.media_type === 'tv' ? `İzlediğin Dizinin Başrolü` : `İzlediğin Filmin Başrolü`,
-              description: `Kütüphanendeki "${targetItem.title || 'Yapım'}" içeriğinin öne çıkan oyuncusu.`
+              role: `${firstCast.character ? `${firstCast.character} • ` : ''}${title}`,
+              photo: photoUrl,
+              appearances: targetType === 'tv' ? `İzlediğin Dizinin Başrolü` : `İzlediğin Filmin Başrolü`,
+              description: `Kütüphanendeki "${title}" yapımının öne çıkan başrol oyuncusu.`
             });
           } else {
             setTopActor(null);
           }
-        } else {
-          if (isMounted) setTopActor(null);
         }
       } catch (e) {
-        console.warn('Actor fetch error:', e);
-        if (isMounted) setTopActor(null);
+        console.warn('Spotlight & Actor fetch error:', e);
+        if (isMounted) {
+          setSpotlightDetails({
+            id: targetId,
+            type: targetType,
+            title: title || 'Yapım',
+            poster: poster || defaultPoster,
+            rating: userRating,
+            reviewText,
+            badge
+          });
+        }
       }
     }
 
     if (isOpen) {
-      loadActorDetails();
+      loadSpotlightAndActor();
     }
     return () => { isMounted = false; };
-  }, [isOpen, watchList, episodeProgress]);
+  }, [isOpen, watchList, episodeProgress, reviews]);
 
   if (!isOpen) return null;
 
@@ -330,7 +370,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                             {movieCount} Sinema Filmi
                           </span>
                           <span className="text-[11px] font-medium text-slate-400 truncate block">
-                            {zirveYapim ? `Öne Çıkan: ${zirveYapim.title}` : 'Film bulunmuyor'}
+                            {spotlightDetails ? `Öne Çıkan: ${spotlightDetails.title}` : 'Film bulunmuyor'}
                           </span>
                         </div>
                       </div>
@@ -356,7 +396,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
 
                     <div className="space-y-1">
                       <h3 className="text-2xl font-black text-white">
-                        {zirveYapim?.userRating ? 'En Yüksek Puan Verilen İçerik 🔥' : 'Öne Çıkan İzleme İçeriğin 🎬'}
+                        {spotlightDetails?.rating ? 'En Yüksek Puan Verilen İçerik 🔥' : 'Öne Çıkan İzleme İçeriğin 🎬'}
                       </h3>
                       <p className="text-xs text-slate-300">
                         {formattedMonthTitle} ayında kütüphanende öne çıkan yapım:
@@ -364,36 +404,36 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                     </div>
 
                     {/* Spotlight Hero Card */}
-                    {zirveYapim ? (
+                    {spotlightDetails ? (
                       <div 
                         onClick={() => {
-                          if (onSelectMediaById && zirveYapim.id) onSelectMediaById(zirveYapim.id, zirveYapim.type);
+                          if (onSelectMediaById && spotlightDetails.id) onSelectMediaById(spotlightDetails.id, spotlightDetails.type);
                           onClose();
                         }}
                         className="group bg-gradient-to-r from-[#1A1D25] to-[#12141A] border border-amber-500/40 rounded-3xl p-4 sm:p-5 flex gap-4 items-center shadow-2xl cursor-pointer hover:border-amber-400 transition"
                       >
                         <div className="w-24 sm:w-28 aspect-[2/3] rounded-2xl overflow-hidden shrink-0 relative bg-[#1F232D] shadow-md">
                           <img 
-                            src={zirveYapim.poster} 
-                            alt={zirveYapim.title}
+                            src={spotlightDetails.poster} 
+                            alt={spotlightDetails.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
                           />
-                          {zirveYapim.userRating && (
+                          {spotlightDetails.rating && (
                             <div className="absolute top-2 left-2 bg-amber-400 text-black px-2 py-0.5 rounded-md text-[10px] font-black font-mono shadow-md">
-                              ★ {zirveYapim.userRating}/10
+                              ★ {spotlightDetails.rating}/10
                             </div>
                           )}
                         </div>
 
                         <div className="space-y-2 flex-1 min-w-0">
                           <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 inline-block">
-                            {zirveYapim.badge}
+                            {spotlightDetails.badge}
                           </span>
                           <h4 className="text-lg sm:text-xl font-extrabold text-white truncate group-hover:text-amber-300 transition">
-                            {zirveYapim.title}
+                            {spotlightDetails.title}
                           </h4>
                           <p className="text-xs text-slate-300 italic line-clamp-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                            "{zirveYapim.reviewText}"
+                            "{spotlightDetails.reviewText}"
                           </p>
                           <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1 group-hover:underline">
                             Detayları İncele →
@@ -490,73 +530,77 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                       </h3>
                     </div>
 
-                    {/* VERTICAL SUMMARY STORY CARD */}
+                    {/* VERTICAL SUMMARY STORY CARD (Larger, Super Readable, High Impact) */}
                     <div 
                       ref={cardRef}
-                      className="bg-[#0B0D13] border-2 border-amber-500/40 rounded-3xl p-5 space-y-4 shadow-2xl relative overflow-hidden max-w-sm mx-auto my-2 text-white ring-1 ring-white/10"
+                      className="bg-gradient-to-b from-[#0F121C] via-[#0B0D13] to-[#08090D] border-2 border-amber-500/50 rounded-3xl p-6 space-y-5 shadow-2xl relative overflow-hidden w-full max-w-md mx-auto my-2 text-white ring-1 ring-white/10"
                     >
-                      {/* Background Ambient Glow */}
-                      <div className="absolute -top-24 -right-24 w-56 h-56 bg-amber-500/25 rounded-full blur-3xl pointer-events-none" />
-                      <div className="absolute top-1/2 -left-28 w-56 h-56 bg-[#E63946]/25 rounded-full blur-3xl pointer-events-none" />
-                      <div className="absolute -bottom-24 -right-20 w-56 h-56 bg-purple-600/30 rounded-full blur-3xl pointer-events-none" />
+                      {/* Background Ambient Glows */}
+                      <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+                      <div className="absolute top-1/2 -left-24 w-64 h-64 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
+                      <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-purple-600/25 rounded-full blur-3xl pointer-events-none" />
 
-                      {/* Header Title */}
-                      <div className="relative z-10 flex items-center justify-between border-b border-white/15 pb-3">
-                        <span className="text-sm font-black tracking-wide text-white uppercase">
-                          {formattedMonthTitle} Özeti
+                      {/* Header Title Bar */}
+                      <div className="relative z-10 flex items-center justify-between border-b border-white/15 pb-3.5">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-amber-400" />
+                          <span className="text-base font-black tracking-wider text-white uppercase">
+                            {formattedMonthTitle} ÖZETİ
+                          </span>
+                        </div>
+                        <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                          2026
                         </span>
                       </div>
 
                       {/* User Profile Bar */}
-                      <div className="relative z-10 flex items-center justify-between bg-white/5 border border-white/10 p-2.5 rounded-2xl backdrop-blur-md">
-                        <div className="flex items-center gap-2.5">
+                      <div className="relative z-10 flex items-center justify-between bg-white/5 border border-white/10 p-3 rounded-2xl backdrop-blur-md">
+                        <div className="flex items-center gap-3">
                           <img
                             src={user.avatar_url}
                             alt={user.username}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-amber-400 shadow-md"
+                            className="w-12 h-12 rounded-full object-cover border-2 border-amber-400 shadow-md"
                           />
                           <div>
-                            <h4 className="text-xs font-black text-white leading-tight flex items-center gap-1">
+                            <h4 className="text-sm font-black text-white leading-tight flex items-center gap-1.5">
                               <span>{user.full_name || user.username}</span>
-                              <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400/20" />
+                              <CheckCircle2 className="w-4 h-4 text-cyan-400 fill-cyan-400/20" />
                             </h4>
-                            <span className="text-[10px] text-slate-400 font-medium">
+                            <span className="text-xs text-slate-300 font-semibold">
                               @{user.username} • TTime Üyesi
                             </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-[9px] font-extrabold uppercase text-slate-400 block">SEZON</span>
-                          <span className="text-xs font-black font-mono text-amber-400">2026</span>
-                        </div>
                       </div>
 
-                      {/* Featured Poster Spotlight Showcase */}
-                      {zirveYapim && (
-                        <div className="relative z-10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3 shadow-xl backdrop-blur-md bg-gradient-to-r from-[#171A23] to-[#11131A]">
+                      {/* 1. EN BEĞENDİĞİN YAPIM (Top Rated Showcase) */}
+                      {spotlightDetails && (
+                        <div className="relative z-10 border border-amber-500/40 rounded-2xl p-4 flex gap-4 items-center shadow-xl backdrop-blur-md bg-gradient-to-r from-[#181B26] to-[#12141D] group">
                           <img 
-                            src={zirveYapim.poster} 
-                            alt={zirveYapim.title}
-                            className="w-16 h-22 rounded-xl object-cover border border-amber-400/40 shadow-lg shrink-0" 
+                            src={spotlightDetails.poster} 
+                            alt={spotlightDetails.title}
+                            className="w-20 h-28 sm:w-22 sm:h-32 rounded-xl object-cover border-2 border-amber-400/50 shadow-lg shrink-0" 
                           />
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border text-amber-400 bg-amber-500/15 border-amber-500/30 inline-block">
-                              🏆 AYIN ÖNE ÇIKAN YAPIMI
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border text-amber-300 bg-amber-500/20 border-amber-500/40 inline-flex items-center gap-1">
+                              <Trophy className="w-3 h-3 text-amber-400 fill-amber-400" /> EN BEĞENDİĞİN YAPIM
                             </span>
-                            <h4 className="text-sm font-black text-white truncate">
-                              {zirveYapim.title}
+                            <h4 className="text-base sm:text-lg font-black text-white truncate">
+                              {spotlightDetails.title}
                             </h4>
-                            <p className="text-[10px] text-slate-300 italic line-clamp-2">
-                              "{zirveYapim.reviewText}"
-                            </p>
-                            <div className="flex items-center gap-2 pt-0.5">
-                              {zirveYapim.userRating ? (
-                                <span className="text-[10px] font-black text-black bg-amber-400 px-1.5 py-0.5 rounded font-mono">
-                                  ★ {zirveYapim.userRating}/10 Kişisel Puanın
+                            {spotlightDetails.reviewText && (
+                              <p className="text-xs text-slate-300 italic line-clamp-2 bg-white/5 p-2 rounded-lg border border-white/5">
+                                "{spotlightDetails.reviewText}"
+                              </p>
+                            )}
+                            <div className="pt-0.5">
+                              {spotlightDetails.rating ? (
+                                <span className="text-xs font-black text-slate-950 bg-amber-400 px-2.5 py-1 rounded-md font-mono shadow-md inline-block">
+                                  ★ {spotlightDetails.rating}/10 Kişisel Puanın
                                 </span>
                               ) : (
-                                <span className="text-[10px] font-bold text-slate-300 bg-white/10 px-1.5 py-0.5 rounded font-mono">
-                                  {zirveYapim.badge}
+                                <span className="text-xs font-bold text-slate-300 bg-white/10 px-2.5 py-1 rounded-md font-mono inline-block">
+                                  {spotlightDetails.badge}
                                 </span>
                               )}
                             </div>
@@ -564,51 +608,63 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                         </div>
                       )}
 
-                      {/* Wrapped Stats Grid */}
-                      <div className="relative z-10 grid grid-cols-2 gap-2">
-                        {/* Watch Time */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-1 backdrop-blur-sm">
+                      {/* 2. DYNAMIC WRAPPED STATS GRID (4 Large Clear Stat Cards) */}
+                      <div className="relative z-10 grid grid-cols-2 gap-3">
+                        
+                        {/* Bu Ay İzlediğin Bölüm Sayısı */}
+                        <div className="bg-white/5 border border-white/10 hover:border-purple-500/40 rounded-2xl p-3.5 space-y-1.5 backdrop-blur-md shadow-md transition">
+                          <div className="flex items-center justify-between text-purple-400">
+                            <Tv className="w-4 h-4" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300">BÖLÜM SAYISI</span>
+                          </div>
+                          <div className="text-xl font-black text-white font-mono">
+                            {episodeCount} <span className="text-xs font-bold text-purple-300">Bölüm</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Bu ay izlendi</span>
+                        </div>
+
+                        {/* Bu Ay İzlediğin Film Sayısı */}
+                        <div className="bg-white/5 border border-white/10 hover:border-emerald-500/40 rounded-2xl p-3.5 space-y-1.5 backdrop-blur-md shadow-md transition">
+                          <div className="flex items-center justify-between text-emerald-400">
+                            <Film className="w-4 h-4" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300">FİLM SAYISI</span>
+                          </div>
+                          <div className="text-xl font-black text-white font-mono">
+                            {movieCount} <span className="text-xs font-bold text-emerald-300">Film</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Sinema yapımı</span>
+                        </div>
+
+                        {/* Bu Ay İncelediğin Yapım Sayısı */}
+                        <div className="bg-white/5 border border-white/10 hover:border-sky-500/40 rounded-2xl p-3.5 space-y-1.5 backdrop-blur-md shadow-md transition">
+                          <div className="flex items-center justify-between text-sky-400">
+                            <MessageSquare className="w-4 h-4" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300">İNCELEME SAYISI</span>
+                          </div>
+                          <div className="text-xl font-black text-white font-mono">
+                            {reviews.length} <span className="text-xs font-bold text-sky-300">İnceleme</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Eleştiri ve yorum</span>
+                        </div>
+
+                        {/* Toplam Ekran Süresi */}
+                        <div className="bg-white/5 border border-white/10 hover:border-amber-500/40 rounded-2xl p-3.5 space-y-1.5 backdrop-blur-md shadow-md transition">
                           <div className="flex items-center justify-between text-amber-400">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">EKRAN SÜRESİ</span>
+                            <Clock className="w-4 h-4" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">EKRAN SÜRESİ</span>
                           </div>
-                          <span className="text-sm font-black text-white font-mono block">
+                          <div className="text-base font-black text-white font-mono">
                             {totalHours}s {remainingMinutes}dk
-                          </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Toplam izleme</span>
                         </div>
 
-                        {/* Episodes & Movies */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-1 backdrop-blur-sm">
-                          <div className="flex items-center justify-between text-purple-400">
-                            <Tv className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">İÇERİKLER</span>
-                          </div>
-                          <span className="text-xs font-black text-purple-300 block">
-                            {episodeCount} Bölüm • {movieCount} Film
-                          </span>
-                        </div>
+                      </div>
 
-                        {/* Favorite Actor */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-1 backdrop-blur-sm">
-                          <div className="flex items-center justify-between text-purple-400">
-                            <User className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">ÖNE ÇIKAN</span>
-                          </div>
-                          <span className="text-xs font-black text-white truncate block">
-                            {topActor ? topActor.name : (zirveYapim?.title || 'Kütüphanen')}
-                          </span>
-                        </div>
-
-                        {/* Peak Day */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-1 backdrop-blur-sm">
-                          <div className="flex items-center justify-between text-cyan-400">
-                            <Calendar className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">EN YOĞUN DÖNEM</span>
-                          </div>
-                          <span className="text-xs font-black text-cyan-300 block">
-                            {enYogunGun.dayName} ({enYogunGun.episodesWatched})
-                          </span>
-                        </div>
+                      {/* Card Footer Brand Bar */}
+                      <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-white/10 font-bold">
+                        <span>TTime • Film & Dizi Takip</span>
+                        <span className="text-amber-400">ttime.app</span>
                       </div>
                     </div>
                   </motion.div>

@@ -605,89 +605,120 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             </div>
 
-            {/* 3. SABİTLENEN İNCELEMELER */}
-            <div className="space-y-5 pt-2">
-              {/* Bölüm Başlığı Deseni */}
-              <div className="border-b border-[#2c3440]/60 pb-2.5 space-y-1">
-                <h2 className="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider">
-                  SABİTLENEN İNCELEMELER
-                </h2>
-                <p className="text-xs sm:text-sm text-[#9ab]">
-                  Öne çıkan detaylı eleştiri ve yorumlar
-                </p>
-              </div>
+            {/* 3. SABİTLENEN İNCELEMELER VEYA SON İNCELEMELER */}
+            {(() => {
+              const pinnedReviews = reviews.filter(r => r.is_pinned);
+              const recentReviews = [...reviews]
+                .sort((a, b) => {
+                  const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                  const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                  return timeB - timeA;
+                })
+                .slice(0, 5);
 
-              <div className="space-y-5">
-                {reviews.filter(r => r.is_pinned).length > 0 ? (
-                  reviews.filter(r => r.is_pinned).map(rev => {
-                    const mediaInfo = getReviewMediaInfo(rev);
-                    return (
-                      <div
-                        key={rev.id}
-                        className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
-                      >
-                        {/* Poster Thumbnail */}
-                        <div 
-                          onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                          className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md"
-                        >
-                          <img
-                            src={mediaInfo.poster}
-                            alt={mediaInfo.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
+              const hasPinned = pinnedReviews.length > 0;
+              const reviewsToDisplay = hasPinned ? pinnedReviews : recentReviews;
+
+              return (
+                <div className="space-y-5 pt-2">
+                  {/* Bölüm Başlığı Deseni */}
+                  <div className="border-b border-[#2c3440]/60 pb-2.5 space-y-1">
+                    <h2 className="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                      {hasPinned ? (
+                        <>
+                          <Pin className="w-4 h-4 text-amber-400" />
+                          <span>SABİTLENEN İNCELEMELER</span>
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="w-4 h-4 text-[#40bcf4]" />
+                          <span>SON İNCELEMELER</span>
+                        </>
+                      )}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[#9ab]">
+                      {hasPinned ? 'Öne çıkan detaylı eleştiri ve yorumlar' : 'En son yapılan değerlendirme ve yorumlar'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-5">
+                    {reviewsToDisplay.length > 0 ? (
+                      reviewsToDisplay.map(rev => {
+                        const mediaInfo = getReviewMediaInfo(rev);
+                        return (
+                          <div
+                            key={rev.id}
+                            className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
+                          >
+                            {/* Poster Thumbnail */}
+                            <div 
+                              onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
+                              className="w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden bg-black/40 shrink-0 cursor-pointer shadow-md"
+                            >
+                              <img
+                                src={mediaInfo.poster}
+                                alt={mediaInfo.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+
+                            {/* İnceleme Detayları */}
+                            <div className="flex-1 space-y-2 min-w-0">
+                              <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-2">
+                                  <h3 
+                                    onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
+                                    className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
+                                  >
+                                    {mediaInfo.title}
+                                  </h3>
+                                  <span className="text-xs sm:text-sm text-[#9ab]">
+                                    ({rev.media_type === 'tv' ? 'Dizi' : 'Film'})
+                                  </span>
+                                  {rev.is_pinned && (
+                                    <span className="text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                      <Pin className="w-3 h-3" /> Sabitlendi
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Puan */}
+                                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
+                                  <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
+                                  <span>{rev.rating || 10} / 10</span>
+                                </div>
+                              </div>
+
+                              <p className="text-sm sm:text-base text-slate-200 italic leading-relaxed font-normal">
+                                "{rev.review_text}"
+                              </p>
+
+                              <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
+                                <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="py-8 text-center bg-[#0e1116] border border-[#2c3440]/60 rounded-2xl p-6 space-y-3 shadow-md">
+                        <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                          <Pin className="w-6 h-6" />
                         </div>
-
-                        {/* İnceleme Detayları */}
-                        <div className="flex-1 space-y-2 min-w-0">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <h3 
-                                onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                                className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
-                              >
-                                {mediaInfo.title}
-                              </h3>
-                              <span className="text-xs sm:text-sm text-[#9ab]">
-                                ({rev.media_type === 'tv' ? 'Dizi' : 'Film'})
-                              </span>
-                            </div>
-
-                            {/* Puan */}
-                            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
-                              <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
-                              <span>{rev.rating || 10} / 10</span>
-                            </div>
-                          </div>
-
-                          <p className="text-sm sm:text-base text-slate-200 italic leading-relaxed font-normal">
-                            "{rev.review_text}"
-                          </p>
-
-                          <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
-                            <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
-                          </div>
+                        <div className="space-y-1.5">
+                          <p className="text-base sm:text-lg font-extrabold text-white">Henüz sabitlenmiş bir inceleme yok</p>
+                          {isOwnProfile && (
+                            <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
+                              Sol menüdeki <strong className="text-white font-bold">İncelemelerin</strong> sekmesine giderek dilediğiniz incelemenin altındaki <strong className="text-amber-400 font-bold">"Profile Sabitle"</strong> butonuna tıklayıp burada öne çıkarabilirsiniz.
+                            </p>
+                          )}
                         </div>
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="py-8 text-center bg-[#0e1116] border border-[#2c3440]/60 rounded-2xl p-6 space-y-3 shadow-md">
-                    <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
-                      <Pin className="w-6 h-6" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-base sm:text-lg font-extrabold text-white">Henüz sabitlenmiş bir inceleme yok</p>
-                      {isOwnProfile && (
-                        <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
-                          Sol menüdeki <strong className="text-white font-bold">İncelemelerin</strong> sekmesine giderek dilediğiniz incelemenin altındaki <strong className="text-amber-400 font-bold">"Profile Sabitle"</strong> butonuna tıklayıp burada öne çıkarabilirsiniz.
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })()}
 
           </div>
         )}

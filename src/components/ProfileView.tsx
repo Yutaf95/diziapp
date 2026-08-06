@@ -192,7 +192,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const displayReviews = reviews;
 
   return (
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-20 sm:-mt-24 -mb-12 min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24 overflow-x-hidden">
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-20 sm:-mt-24 -mb-12 min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24">
 
       {/* ================================================================ */}
       {/* PROFILE HEADER — Letterboxd Overlap & Gradient Style             */}
@@ -205,7 +205,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           src={user.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1920&q=90'}
           alt="Profile Cover"
           className="w-full h-full object-cover object-center transition-transform duration-700 group-hover/banner:scale-105"
-          style={{ filter: 'grayscale(85%) brightness(0.7)' }}
+          style={{ filter: 'grayscale(85%) brightness(0.7)', transform: 'translateZ(0)', willChange: 'transform' }}
         />
         
         {/* Multi-stop linear gradient transition (spreads over bottom 60-70%) */}
@@ -591,7 +591,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="border-b border-[#2c3440]/60 pb-3 flex items-center justify-between flex-wrap gap-2">
               <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">İzlenen Filmler ({filteredMovies.length})</h2>
-              <span className="text-xs sm:text-sm text-[#9ab] font-medium">Son eklenenden eskiye doğru sıralı</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
@@ -615,7 +614,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                     <div className="space-y-0.5 min-w-0">
                       <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
-                      <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Tamamlandı</p>
                     </div>
                   </div>
                 ))
@@ -633,7 +631,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="border-b border-[#2c3440]/60 pb-3 flex items-center justify-between flex-wrap gap-2">
               <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">İzlenen Diziler ({filteredTvShows.length})</h2>
-              <span className="text-xs sm:text-sm text-[#9ab] font-medium">Son eklenenden eskiye doğru sıralı</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
@@ -657,7 +654,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                     <div className="space-y-0.5 min-w-0">
                       <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
-                      <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Tamamlandı</p>
                     </div>
                   </div>
                 ))

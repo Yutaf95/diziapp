@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { Star, Eye, CheckCircle2, MessageSquare, AlertTriangle, UserPlus, UserCheck, Flame, Heart, Search, X, Users, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Star, Eye, CheckCircle2, MessageSquare, AlertTriangle, UserPlus, UserCheck, Flame, Heart, Search, X, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { ActivityFeedItem, Profile } from '../types';
 import { EmptyState } from './EmptyState';
 import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix } from '../utils/textUtils';
+import { DEFAULT_AVATAR_URL, MOCK_USER_PROFILES } from '../data/mockData';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { UserAvatar } from './UserAvatar';
 
 interface ActivityFeedViewProps {
   activities: ActivityFeedItem[];
@@ -22,6 +25,8 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
   const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, boolean>>({});
   const [likedActivities, setLikedActivities] = useState<Record<string, boolean>>({});
   const [friendSearchQuery, setFriendSearchQuery] = useState<string>('');
+  const [matchingUsers, setMatchingUsers] = useState<Profile[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
 
   const toggleSpoiler = (id: string) => {
     setRevealedSpoilers(prev => ({ ...prev, [id]: !prev[id] }));
@@ -31,10 +36,52 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
     setLikedActivities(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Filter friends based on query
-  const normalizedQuery = friendSearchQuery.trim().toLowerCase().replace(/^@/, '');
-  
-  let matchingUsers: Profile[] = [];
+  // Live query for user search in Supabase
+  useEffect(() => {
+    const query = friendSearchQuery.trim().toLowerCase().replace(/^@/, '');
+    if (!query) {
+      setMatchingUsers([]);
+      return;
+    }
+
+    let isMounted = true;
+    const timer = setTimeout(async () => {
+      setIsSearchingUsers(true);
+      try {
+        if (isSupabaseConfigured) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, avatar_url, bio')
+            .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+            .limit(10);
+          if (isMounted && data) {
+            setMatchingUsers(data.map(u => ({
+              id: u.id,
+              username: u.username,
+              full_name: u.full_name || u.username,
+              avatar_url: u.avatar_url || '',
+              bio: u.bio || ''
+            })));
+          }
+        } else {
+          const matches = Object.values(MOCK_USER_PROFILES).map(p => p.profile).filter(p => 
+            p.username.toLowerCase().includes(query) || 
+            (p.full_name || '').toLowerCase().includes(query)
+          );
+          if (isMounted) setMatchingUsers(matches);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (isMounted) setIsSearchingUsers(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      isMounted = false;
+    };
+  }, [friendSearchQuery]);
 
 
 
@@ -122,7 +169,12 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
               </button>
             </div>
 
-            {matchingUsers.length === 0 ? (
+            {isSearchingUsers ? (
+              <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 text-[#E63946] animate-spin" />
+                <span>Kullanıcılar veritabanında aranıyor...</span>
+              </div>
+            ) : matchingUsers.length === 0 ? (
               <div className="text-center py-6 bg-[#0B0C0E] rounded-xl border border-[#232833] space-y-1">
                 <p className="text-xs text-slate-400 font-medium">"{friendSearchQuery}" ile eşleşen kullanıcı bulunamadı.</p>
                 <p className="text-[11px] text-slate-500">Lütfen farklı bir kullanıcı adı veya isim deneyin.</p>
@@ -142,11 +194,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                         className="flex items-center gap-2.5 min-w-0 cursor-pointer group flex-1"
                         title={`${user.full_name || user.username} profilini gör`}
                       >
-                        <img
-                          src={user.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                          alt={user.username}
-                          className="w-10 h-10 rounded-full object-cover border border-slate-700 group-hover:border-[#E63946] transition shrink-0"
-                        />
+                        <UserAvatar user={user} size="sm" />
                         <div className="min-w-0">
                           <div className="text-xs font-bold text-white group-hover:text-[#E63946] transition truncate">
                             {user.full_name || user.username}
@@ -230,7 +278,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                   title={`${profile.full_name || profile.username} profilini gör`}
                 >
                   <img
-                    src={profile.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                    src={profile.avatar_url || DEFAULT_AVATAR_URL}
                     alt={profile.username}
                     className="w-10 h-10 rounded-full object-cover border border-slate-700 group-hover:border-[#E63946] transition"
                   />

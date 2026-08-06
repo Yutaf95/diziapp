@@ -105,7 +105,7 @@ export default function App() {
             id: profileData.id,
             username: profileData.username,
             full_name: profileData.full_name || '',
-            avatar_url: profileData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+            avatar_url: profileData.avatar_url || DEFAULT_AVATAR_URL,
             banner_url: profileData.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
             featured_media_title: profileData.featured_media_title || 'Severance',
             bio: profileData.bio || '',
@@ -359,6 +359,7 @@ export default function App() {
     fetchUserData();
   }, [session?.user?.id]);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [userSearchResults, setUserSearchResults] = useState<Profile[]>([]);
   const [showRecapModal, setShowRecapModal] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -385,7 +386,7 @@ export default function App() {
         id: '',
         username: 'kullanici',
         full_name: 'Kullanıcı',
-        avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        avatar_url: DEFAULT_AVATAR_URL,
         banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
         featured_media_title: 'Severance',
         bio: ''
@@ -1013,20 +1014,46 @@ export default function App() {
     return () => { isMounted = false; };
   }, []);
 
-  // Handle Search Input Debounce
+  // Handle Search Input Debounce (Media & User Profiles)
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
+      setUserSearchResults([]);
       return;
     }
 
     let isMounted = true;
     const timer = setTimeout(async () => {
       setLoadingMedia(true);
+      const query = searchQuery.trim();
       try {
-        const res = await search(searchQuery, mediaFilter);
+        const res = await search(query, mediaFilter);
         if (isMounted) {
           setSearchResults(res.results || []);
+        }
+
+        // Query registered user profiles in Supabase or local mock data
+        if (isSupabaseConfigured) {
+          const { data: users } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, avatar_url, bio')
+            .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+            .limit(6);
+          if (isMounted) {
+            setUserSearchResults(users ? users.map((u: any) => ({
+              id: u.id,
+              username: u.username,
+              full_name: u.full_name || u.username,
+              avatar_url: u.avatar_url || '',
+              bio: u.bio || ''
+            })) : []);
+          }
+        } else {
+          const matches = Object.values(MOCK_USER_PROFILES).map(p => p.profile).filter(p => 
+            p.username.toLowerCase().includes(query.toLowerCase()) || 
+            (p.full_name || '').toLowerCase().includes(query.toLowerCase())
+          );
+          if (isMounted) setUserSearchResults(matches);
         }
       } catch (e) {
         console.error(e);
@@ -1811,8 +1838,10 @@ export default function App() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         searchResults={searchResults}
+        userSearchResults={userSearchResults}
         isSearching={loadingMedia}
         onSelectMedia={(m) => setSelectedMedia(m)}
+        onNavigateToProfile={handleNavigateToProfile}
         onOpenProfile={() => handleNavigateToProfile(currentUser.username)}
         onGoHome={() => {
           setActiveTab('discover');

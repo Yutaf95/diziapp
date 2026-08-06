@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Tv, Search, Bell, LogOut, Star, Loader2, X, Film, Eye, Clock, CheckCircle2, Settings, Plus } from 'lucide-react';
+import { Tv, Search, Bell, LogOut, Star, Loader2, X, Film, Eye, Clock, CheckCircle2, Settings, Plus, User } from 'lucide-react';
 import { Profile, TMDBMedia, WatchStatusType } from '../types';
 import { getPosterUrl } from '../lib/tmdb';
 import { MobileSidebarDrawer } from './MobileSidebarDrawer';
@@ -11,8 +11,10 @@ interface HeaderProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   searchResults?: TMDBMedia[];
+  userSearchResults?: Profile[];
   isSearching?: boolean;
   onSelectMedia?: (media: TMDBMedia) => void;
+  onNavigateToProfile?: (username: string) => void;
   onOpenProfile?: () => void;
   onGoHome?: () => void;
   onLogout?: () => void;
@@ -40,8 +42,10 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   setSearchQuery,
   searchResults = [],
+  userSearchResults = [],
   isSearching = false,
   onSelectMedia,
+  onNavigateToProfile,
   onOpenProfile,
   onGoHome,
   onLogout,
@@ -145,7 +149,46 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Results List */}
         <div ref={searchScrollRef} className="max-h-[32rem] overflow-y-auto p-2.5 sm:p-3 space-y-2.5 custom-scrollbar">
-          {isSearching && searchResults.length === 0 ? (
+          
+          {/* USER SEARCH RESULTS SECTION */}
+          {userSearchResults && userSearchResults.length > 0 && (
+            <div className="space-y-2 pb-3 mb-2 border-b border-[#232833]">
+              <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-[#40bcf4]">
+                  <User className="w-3.5 h-3.5" />
+                  <span>KULLANICILAR ({userSearchResults.length})</span>
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5">
+                {userSearchResults.map((u) => (
+                  <div
+                    key={u.id}
+                    onClick={() => {
+                      if (onNavigateToProfile) onNavigateToProfile(u.username);
+                      setIsSearchOpen(false);
+                      setSearchQuery('');
+                    }}
+                    className="flex items-center gap-3 p-2.5 rounded-xl bg-[#0B0C0E]/90 hover:bg-[#232833] border border-[#232833] hover:border-[#40bcf4]/50 cursor-pointer transition group"
+                  >
+                    <UserAvatar user={u} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <h5 className="text-xs font-bold text-white group-hover:text-[#40bcf4] transition truncate">
+                        {u.full_name || u.username}
+                      </h5>
+                      <span className="text-[10px] text-slate-400 font-mono block truncate">
+                        @{u.username}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#40bcf4] bg-[#40bcf4]/10 px-2 py-0.5 rounded border border-[#40bcf4]/20 group-hover:bg-[#40bcf4] group-hover:text-black transition">
+                      Profil →
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isSearching && searchResults.length === 0 && userSearchResults.length === 0 ? (
             <div className="py-12 text-center text-sm text-slate-300 flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-7 h-7 text-[#E63946] animate-spin" />
               <span className="font-semibold">TMDB veritabanında film ve diziler taranıyor...</span>

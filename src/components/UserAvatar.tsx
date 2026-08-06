@@ -1,6 +1,7 @@
 import React from 'react';
 import { Profile } from '../types';
 import { Camera } from 'lucide-react';
+import { DEFAULT_AVATAR_URL } from '../data/mockData';
 
 export interface UserAvatarProps {
   user?: Partial<Profile> | null;
@@ -38,7 +39,9 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   onEditCameraClick,
   title
 }) => {
-  const currentAvatarUrl = avatarUrl || user?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+  const rawUrl = avatarUrl || user?.avatar_url;
+  const isDefaultOrOld = !rawUrl || rawUrl.includes('photo-1535713875002-d1d0cf377fde');
+  const currentAvatarUrl = isDefaultOrOld ? DEFAULT_AVATAR_URL : rawUrl;
   const currentUsername = username || user?.username || 'user';
 
   const isPresetSize = typeof size === 'string' && SIZE_CLASSES[size];
@@ -57,6 +60,9 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
           src={currentAvatarUrl}
           alt={currentUsername}
           className={`w-full h-full object-cover ${imgClassName}`}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = DEFAULT_AVATAR_URL;
+          }}
         />
       </div>
 

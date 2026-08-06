@@ -115,7 +115,7 @@ BEGIN
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1)),
     COALESCE(NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'),
+    COALESCE(NEW.raw_user_meta_data->>'avatar_url', NULL),
     NEW.email
   );
   RETURN NEW;

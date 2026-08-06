@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem } from '../types';
 import { getDetails, getSeasonDetails, getBackdropUrl, getPosterUrl } from '../lib/tmdb';
+import { DEFAULT_AVATAR_URL } from '../data/mockData';
 import { AddToCollectionModal } from './AddToCollectionModal';
 
 interface MediaDetailModalProps {
@@ -900,7 +901,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <img
-                            src={rev.profile?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                            src={rev.profile?.avatar_url || DEFAULT_AVATAR_URL}
                             alt={rev.profile?.username}
                             className="w-8 h-8 rounded-full object-cover border border-[#E63946]"
                           />

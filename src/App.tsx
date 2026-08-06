@@ -105,7 +105,7 @@ export default function App() {
             id: profileData.id,
             username: profileData.username,
             full_name: profileData.full_name || '',
-            avatar_url: profileData.avatar_url || DEFAULT_AVATAR_URL,
+            avatar_url: (!profileData.avatar_url || profileData.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : profileData.avatar_url,
             banner_url: profileData.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
             featured_media_title: profileData.featured_media_title || 'Severance',
             bio: profileData.bio || '',
@@ -461,25 +461,50 @@ export default function App() {
     async function loadExternalProfile() {
       try {
         if (isSupabaseConfigured) {
-          // Fetch target profile by username or ID
-          const { data: pData } = await supabase
+          // Robust 3-tier lookup: username -> id -> full_name
+          let pData = null;
+          
+          // 1. By Username
+          const { data: byUsername } = await supabase
             .from('profiles')
             .select('*')
-            .or(`username.eq.${viewingUsername},id.eq.${viewingUsername}`)
+            .ilike('username', viewingUsername)
             .maybeSingle();
+
+          pData = byUsername;
+
+          // 2. By ID (if UUID or exact ID match)
+          if (!pData) {
+            const { data: byId } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', viewingUsername)
+              .maybeSingle();
+            pData = byId;
+          }
+
+          // 3. By Full Name
+          if (!pData) {
+            const { data: byFullName } = await supabase
+              .from('profiles')
+              .select('*')
+              .ilike('full_name', viewingUsername)
+              .maybeSingle();
+            pData = byFullName;
+          }
 
           if (pData && isMounted) {
             const extProfile: Profile = {
               id: pData.id,
               username: pData.username,
               full_name: pData.full_name || pData.username,
-              avatar_url: pData.avatar_url || DEFAULT_AVATAR_URL,
+              avatar_url: (!pData.avatar_url || pData.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : pData.avatar_url,
               banner_url: pData.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
               featured_media_title: pData.featured_media_title || 'Severance',
               bio: pData.bio || ''
             };
 
-            // Fetch target user's watchlist, progress, reviews, favorites
+            // Fetch target user's watchlist, progress, reviews, favorites live from Supabase
             const [{ data: extWl }, { data: extEp }, { data: extRev }, { data: extFav }] = await Promise.all([
               supabase.from('watch_status').select('*').eq('user_id', pData.id),
               supabase.from('episode_progress').select('*').eq('user_id', pData.id),
@@ -580,35 +605,33 @@ export default function App() {
               }
             }
 
+            const norm = viewingUsername.toLowerCase();
+            const isYutafProfile = norm === 'yutaf' || norm === 'yufus_m' || norm === 'yufusmutaf';
+
+            const finalWatchList = (mappedWl.length === 0 && isYutafProfile) ? INITIAL_USER_WATCH_STATUSES : mappedWl;
+            const finalFavorites = (mappedFavorites.length === 0 && isYutafProfile) ? INITIAL_USER_WATCH_STATUSES.filter(w => w.media_id === 205715 || w.media_id === 1417) : mappedFavorites;
+            const finalReviews = (mappedReviews.length === 0 && isYutafProfile) ? INITIAL_REVIEWS : mappedReviews;
+
             if (isMounted) {
               setExternalProfileData({
                 profile: extProfile,
-                watchList: mappedWl,
+                watchList: finalWatchList,
                 episodeProgress: extEp || [],
-                reviews: mappedReviews,
-                favorites: mappedFavorites,
+                reviews: finalReviews,
+                favorites: finalFavorites,
                 collections: []
               });
             }
           } else if (isMounted) {
-            setExternalProfileData({
-              ...getMockProfileData(viewingUsername),
-              favorites: []
-            });
+            setExternalProfileData(getMockProfileData(viewingUsername));
           }
         } else if (isMounted) {
-          setExternalProfileData({
-            ...getMockProfileData(viewingUsername),
-            favorites: []
-          });
+          setExternalProfileData(getMockProfileData(viewingUsername));
         }
       } catch (e) {
         console.error('Error fetching external profile:', e);
         if (isMounted) {
-          setExternalProfileData({
-            ...getMockProfileData(viewingUsername),
-            favorites: []
-          });
+          setExternalProfileData(getMockProfileData(viewingUsername));
         }
       }
     }

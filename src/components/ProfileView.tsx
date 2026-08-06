@@ -175,50 +175,71 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       try {
         if (isSupabaseConfigured) {
-          // 1. Fetch profiles that THIS user is following
-          const { data: followingsData } = await supabase
+          // 1. Fetch IDs of users THIS user is following
+          const { data: followRows } = await supabase
             .from('follows')
-            .select('following_id, profiles!follows_following_id_fkey(id, username, full_name, avatar_url, bio)')
+            .select('following_id')
             .eq('follower_id', user.id);
 
-          // 2. Fetch profiles that follow THIS user
-          const { data: followersData } = await supabase
+          if (followRows && followRows.length > 0) {
+            const targetIds = followRows.map((r: any) => r.following_id);
+            const { data: pList } = await supabase
+              .from('profiles')
+              .select('id, username, full_name, avatar_url, bio')
+              .in('id', targetIds);
+
+            if (isMounted && pList) {
+              setFollowing(pList.map((p: any) => ({
+                id: p.id,
+                username: p.username,
+                full_name: p.full_name || p.username,
+                avatar_url: p.avatar_url || DEFAULT_AVATAR_URL,
+                bio: p.bio || ''
+              })));
+            }
+          } else if (isMounted) {
+            setFollowing([]);
+          }
+
+          // 2. Fetch IDs of users that follow THIS user
+          const { data: followerRows } = await supabase
             .from('follows')
-            .select('follower_id, profiles!follows_follower_id_fkey(id, username, full_name, avatar_url, bio)')
+            .select('follower_id')
             .eq('following_id', user.id);
 
-          if (isMounted) {
-            if (followingsData) {
-              const mappedFollowing: Profile[] = followingsData
-                .map((item: any) => item.profiles)
-                .filter(Boolean)
-                .map((p: any) => ({
-                  id: p.id,
-                  username: p.username,
-                  full_name: p.full_name || p.username,
-                  avatar_url: p.avatar_url || DEFAULT_AVATAR_URL,
-                  bio: p.bio || ''
-                }));
-              setFollowing(mappedFollowing);
-            } else {
-              setFollowing([]);
-            }
+          if (followerRows && followerRows.length > 0) {
+            const targetIds = followerRows.map((r: any) => r.follower_id);
+            const { data: pList } = await supabase
+              .from('profiles')
+              .select('id, username, full_name, avatar_url, bio')
+              .in('id', targetIds);
 
-            if (followersData) {
-              const mappedFollowers: Profile[] = followersData
-                .map((item: any) => item.profiles)
-                .filter(Boolean)
-                .map((p: any) => ({
-                  id: p.id,
-                  username: p.username,
-                  full_name: p.full_name || p.username,
-                  avatar_url: p.avatar_url || DEFAULT_AVATAR_URL,
-                  bio: p.bio || ''
-                }));
-              setFollowers(mappedFollowers);
-            } else {
-              setFollowers([]);
+            if (isMounted && pList) {
+              setFollowers(pList.map((p: any) => ({
+                id: p.id,
+                username: p.username,
+                full_name: p.full_name || p.username,
+                avatar_url: p.avatar_url || DEFAULT_AVATAR_URL,
+                bio: p.bio || ''
+              })));
             }
+          } else if (isMounted) {
+            setFollowers([]);
+          }
+        } else {
+          // Local fallback
+          if (isOwnProfile && currentUserProfile && followingUserIds) {
+            const localFollowing = followingUserIds.map(id => ({
+              id,
+              username: id,
+              full_name: id,
+              avatar_url: DEFAULT_AVATAR_URL,
+              bio: ''
+            }));
+            if (isMounted) setFollowing(localFollowing);
+          }
+          if (!isOwnProfile && isFollowing && currentUserProfile) {
+            if (isMounted) setFollowers([currentUserProfile]);
           }
         }
       } catch (err) {
@@ -227,7 +248,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
 
     loadSocialConnections();
-  }, [user?.id, user?.username, isOwnProfile, isFollowing, followingUserIds]);
+  }, [user?.id, user?.username, isOwnProfile, isFollowing, followingUserIds, currentUserProfile]);
 
   // Helper to dynamically resolve title and poster from watchList if missing on review
   const getReviewMediaInfo = (rev: RatingReview) => {
@@ -306,21 +327,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
   })();
 
-  // Real User Reviews filtering (No fallback to MOCK_PINNED_REVIEWS)
+  // Real User Reviews filtering — Strictly scoped to this profile's user only
   const userReviews = React.useMemo(() => {
     return reviews.filter(r => 
-      r.user_id === user.id || 
-      r.username === user.username || 
-      (isOwnProfile && (
-        r.user_id === currentUserId || 
-        r.username === currentUserProfile?.username || 
-        r.username === 'yufus_m' || 
-        r.username === 'yufusmutaf'
-      ))
+      (r.user_id && user.id && r.user_id === user.id) || 
+      (r.username && user.username && r.username === user.username) ||
+      (r.profile?.id && user.id && r.profile.id === user.id) ||
+      (r.profile?.username && user.username && r.profile.username === user.username)
     );
-  }, [reviews, user.id, user.username, isOwnProfile, currentUserId, currentUserProfile]);
+  }, [reviews, user.id, user.username]);
 
-  const displayReviews = userReviews.length > 0 ? userReviews : reviews;
+  const displayReviews = userReviews;
+
+  const rawAvatarUrl = user.avatar_url;
+  const isDefaultOrOldAvatar = !rawAvatarUrl || rawAvatarUrl.includes('photo-1535713875002-d1d0cf377fde');
+  const avatarUrl = isDefaultOrOldAvatar ? DEFAULT_AVATAR_URL : rawAvatarUrl;
 
   return (
     <div className="w-full min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24">
@@ -393,19 +414,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 onClick={isOwnProfile ? handleAvatarClick : undefined}
                 className={`relative w-[110px] h-[110px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl ring-2 ring-white/10 bg-[#2c3440] ${isOwnProfile ? 'cursor-pointer' : ''}`}
               >
-                {user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={user.username}
-                    className={`w-full h-full object-cover ${isOwnProfile ? 'transition-transform duration-300 group-hover/avatar:scale-105' : ''}`}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-[#2c3440]">
-                    <span className="text-4xl sm:text-6xl font-black text-white/60">
-                      {(user.full_name || user.username || '?').charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
+                <img
+                  src={avatarUrl}
+                  alt={user.username}
+                  className={`w-full h-full object-cover ${isOwnProfile ? 'transition-transform duration-300 group-hover/avatar:scale-105' : ''}`}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = DEFAULT_AVATAR_URL;
+                  }}
+                />
 
                 {/* Hover overlay for changing profile photo ONLY on own profile */}
                 {isOwnProfile && (
@@ -1219,14 +1235,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             <div className="flex border-b border-[#2c3440] shrink-0">
               <button
-                onClick={() => setFollowerTab('followers')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
-                  followerTab === 'followers' ? 'border-[#00e054] text-white font-extrabold' : 'border-transparent text-slate-400'
-                }`}
-              >
-                Takipçiler ({followers.length})
-              </button>
-              <button
                 onClick={() => setFollowerTab('following')}
                 className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
                   followerTab === 'following' ? 'border-[#00e054] text-white font-extrabold' : 'border-transparent text-slate-400'
@@ -1234,15 +1242,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               >
                 Takip Edilenler ({following.length})
               </button>
+              <button
+                onClick={() => setFollowerTab('followers')}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                  followerTab === 'followers' ? 'border-[#00e054] text-white font-extrabold' : 'border-transparent text-slate-400'
+                }`}
+              >
+                Takipçiler ({followers.length})
+              </button>
             </div>
 
             <div className="overflow-y-auto space-y-2 pr-1 flex-1 custom-scrollbar">
-              {(followerTab === 'followers' ? followers : following).length === 0 ? (
+              {(followerTab === 'following' ? following : followers).length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-400">
-                  Henüz {followerTab === 'followers' ? 'takipçi' : 'takip edilen kullanıcı'} bulunmuyor.
+                  Henüz {followerTab === 'following' ? 'takip edilen kullanıcı' : 'takipçi'} bulunmuyor.
                 </div>
               ) : (
-                (followerTab === 'followers' ? followers : following).map(person => (
+                (followerTab === 'following' ? following : followers).map(person => (
                   <div 
                     key={person.id}
                     onClick={() => {

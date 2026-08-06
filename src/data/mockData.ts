@@ -33,6 +33,29 @@ export const MOCK_USER_PROFILES: Record<string, {
 }> = {};
 
 export function getMockProfileData(username: string) {
+  const norm = username.toLowerCase();
+  if (norm === 'yutaf' || norm === 'yufus_m' || norm === 'yufusmutaf') {
+    const yutafFavorites = INITIAL_USER_WATCH_STATUSES.filter(w => w.media_id === 205715 || w.media_id === 1417);
+    return {
+      profile: {
+        id: CURRENT_USER.id,
+        username: username,
+        full_name: 'Yusuf Mutaf',
+        avatar_url: CURRENT_USER.avatar_url,
+        banner_url: CURRENT_USER.banner_url,
+        featured_media_title: CURRENT_USER.featured_media_title,
+        bio: CURRENT_USER.bio
+      },
+      watchList: INITIAL_USER_WATCH_STATUSES,
+      reviews: INITIAL_REVIEWS,
+      collections: INITIAL_COLLECTIONS,
+      favorites: yutafFavorites,
+      episodeProgress: [],
+      followers: [],
+      following: []
+    };
+  }
+
   if (MOCK_USER_PROFILES[username]) {
     return MOCK_USER_PROFILES[username];
   }
@@ -48,6 +71,7 @@ export function getMockProfileData(username: string) {
     watchList: [],
     reviews: [],
     collections: [],
+    favorites: [],
     episodeProgress: [],
     followers: [],
     following: []

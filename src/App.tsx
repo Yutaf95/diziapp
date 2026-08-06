@@ -112,7 +112,16 @@ export default function App() {
             email: profileData.email || session.user.email || ''
           };
           setCurrentUser(profileObj);
-          setViewingUsername(profileData.username);
+          
+          // Only update viewingUsername to currentUser if not currently on a specific /user/... URL
+          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/user/')) {
+            const urlUsername = window.location.pathname.replace('/user/', '').trim();
+            if (urlUsername) {
+              setViewingUsername(urlUsername);
+            }
+          } else {
+            setViewingUsername(profileData.username);
+          }
         }
       } catch (err) { console.warn('profiles fetch error:', err); }
 
@@ -452,8 +461,11 @@ export default function App() {
 
   useEffect(() => {
     const isOwn = !viewingUsername || viewingUsername === currentUser.username || viewingUsername === 'me' || viewingUsername === currentUser.id;
+    
+    // RESET STALE DATA IMMEDIATELY TO PREVENT SHOWING OLD PROFILE FOR 4-5 SECONDS
+    setExternalProfileData(null);
+
     if (isOwn) {
-      setExternalProfileData(null);
       return;
     }
 
@@ -504,7 +516,7 @@ export default function App() {
               bio: pData.bio || ''
             };
 
-            // Fetch target user's watchlist, progress, reviews, favorites live from Supabase
+            // Fetch target user's watchlist, progress, reviews, favorites live from Supabase concurrently
             const [{ data: extWl }, { data: extEp }, { data: extRev }, { data: extFav }] = await Promise.all([
               supabase.from('watch_status').select('*').eq('user_id', pData.id),
               supabase.from('episode_progress').select('*').eq('user_id', pData.id),
@@ -512,98 +524,104 @@ export default function App() {
               supabase.from('favorites').select('*').eq('user_id', pData.id)
             ]);
 
-            // Enrich watchlist with TMDB details for complete title & poster info
-            const mappedWl: WatchStatus[] = [];
-            if (extWl && extWl.length > 0) {
-              for (const w of extWl) {
-                try {
-                  const details = await getDetails(w.media_id, w.media_type);
-                  mappedWl.push({
-                    media_id: w.media_id,
-                    media_type: w.media_type,
-                    status: w.status,
-                    title: details?.title || details?.name || w.title || 'Yapım',
-                    poster_path: details?.poster_path || w.poster_path || '',
-                    vote_average: details?.vote_average || w.vote_average || 8.0,
-                    updated_at: w.updated_at,
-                    created_at: w.created_at
-                  });
-                } catch (e) {
-                  mappedWl.push({
-                    media_id: w.media_id,
-                    media_type: w.media_type,
-                    status: w.status,
-                    title: w.title || 'Yapım',
-                    poster_path: w.poster_path || '',
-                    vote_average: w.vote_average || 8.0,
-                    updated_at: w.updated_at,
-                    created_at: w.created_at
-                  });
-                }
-              }
-            }
+            // PARALLEL ENRICHMENT WITH PROMISE.ALL (FAST & NON-BLOCKING)
+            const mappedWl: WatchStatus[] = extWl && extWl.length > 0 
+              ? await Promise.all(extWl.map(async (w: any) => {
+                  if (w.title && w.poster_path) {
+                    return {
+                      media_id: w.media_id,
+                      media_type: w.media_type,
+                      status: w.status,
+                      title: w.title,
+                      poster_path: w.poster_path,
+                      vote_average: w.vote_average || 8.0,
+                      updated_at: w.updated_at,
+                      created_at: w.created_at
+                    };
+                  }
+                  try {
+                    const details = await getDetails(w.media_id, w.media_type);
+                    return {
+                      media_id: w.media_id,
+                      media_type: w.media_type,
+                      status: w.status,
+                      title: details?.title || details?.name || w.title || 'Yapım',
+                      poster_path: details?.poster_path || w.poster_path || '',
+                      vote_average: details?.vote_average || w.vote_average || 8.0,
+                      updated_at: w.updated_at,
+                      created_at: w.created_at
+                    };
+                  } catch {
+                    return {
+                      media_id: w.media_id,
+                      media_type: w.media_type,
+                      status: w.status,
+                      title: w.title || 'Yapım',
+                      poster_path: w.poster_path || '',
+                      vote_average: w.vote_average || 8.0,
+                      updated_at: w.updated_at,
+                      created_at: w.created_at
+                    };
+                  }
+                }))
+              : [];
 
-            // Map favorites
-            const mappedFavorites: WatchStatus[] = [];
-            if (extFav && extFav.length > 0) {
-              for (const f of extFav) {
-                const watchMatch = mappedWl.find(w => w.media_id === f.media_id && w.media_type === f.media_type);
-                if (watchMatch) {
-                  mappedFavorites.push(watchMatch);
-                } else {
+            // Map favorites in parallel
+            const mappedFavorites: WatchStatus[] = extFav && extFav.length > 0
+              ? await Promise.all(extFav.map(async (f: any) => {
+                  const watchMatch = mappedWl.find(w => w.media_id === f.media_id && w.media_type === f.media_type);
+                  if (watchMatch) return watchMatch;
                   try {
                     const details = await getDetails(f.media_id, f.media_type);
-                    mappedFavorites.push({
+                    return {
                       media_id: f.media_id,
                       media_type: f.media_type,
                       status: 'watched',
                       title: details?.title || details?.name || 'Yapım',
                       poster_path: details?.poster_path || '',
                       vote_average: details?.vote_average || 8.5
-                    });
-                  } catch (e) {
-                    mappedFavorites.push({
+                    };
+                  } catch {
+                    return {
                       media_id: f.media_id,
                       media_type: f.media_type,
                       status: 'watched',
                       title: 'Yapım',
                       poster_path: '',
                       vote_average: 8.5
-                    });
+                    };
                   }
-                }
-              }
-            }
+                }))
+              : [];
 
-            // Enrich reviews with TMDB titles and posters
-            const mappedReviews: RatingReview[] = [];
-            if (extRev && extRev.length > 0) {
-              for (const r of extRev) {
-                const watchMatch = mappedWl.find(w => w.media_id === r.media_id && w.media_type === r.media_type);
-                let title = r.media_title || watchMatch?.title;
-                let poster = r.media_poster || watchMatch?.poster_path;
-                if (!title || !poster) {
-                  try {
-                    const details = await getDetails(r.media_id, r.media_type);
-                    title = title || details?.title || details?.name || 'Yapım';
-                    poster = poster || details?.poster_path || '';
-                  } catch (e) {}
-                }
-                mappedReviews.push({
-                  id: r.id,
-                  user_id: r.user_id,
-                  media_id: r.media_id,
-                  media_type: r.media_type,
-                  media_title: title || 'Yapım',
-                  media_poster: poster || '',
-                  rating: r.rating,
-                  review_text: r.review_text,
-                  contains_spoiler: r.contains_spoiler,
-                  created_at: r.created_at,
-                  profile: extProfile
-                });
-              }
-            }
+            // Map reviews in parallel
+            const mappedReviews: RatingReview[] = extRev && extRev.length > 0
+              ? await Promise.all(extRev.map(async (r: any) => {
+                  const watchMatch = mappedWl.find(w => w.media_id === r.media_id && w.media_type === r.media_type);
+                  let title = r.media_title || watchMatch?.title;
+                  let poster = r.media_poster || watchMatch?.poster_path;
+                  if (!title || !poster) {
+                    try {
+                      const details = await getDetails(r.media_id, r.media_type);
+                      title = title || details?.title || details?.name || 'Yapım';
+                      poster = poster || details?.poster_path || '';
+                    } catch {}
+                  }
+                  return {
+                    id: r.id,
+                    user_id: r.user_id,
+                    media_id: r.media_id,
+                    media_type: r.media_type,
+                    media_title: title || 'Yapım',
+                    media_poster: poster || '',
+                    rating: r.rating,
+                    review_text: r.review_text,
+                    contains_spoiler: r.contains_spoiler,
+                    created_at: r.created_at,
+                    profile: extProfile
+                  };
+                }))
+              : [];
 
             const norm = viewingUsername.toLowerCase();
             const isYutafProfile = norm === 'yutaf' || norm === 'yufus_m' || norm === 'yufusmutaf';

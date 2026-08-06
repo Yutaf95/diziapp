@@ -1228,44 +1228,58 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           }}
           className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
         >
-          <div className="bg-[#181e23] border border-[#2c3440] rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95 cursor-default max-h-[85vh] flex flex-col">
+          <div className="bg-[#181e23] border border-[#3e4856]/60 rounded-3xl w-full max-w-lg sm:max-w-xl p-5 sm:p-7 space-y-5 shadow-2xl animate-in zoom-in-95 cursor-default max-h-[85vh] flex flex-col">
             
-            <div className="flex items-center justify-between border-b border-[#2c3440] pb-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#00e054]" />
-                <h3 className="font-bold text-sm text-white">Sosyal Ağ</h3>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#2c3440] pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#00e054]/15 text-[#00e054] border border-[#00e054]/30">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base sm:text-xl text-white">Sosyal Ağ</h3>
+                  <p className="text-xs text-[#9ab] font-medium mt-0.5">Takip edilen kullanıcılar ve takipçiler</p>
+                </div>
               </div>
               <button
                 onClick={() => setShowFollowersModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-[#2c3440] transition"
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-[#2c3440] transition cursor-pointer border border-transparent hover:border-[#3e4856]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex border-b border-[#2c3440] shrink-0">
+            {/* Tab Switcher */}
+            <div className="flex border-b border-[#2c3440] shrink-0 gap-2">
               <button
                 onClick={() => setFollowerTab('following')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
-                  followerTab === 'following' ? 'border-[#00e054] text-white font-extrabold' : 'border-transparent text-slate-400'
+                className={`flex-1 py-3 text-xs sm:text-sm font-extrabold border-b-2 transition-all cursor-pointer ${
+                  followerTab === 'following' ? 'border-[#00e054] text-white font-black' : 'border-transparent text-[#9ab] hover:text-white'
                 }`}
               >
                 Takip Edilenler ({following.length})
               </button>
               <button
                 onClick={() => setFollowerTab('followers')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
-                  followerTab === 'followers' ? 'border-[#00e054] text-white font-extrabold' : 'border-transparent text-slate-400'
+                className={`flex-1 py-3 text-xs sm:text-sm font-extrabold border-b-2 transition-all cursor-pointer ${
+                  followerTab === 'followers' ? 'border-[#00e054] text-white font-black' : 'border-transparent text-[#9ab] hover:text-white'
                 }`}
               >
                 Takipçiler ({followers.length})
               </button>
             </div>
 
-            <div className="overflow-y-auto space-y-2 pr-1 flex-1 custom-scrollbar">
+            {/* Content List */}
+            <div className="overflow-y-auto space-y-3 pr-1 flex-1 custom-scrollbar">
               {(followerTab === 'following' ? following : followers).length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400">
-                  Henüz {followerTab === 'following' ? 'takip edilen kullanıcı' : 'takipçi'} bulunmuyor.
+                <div className="py-12 text-center space-y-2">
+                  <Users className="w-10 h-10 text-slate-600 mx-auto" />
+                  <p className="text-sm font-bold text-slate-300">
+                    Henüz {followerTab === 'following' ? 'takip edilen kullanıcı' : 'takipçi'} bulunmuyor.
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Yeni kişileri arama çubuğundan bulup takip edebilirsiniz.
+                  </p>
                 </div>
               ) : (
                 (followerTab === 'following' ? following : followers).map(person => (
@@ -1277,21 +1291,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         onNavigateToProfile(person.username);
                       }
                     }}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#14181c] hover:bg-[#232833] border border-[#2c3440] cursor-pointer transition group"
+                    className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#14181c] hover:bg-[#20262e] border border-[#2c3440] hover:border-[#40bcf4]/50 cursor-pointer transition-all duration-200 group shadow-md hover:shadow-xl"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <UserAvatar user={person} size="sm" />
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-white group-hover:text-[#40bcf4] transition truncate">
+                    <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                      <UserAvatar user={person} size="lg" className="shrink-0 ring-2 ring-white/10" />
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="text-sm sm:text-base font-extrabold text-white group-hover:text-[#40bcf4] transition truncate">
                           {person.full_name || person.username}
                         </div>
-                        <div className="text-[10px] text-slate-400 truncate font-mono">
+                        <div className="text-xs text-[#9ab] font-medium font-mono truncate">
                           @{person.username}
                         </div>
+                        {person.bio && (
+                          <p className="text-xs text-slate-400 truncate max-w-xs font-sans pt-0.5">
+                            {person.bio}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-[#40bcf4] bg-[#40bcf4]/10 px-2 py-0.5 rounded border border-[#40bcf4]/20 group-hover:bg-[#40bcf4] group-hover:text-black transition">
-                      Profil →
+                    <span className="px-3 py-1.5 text-xs font-black rounded-xl text-[#40bcf4] bg-[#40bcf4]/15 border border-[#40bcf4]/30 group-hover:bg-[#40bcf4] group-hover:text-slate-950 transition shadow-sm shrink-0 whitespace-nowrap">
+                      Profili Gör →
                     </span>
                   </div>
                 ))

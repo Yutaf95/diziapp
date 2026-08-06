@@ -446,7 +446,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                           : 'text-slate-400 hover:text-white hover:bg-[#232833]'
                       }`}
                     >
-                      <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> İzliyorum
+                      <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> İzleniyor
                     </button>
                   )}
 
@@ -459,7 +459,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                         : 'text-slate-400 hover:text-white hover:bg-[#232833]'
                     }`}
                   >
-                    <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400" /> İzleyeceğim
+                    <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400" /> İzlenecek
                   </button>
 
                   {/* İzledim — always visible, active when watched */}
@@ -558,8 +558,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
             </p>
           </div>
 
-          {/* 3. SEZON BUTONLARI & BÖLÜM KARTLARI GRID'I (Yalnızca İzliyorum/İzlendi durumunda gösterilir) */}
-          {isTv && (userWatchStatus === 'watching' || userWatchStatus === 'watched') && (
+          {/* 3. SEZON BUTONLARI & BÖLÜM KARTLARI GRID'I (Tamamlanan dizilerde varsayılan kapalı, diğerlerinde açık gösterilir) */}
+          {isTv && (
             <div className="bg-[#14171D] border border-[#232833] rounded-3xl shadow-xl transition-all overflow-hidden">
               
               {/* Header Bar - Tıklanabilir (Tamamlanan dizilerde tek sıra kapalı kalır, tıklanınca açılır) */}

@@ -82,6 +82,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followerTab, setFollowerTab] = useState<'followers' | 'following'>('followers');
+  const [genreTab, setGenreTab] = useState<'tv' | 'movie'>('tv');
+
+  const tvGenreDistribution = [
+    { genre: 'Bilim Kurgu & Macera', percent: 38, color: 'bg-[#00e054]' },
+    { genre: 'Drama & Gizem', percent: 28, color: 'bg-blue-500' },
+    { genre: 'Aksiyon & Gerilim', percent: 20, color: 'bg-amber-500' },
+    { genre: 'Animasyon & Komedi', percent: 14, color: 'bg-purple-500' }
+  ];
+
+  const movieGenreDistribution = [
+    { genre: 'Aksiyon & Macera', percent: 42, color: 'bg-amber-500' },
+    { genre: 'Bilim Kurgu & Fantezi', percent: 26, color: 'bg-[#00e054]' },
+    { genre: 'Drama & Suç', percent: 18, color: 'bg-blue-500' },
+    { genre: 'Korku & Gerilim', percent: 14, color: 'bg-rose-500' }
+  ];
 
   // Edit profile form state
   const [formUsername, setFormUsername] = useState(user.username);
@@ -889,23 +904,59 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             {/* GENRE DISTRIBUTION PROGRESS BARS */}
-            <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-6 space-y-4 shadow-xl">
-              <h3 className="text-base font-black text-white uppercase tracking-wider">En Çok İzlenen Tür Dağılımı</h3>
-              
-              <div className="space-y-3 pt-2">
-                {[
-                  { genre: 'Bilim Kurgu & Macera', percent: 38, color: 'bg-[#00e054]' },
-                  { genre: 'Drama & Gizem', percent: 26, color: 'bg-blue-500' },
-                  { genre: 'Aksiyon & Gerilim', percent: 20, color: 'bg-amber-500' },
-                  { genre: 'Animasyon & Fantezi', percent: 16, color: 'bg-purple-500' }
-                ].map(item => (
-                  <div key={item.genre} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
-                      <span>{item.genre}</span>
-                      <span className="font-mono">{item.percent}%</span>
+            <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2c3440] pb-4">
+                <div className="flex items-center gap-2.5">
+                  <BarChart2 className="w-5 h-5 text-[#00e054]" />
+                  <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                    En Çok İzlenen Tür Dağılımı
+                  </h3>
+                </div>
+
+                {/* Dizi / Film Selector Boxes in Top Right Header */}
+                <div className="flex items-center gap-1.5 bg-[#14181c] p-1 rounded-xl border border-[#2c3440] self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setGenreTab('tv')}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                      genreTab === 'tv'
+                        ? 'bg-[#00e054] text-slate-950 shadow-md scale-105'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Tv className="w-3.5 h-3.5" /> Dizi
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setGenreTab('movie')}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                      genreTab === 'movie'
+                        ? 'bg-blue-500 text-white shadow-md scale-105'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Film className="w-3.5 h-3.5" /> Film
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress bars based on selected genreTab */}
+              <div className="space-y-3.5 pt-1">
+                {(genreTab === 'tv' ? tvGenreDistribution : movieGenreDistribution).map(item => (
+                  <div key={item.genre} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-200">
+                      <span className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${item.color}`} />
+                        {item.genre}
+                      </span>
+                      <span className="font-mono text-slate-400">{item.percent}%</span>
                     </div>
-                    <div className="w-full bg-[#14181c] rounded-full h-2 overflow-hidden border border-[#2c3440]">
-                      <div className={`h-full ${item.color} rounded-full transition-all duration-500`} style={{ width: `${item.percent}%` }} />
+                    <div className="w-full bg-[#14181c] rounded-full h-2.5 overflow-hidden border border-[#2c3440]">
+                      <div 
+                        className={`h-full ${item.color} rounded-full transition-all duration-500 ease-out`} 
+                        style={{ width: `${item.percent}%` }} 
+                      />
                     </div>
                   </div>
                 ))}
@@ -975,16 +1026,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-300 font-bold">Kullanıcı Adı</label>
-                <input
-                  type="text"
-                  value={formUsername}
-                  onChange={(e) => setFormUsername(e.target.value)}
-                  className="w-full bg-[#14181c] border border-[#2c3440] rounded-xl px-3 py-2 text-white font-medium focus:border-[#00e054] focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
                 <label className="text-slate-300 font-bold">Ad Soyad</label>
                 <input
                   type="text"
@@ -1018,7 +1059,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 onClick={() => {
                   if (onUpdateProfile) {
                     onUpdateProfile({
-                      username: formUsername,
                       full_name: formFullName,
                       bio: formBio
                     });

@@ -29,9 +29,8 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   reviews,
   onSelectMediaById
 }) => {
-  // ALL HOOKS MUST BE DECLARED UNCONDITIONALLY AT THE TOP
+  // ALL HOOKS DECLARED UNCONDITIONALLY AT TOP
   const [currentSlide, setCurrentSlide] = useState<number>(0);
-  const [cardTheme, setCardTheme] = useState<'cinema' | 'cyber' | 'poster'>('cinema');
   const [isDownloading, setIsDownloading] = useState(false);
   const [topActor, setTopActor] = useState<{
     name: string;
@@ -59,32 +58,43 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   const remainingMinutes = totalWatchMinutes % 60;
 
   const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80';
-  const anyWatchedItem = watchList.find(w => w.status === 'watched' || w.status === 'watching') || watchList[0];
-  const topWatchedItem = watchList.filter(w => w.status === 'watched').sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))[0];
+  
+  // Find watched items from user's actual watchList
+  const watchedItems = watchList.filter(w => w.status === 'watched' || w.status === 'watching');
+  const anyWatchedItem = watchedItems[0];
 
-  const topReview = reviews.length > 0 
-    ? [...reviews].sort((a, b) => b.rating - a.rating)[0]
+  // User rated items strictly from user's explicit reviews or explicit ratings
+  const userRatedReviews = reviews.filter(r => typeof r.rating === 'number' && r.rating > 0);
+  const topUserReview = userRatedReviews.length > 0 
+    ? [...userRatedReviews].sort((a, b) => b.rating - a.rating)[0]
     : null;
 
-  const zirveYapim = topReview 
+  // Find item with user's highest personal rating
+  const userRatedWatchItems = watchedItems.filter(w => typeof w.rating === 'number' && w.rating > 0);
+  const topRatedWatchItem = userRatedWatchItems.length > 0
+    ? [...userRatedWatchItems].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0]
+    : null;
+
+  // Compute 100% Dynamic Zirve Yapım
+  const zirveYapim = topUserReview
     ? {
-        id: topReview.media_id,
-        type: topReview.media_type,
-        title: topReview.media_title || 'Zirve Yapım',
-        poster: topReview.media_poster || (anyWatchedItem?.poster_path ? (anyWatchedItem.poster_path.startsWith('http') ? anyWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${anyWatchedItem.poster_path}`) : defaultPoster),
-        rating: topReview.rating || 9.0,
-        reviewText: topReview.review_text || 'Bu ay kütüphanenizdeki en yüksek puanlı değerlendirmeniz.',
-        badge: `${topReview.rating || 9}/10 Zirve Puan`
-      } 
-    : (topWatchedItem 
+        id: topUserReview.media_id,
+        type: topUserReview.media_type,
+        title: topUserReview.media_title || 'Yapım',
+        poster: topUserReview.media_poster || (anyWatchedItem?.poster_path ? (anyWatchedItem.poster_path.startsWith('http') ? anyWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${anyWatchedItem.poster_path}`) : defaultPoster),
+        userRating: topUserReview.rating,
+        reviewText: topUserReview.review_text || 'Bu ay değerlendirdiğin en yüksek puanlı yapım.',
+        badge: `★ ${topUserReview.rating}/10 Kişisel Puanın`
+      }
+    : (topRatedWatchItem
         ? {
-            id: topWatchedItem.media_id,
-            type: topWatchedItem.media_type,
-            title: topWatchedItem.title || 'Yapım',
-            poster: topWatchedItem.poster_path ? (topWatchedItem.poster_path.startsWith('http') ? topWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${topWatchedItem.poster_path}`) : defaultPoster,
-            rating: topWatchedItem.vote_average || 8.0,
-            reviewText: 'Bu ay kütüphanenizde tamamladığınız ve öne çıkan yapım.',
-            badge: `★ ${topWatchedItem.vote_average || 8.0} Tamamlandı`
+            id: topRatedWatchItem.media_id,
+            type: topRatedWatchItem.media_type,
+            title: topRatedWatchItem.title || 'Yapım',
+            poster: topRatedWatchItem.poster_path ? (topRatedWatchItem.poster_path.startsWith('http') ? topRatedWatchItem.poster_path : `https://image.tmdb.org/t/p/w500${topRatedWatchItem.poster_path}`) : defaultPoster,
+            userRating: topRatedWatchItem.rating || null,
+            reviewText: 'Kütüphanende kendi verdiğin puanla öne çıkan içerik.',
+            badge: `★ ${topRatedWatchItem.rating}/10 Puanın`
           }
         : (anyWatchedItem
             ? {
@@ -92,27 +102,23 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 type: anyWatchedItem.media_type,
                 title: anyWatchedItem.title || 'Yapım',
                 poster: anyWatchedItem.poster_path ? (anyWatchedItem.poster_path.startsWith('http') ? anyWatchedItem.poster_path : `https://image.tmdb.org/t/p/w500${anyWatchedItem.poster_path}`) : defaultPoster,
-                rating: anyWatchedItem.vote_average || 8.0,
-                reviewText: 'Bu ay izlemeye başladığınız öne çıkan yapım.',
-                badge: `★ ${anyWatchedItem.vote_average || 8.0} İzleniyor`
+                userRating: null, // NO fake rating if user hasn't rated!
+                reviewText: 'Bu ay kütüphanende en çok vakit geçirdiğin içerik.',
+                badge: anyWatchedItem.status === 'watched' ? 'Tamamlandı' : 'İzleniyor'
               }
-            : {
-                id: 0,
-                type: 'movie' as const,
-                title: 'Öne Çıkan Yapım',
-                poster: defaultPoster,
-                rating: 8.5,
-                reviewText: 'Bu ayki izleme maratonunuzun öne çıkan içeriği.',
-                badge: 'Özel Seçki'
-              }
+            : null
           )
       );
 
+  // Dynamic Actor details from user's actual watched items
   useEffect(() => {
     let isMounted = true;
     async function loadActorDetails() {
-      const targetItem = topWatchedItem || anyWatchedItem;
-      if (!targetItem || !targetItem.media_id) return;
+      const targetItem = anyWatchedItem;
+      if (!targetItem || !targetItem.media_id) {
+        if (isMounted) setTopActor(null);
+        return;
+      }
 
       try {
         const details = await getDetails(targetItem.media_id, targetItem.media_type);
@@ -120,18 +126,25 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
           const firstCast = details.cast[0];
           const photoUrl = firstCast.profile_path
             ? (firstCast.profile_path.startsWith('http') ? firstCast.profile_path : `https://image.tmdb.org/t/p/w500${firstCast.profile_path}`)
-            : (targetItem.poster_path ? (targetItem.poster_path.startsWith('http') ? targetItem.poster_path : `https://image.tmdb.org/t/p/w500${targetItem.poster_path}`) : defaultPoster);
+            : null;
 
-          setTopActor({
-            name: firstCast.name,
-            role: `${firstCast.character ? `${firstCast.character} • ` : ''}${targetItem.title || 'Yapım'}`,
-            photo: photoUrl,
-            appearances: episodeCount > 0 ? `${episodeCount} Bölüm İzlendi` : `${movieCount} Film İzlendi`,
-            description: `Bu ay en çok izlediğiniz ${targetItem.title || 'yapımın'} oyuncu kadrosundan`
-          });
+          if (firstCast.name) {
+            setTopActor({
+              name: firstCast.name,
+              role: `${firstCast.character ? `${firstCast.character} • ` : ''}${targetItem.title || 'Yapım'}`,
+              photo: photoUrl || (targetItem.poster_path ? (targetItem.poster_path.startsWith('http') ? targetItem.poster_path : `https://image.tmdb.org/t/p/w500${targetItem.poster_path}`) : defaultPoster),
+              appearances: targetItem.media_type === 'tv' ? `İzlediğin Dizinin Başrolü` : `İzlediğin Filmin Başrolü`,
+              description: `Kütüphanendeki "${targetItem.title || 'Yapım'}" içeriğinin öne çıkan oyuncusu.`
+            });
+          } else {
+            setTopActor(null);
+          }
+        } else {
+          if (isMounted) setTopActor(null);
         }
       } catch (e) {
         console.warn('Actor fetch error:', e);
+        if (isMounted) setTopActor(null);
       }
     }
 
@@ -141,16 +154,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     return () => { isMounted = false; };
   }, [isOpen, watchList, episodeProgress]);
 
-  // Dynamic Favori Oyuncu (TMDB Actor Data)
-  const favoriOyuncu = topActor || {
-    name: zirveYapim?.title ? `${zirveYapim.title} Oyuncusu` : 'Favori Oyuncu',
-    role: `Başrol • ${zirveYapim?.title || 'Yapım'}`,
-    photo: zirveYapim?.poster || defaultPoster,
-    appearances: `${episodeCount} Bölüm • ${movieCount} Film`,
-    description: 'Bu ay ekran maratonunda izlediğiniz yapımın öne çıkan oyuncusu'
-  };
-
-  // EARLY RETURN PLACED AFTER ALL HOOKS
   if (!isOpen) return null;
 
   // Dynamic En Yoğun Gün calculation from watched items
@@ -161,35 +164,8 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     episodesWatched: `${episodeCount} Bölüm, ${movieCount} Film`
   };
 
-  // Check if user has sufficient data (strictly >= 2 watched items)
-  const hasData = (episodeCount + movieCount) >= 2;
-
-  // Handle PNG Image Download of the Spotify Wrapped Card
-  const handleDownloadWrappedCard = async () => {
-    if (!cardRef.current) return;
-    setIsDownloading(true);
-    try {
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#0F1117',
-        allowTaint: false,
-        logging: false
-      });
-      const imageUri = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = imageUri;
-      link.download = `TVTime_${user.username}_${formattedMonthTitle.replace(/\s+/g, '_')}_Ozeti.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error('Özet kartı indirilirken hata oluştu:', err);
-      alert('Görsel indirilirken bir sorun oluştu, lütfen tekrar deneyin.');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+  // Check if user has sufficient data (at least 1 watched episode or movie)
+  const hasData = (episodeCount + movieCount) > 0;
 
   const TOTAL_SLIDES = 4;
 
@@ -238,7 +214,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition border border-white/10 shrink-0"
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition border border-white/10 shrink-0 cursor-pointer"
               title="Kapat"
             >
               <X className="w-5 h-5" />
@@ -257,13 +233,13 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                   {formattedMonthTitle} Özetin İçin Henüz Erken!
                 </h3>
                 <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-                  Bu ay henüz yeterli izleme verin oluşmadı, kaydetmeye başla! 🎬
+                  Bu ay henüz izleme verin bulunmuyor. Dizi ve film izledikçe kişisel özetin burada şekillenecektir! 🎬
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-3 rounded-2xl bg-[#E63946] hover:bg-[#d62839] text-white font-extrabold text-xs shadow-xl shadow-[#E63946]/30 transition hover:scale-105 active:scale-95"
+                className="px-6 py-3 rounded-2xl bg-[#E63946] hover:bg-[#d62839] text-white font-extrabold text-xs shadow-xl shadow-[#E63946]/30 transition hover:scale-105 active:scale-95 cursor-pointer"
               >
                 Hemen İçerik Keşfet & Ekle 🚀
               </button>
@@ -333,7 +309,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                           <Calendar className="w-5 h-5" />
                         </div>
                         <div>
-                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">En Yoğun Günün</span>
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">En Yoğun Dönem</span>
                           <span className="text-lg font-black text-cyan-300 block">
                             {enYogunGun.dayName}
                           </span>
@@ -353,8 +329,8 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                           <span className="text-lg font-black text-emerald-300 block">
                             {movieCount} Sinema Filmi
                           </span>
-                          <span className="text-[11px] font-medium text-slate-400">
-                            Zirve: {zirveYapim ? zirveYapim.title : 'Yok'}
+                          <span className="text-[11px] font-medium text-slate-400 truncate block">
+                            {zirveYapim ? `Öne Çıkan: ${zirveYapim.title}` : 'Film bulunmuyor'}
                           </span>
                         </div>
                       </div>
@@ -380,51 +356,59 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
 
                     <div className="space-y-1">
                       <h3 className="text-2xl font-black text-white">
-                        10 Üzerinden En Yüksek Puan Verilen İçerik 🔥
+                        {zirveYapim?.userRating ? 'En Yüksek Puan Verilen İçerik 🔥' : 'Öne Çıkan İzleme İçeriğin 🎬'}
                       </h3>
                       <p className="text-xs text-slate-300">
-                        {formattedMonthTitle} ayında en çok etkilendiğin şaheser:
+                        {formattedMonthTitle} ayında kütüphanende öne çıkan yapım:
                       </p>
                     </div>
 
                     {/* Spotlight Hero Card */}
-                    <div 
-                      onClick={() => {
-                        if (onSelectMediaById && zirveYapim?.id) onSelectMediaById(zirveYapim.id, zirveYapim.type);
-                        onClose();
-                      }}
-                      className="group bg-gradient-to-r from-[#1A1D25] to-[#12141A] border border-amber-500/40 rounded-3xl p-4 sm:p-5 flex gap-4 items-center shadow-2xl cursor-pointer hover:border-amber-400 transition"
-                    >
-                      <div className="w-24 sm:w-28 aspect-[2/3] rounded-2xl overflow-hidden shrink-0 relative bg-[#1F232D] shadow-md">
-                        <img 
-                          src={zirveYapim?.poster || defaultPoster} 
-                          alt={zirveYapim?.title || 'Yapım'}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
-                        />
-                        <div className="absolute top-2 left-2 bg-amber-400 text-black px-2 py-0.5 rounded-md text-[10px] font-black font-mono shadow-md">
-                          ★ {zirveYapim?.rating || 8.0}
+                    {zirveYapim ? (
+                      <div 
+                        onClick={() => {
+                          if (onSelectMediaById && zirveYapim.id) onSelectMediaById(zirveYapim.id, zirveYapim.type);
+                          onClose();
+                        }}
+                        className="group bg-gradient-to-r from-[#1A1D25] to-[#12141A] border border-amber-500/40 rounded-3xl p-4 sm:p-5 flex gap-4 items-center shadow-2xl cursor-pointer hover:border-amber-400 transition"
+                      >
+                        <div className="w-24 sm:w-28 aspect-[2/3] rounded-2xl overflow-hidden shrink-0 relative bg-[#1F232D] shadow-md">
+                          <img 
+                            src={zirveYapim.poster} 
+                            alt={zirveYapim.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                          />
+                          {zirveYapim.userRating && (
+                            <div className="absolute top-2 left-2 bg-amber-400 text-black px-2 py-0.5 rounded-md text-[10px] font-black font-mono shadow-md">
+                              ★ {zirveYapim.userRating}/10
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 flex-1 min-w-0">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 inline-block">
+                            {zirveYapim.badge}
+                          </span>
+                          <h4 className="text-lg sm:text-xl font-extrabold text-white truncate group-hover:text-amber-300 transition">
+                            {zirveYapim.title}
+                          </h4>
+                          <p className="text-xs text-slate-300 italic line-clamp-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                            "{zirveYapim.reviewText}"
+                          </p>
+                          <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1 group-hover:underline">
+                            Detayları İncele →
+                          </span>
                         </div>
                       </div>
-
-                      <div className="space-y-2 flex-1 min-w-0">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 inline-block">
-                          {zirveYapim.badge}
-                        </span>
-                        <h4 className="text-lg sm:text-xl font-extrabold text-white truncate group-hover:text-amber-300 transition">
-                          {zirveYapim.title}
-                        </h4>
-                        <p className="text-xs text-slate-300 italic line-clamp-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                          "{zirveYapim.reviewText}"
-                        </p>
-                        <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1 group-hover:underline">
-                          Detayları ve Yorumları İncele →
-                        </span>
+                    ) : (
+                      <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-6 text-center text-slate-400 text-xs">
+                        Bu ay öne çıkan bir yapım bulunmuyor.
                       </div>
-                    </div>
+                    )}
                   </motion.div>
                 )}
 
-                {/* SLIDE 2: FAVORİ OYUNCU */}
+                {/* SLIDE 2: FAVORİ OYUNCU OR KÜTÜPHANE İSTATİSTİĞİ */}
                 {currentSlide === 2 && (
                   <motion.div
                     key="slide-2"
@@ -436,38 +420,57 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="px-3 py-1 rounded-full text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5 text-purple-400" />
-                        <span>Favori Oyuncu</span>
+                        <span>{topActor ? 'Favori Oyuncu' : 'Kütüphane Dağılımı'}</span>
                       </span>
                     </div>
 
                     <div className="space-y-1">
                       <h3 className="text-2xl font-black text-white">
-                        Ekranını En Çok Süsleyen Oyuncu 🎭
+                        {topActor ? 'Ekranını En Çok Süsleyen Oyuncu 🎭' : 'İzleme Kütüphanenin Özeti 📊'}
                       </h3>
                     </div>
 
-                    {/* Actor Card */}
-                    <div className="bg-gradient-to-br from-[#1A1D25] to-[#12141A] border border-purple-500/30 rounded-3xl p-5 flex items-center gap-5 shadow-2xl">
-                      <img
-                        src={favoriOyuncu.photo}
-                        alt={favoriOyuncu.name}
-                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-purple-500/50 shadow-xl shrink-0"
-                      />
-                      <div className="space-y-1.5 min-w-0">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-md border border-purple-500/20 inline-block">
-                          {favoriOyuncu.appearances}
-                        </span>
-                        <h4 className="text-xl font-black text-white">
-                          {favoriOyuncu.name}
-                        </h4>
-                        <p className="text-xs font-bold text-slate-300">
-                          {favoriOyuncu.role}
-                        </p>
-                        <p className="text-[11px] text-slate-400 font-medium">
-                          {favoriOyuncu.description}
-                        </p>
+                    {/* Actor Card OR Library Stats */}
+                    {topActor ? (
+                      <div className="bg-gradient-to-br from-[#1A1D25] to-[#12141A] border border-purple-500/30 rounded-3xl p-5 flex items-center gap-5 shadow-2xl">
+                        <img
+                          src={topActor.photo}
+                          alt={topActor.name}
+                          className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-purple-500/50 shadow-xl shrink-0"
+                        />
+                        <div className="space-y-1.5 min-w-0">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-md border border-purple-500/20 inline-block">
+                            {topActor.appearances}
+                          </span>
+                          <h4 className="text-xl font-black text-white">
+                            {topActor.name}
+                          </h4>
+                          <p className="text-xs font-bold text-slate-300">
+                            {topActor.role}
+                          </p>
+                          <p className="text-[11px] text-slate-400 font-medium">
+                            {topActor.description}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="bg-gradient-to-br from-[#1A1D25] to-[#12141A] border border-purple-500/30 rounded-3xl p-6 space-y-4 shadow-2xl">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                          <span>Dizi & Bölümler</span>
+                          <span className="font-mono text-purple-400">{episodeCount} Bölüm</span>
+                        </div>
+                        <div className="w-full bg-[#14181c] rounded-full h-3 overflow-hidden border border-[#2c3440]">
+                          <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, (episodeCount / Math.max(1, episodeCount + movieCount)) * 100)}%` }} />
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-300 pt-2">
+                          <span>Sinema Filmleri</span>
+                          <span className="font-mono text-emerald-400">{movieCount} Film</span>
+                        </div>
+                        <div className="w-full bg-[#14181c] rounded-full h-3 overflow-hidden border border-[#2c3440]">
+                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (movieCount / Math.max(1, episodeCount + movieCount)) * 100)}%` }} />
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
@@ -518,7 +521,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                               <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400/20" />
                             </h4>
                             <span className="text-[10px] text-slate-400 font-medium">
-                              @{user.username} • Sinema Sever
+                              @{user.username} • TTime Üyesi
                             </span>
                           </div>
                         </div>
@@ -529,29 +532,37 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                       </div>
 
                       {/* Featured Poster Spotlight Showcase */}
-                      <div className="relative z-10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3 shadow-xl backdrop-blur-md bg-gradient-to-r from-[#171A23] to-[#11131A]">
-                        <img 
-                          src={zirveYapim?.poster || defaultPoster} 
-                          alt={zirveYapim?.title || 'Yapım'}
-                          className="w-16 h-22 rounded-xl object-cover border border-amber-400/40 shadow-lg shrink-0" 
-                        />
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border text-amber-400 bg-amber-500/15 border-amber-500/30 inline-block">
-                            🏆 AYIN ZİRVE YAPIMI
-                          </span>
-                          <h4 className="text-sm font-black text-white truncate">
-                            {zirveYapim?.title || 'Yapım'}
-                          </h4>
-                          <p className="text-[10px] text-slate-300 italic line-clamp-2">
-                            "{zirveYapim.reviewText}"
-                          </p>
-                          <div className="flex items-center gap-2 pt-0.5">
-                            <span className="text-[10px] font-black text-black bg-amber-400 px-1.5 py-0.5 rounded font-mono">
-                              ★ {zirveYapim.rating}/10
+                      {zirveYapim && (
+                        <div className="relative z-10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3 shadow-xl backdrop-blur-md bg-gradient-to-r from-[#171A23] to-[#11131A]">
+                          <img 
+                            src={zirveYapim.poster} 
+                            alt={zirveYapim.title}
+                            className="w-16 h-22 rounded-xl object-cover border border-amber-400/40 shadow-lg shrink-0" 
+                          />
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border text-amber-400 bg-amber-500/15 border-amber-500/30 inline-block">
+                              🏆 AYIN ÖNE ÇIKAN YAPIMI
                             </span>
+                            <h4 className="text-sm font-black text-white truncate">
+                              {zirveYapim.title}
+                            </h4>
+                            <p className="text-[10px] text-slate-300 italic line-clamp-2">
+                              "{zirveYapim.reviewText}"
+                            </p>
+                            <div className="flex items-center gap-2 pt-0.5">
+                              {zirveYapim.userRating ? (
+                                <span className="text-[10px] font-black text-black bg-amber-400 px-1.5 py-0.5 rounded font-mono">
+                                  ★ {zirveYapim.userRating}/10 Kişisel Puanın
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-slate-300 bg-white/10 px-1.5 py-0.5 rounded font-mono">
+                                  {zirveYapim.badge}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Wrapped Stats Grid */}
                       <div className="relative z-10 grid grid-cols-2 gap-2">
@@ -581,10 +592,10 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                         <div className="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-1 backdrop-blur-sm">
                           <div className="flex items-center justify-between text-purple-400">
                             <User className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">FAVORİ OYUNCU</span>
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">ÖNE ÇIKAN</span>
                           </div>
                           <span className="text-xs font-black text-white truncate block">
-                            {favoriOyuncu.name}
+                            {topActor ? topActor.name : (zirveYapim?.title || 'Kütüphanen')}
                           </span>
                         </div>
 
@@ -592,7 +603,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                         <div className="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-1 backdrop-blur-sm">
                           <div className="flex items-center justify-between text-cyan-400">
                             <Calendar className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">EN YOĞUN GÜN</span>
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">EN YOĞUN DÖNEM</span>
                           </div>
                           <span className="text-xs font-black text-cyan-300 block">
                             {enYogunGun.dayName} ({enYogunGun.episodesWatched})
@@ -614,7 +625,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 type="button"
                 onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
                 disabled={currentSlide === 0}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 hover:text-white transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 border border-white/10"
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 hover:text-white transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 border border-white/10 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Geri</span>
@@ -628,7 +639,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setCurrentSlide(prev => Math.min(TOTAL_SLIDES - 1, prev + 1))}
-                  className="px-5 py-2 rounded-xl bg-[#E63946] hover:bg-[#d62839] text-xs font-extrabold text-white transition flex items-center gap-1 shadow-lg shadow-[#E63946]/20 hover:scale-105 active:scale-95"
+                  className="px-5 py-2 rounded-xl bg-[#E63946] hover:bg-[#d62839] text-xs font-extrabold text-white transition flex items-center gap-1 shadow-lg shadow-[#E63946]/20 hover:scale-105 active:scale-95 cursor-pointer"
                 >
                   <span>İleri</span>
                   <ChevronRight className="w-4 h-4" />
@@ -637,7 +648,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-xs font-black text-black transition flex items-center gap-1 shadow-lg shadow-amber-400/20 hover:scale-105 active:scale-95"
+                  className="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-xs font-black text-black transition flex items-center gap-1 shadow-lg shadow-amber-400/20 hover:scale-105 active:scale-95 cursor-pointer"
                 >
                   <span>Kapat</span>
                   <X className="w-3.5 h-3.5" />

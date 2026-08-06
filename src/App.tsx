@@ -480,6 +480,10 @@ export default function App() {
 
   // Enhanced popstate listener for browser & mouse back/forward navigation
   useEffect(() => {
+    if (typeof window !== 'undefined' && (!window.history.state || !window.history.state.tab)) {
+      window.history.replaceState({ tab: activeTab, viewingUsername }, '', window.location.pathname);
+    }
+
     const handlePopState = (event: PopStateEvent) => {
       if (selectedMedia) {
         setSelectedMedia(null);
@@ -495,35 +499,37 @@ export default function App() {
       }
 
       const state = event.state;
+      const path = window.location.pathname;
+
       if (state && state.tab) {
         setActiveTab(state.tab);
         if (state.viewingUsername) {
           setViewingUsername(state.viewingUsername);
         }
-      } else {
-        const path = window.location.pathname;
-        if (path.startsWith('/user/')) {
-          const username = path.replace('/user/', '').trim();
-          if (username) {
-            setViewingUsername(username);
-            setActiveTab('profile');
-          }
-        } else if (path === '/' || path === '') {
-          setActiveTab('discover');
-        } else {
-          const cleanTab = path.replace('/', '').trim();
-          if (cleanTab) setActiveTab(cleanTab);
+      } else if (path.startsWith('/user/')) {
+        const username = path.replace('/user/', '').trim();
+        if (username) {
+          setViewingUsername(username);
+          setActiveTab('profile');
         }
+      } else {
+        setActiveTab('discover');
+        setStatusFilter('all');
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [selectedMedia, isDrawerOpen, isSettingsOpen]);
+  }, [selectedMedia, isDrawerOpen, isSettingsOpen, activeTab, viewingUsername]);
 
   const [profileSubTab, setProfileSubTab] = useState<'profil' | 'movies' | 'tv' | 'reviews' | 'stats'>('profil');
 
   const handleNavigateToProfile = (username: string, subTab?: 'profil' | 'movies' | 'tv' | 'reviews' | 'stats') => {
+    if (typeof window !== 'undefined' && (!window.history.state || !window.history.state.tab)) {
+      const originPath = activeTab === 'discover' ? '/' : (activeTab === 'profile' ? `/user/${viewingUsername}` : `/${activeTab}`);
+      window.history.replaceState({ tab: activeTab, viewingUsername }, '', originPath);
+    }
+
     setViewingUsername(username);
     if (subTab) setProfileSubTab(subTab);
     else setProfileSubTab('profil');
@@ -915,7 +921,16 @@ export default function App() {
   const handleSetMediaFilter = (filter: 'all' | 'tv' | 'movie') => {
     setMediaFilter(filter);
     setSelectedMedia(null);
+    if (filter === 'movie' && statusFilter === 'watching') {
+      setStatusFilter('plan_to_watch');
+    }
   };
+
+  useEffect(() => {
+    if (mediaFilter === 'movie' && statusFilter === 'watching') {
+      setStatusFilter('plan_to_watch');
+    }
+  }, [mediaFilter, statusFilter]);
 
   // Load Trending Media on Mount & when mediaFilter changes (for library filtering)
   useEffect(() => {
@@ -1775,7 +1790,7 @@ export default function App() {
         onGoHome={() => {
           setActiveTab('discover');
           setStatusFilter('all');
-          try { window.history.pushState({}, '', '/'); } catch(e){}
+          try { window.history.pushState({ tab: 'discover' }, '', '/'); } catch(e){}
         }}
         onLogout={handleLogout}
         notificationCount={isSupabaseConfigured ? 0 : 3}

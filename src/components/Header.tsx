@@ -228,14 +228,14 @@ export const Header: React.FC<HeaderProps> = ({
                         if (status === 'watching') {
                           return (
                             <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                              İzliyorum
+                              İzleniyor
                             </span>
                           );
                         }
                         if (status === 'plan_to_watch') {
                           return (
                             <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                              İzleyeceğim
+                              İzlenecek
                             </span>
                           );
                         }
@@ -261,7 +261,7 @@ export const Header: React.FC<HeaderProps> = ({
                             onUpdateWatchStatus(item, 'watching');
                           }}
                           className="p-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all duration-150 active:scale-90 shadow-md"
-                          title="İzliyorum"
+                          title="İzleniyor"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -272,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
                           onUpdateWatchStatus(item, 'plan_to_watch');
                         }}
                         className="p-2 rounded-xl bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 transition-all duration-150 active:scale-90 shadow-md"
-                        title="İzleyeceğim"
+                        title="İzlenecek"
                       >
                         <Clock className="w-4 h-4" />
                       </button>
@@ -570,7 +570,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Eye className={`w-3.5 h-3.5 ${statusFilter === 'watching' ? 'text-[#E63946]' : 'text-slate-400'}`} />
-              <span>İzliyorum</span>
+              <span>İzleniyor</span>
             </button>
 
             <button
@@ -583,7 +583,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Clock className={`w-3.5 h-3.5 ${statusFilter === 'plan_to_watch' ? 'text-amber-500' : 'text-slate-400'}`} />
-              <span>İzleyeceğim</span>
+              <span>İzlenecek</span>
             </button>
 
             <button

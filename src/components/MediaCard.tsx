@@ -29,13 +29,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       case 'watching':
         return (
           <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md shadow-md">
-            <Eye className="w-3.5 h-3.5" /> İzliyorum
+            <Eye className="w-3.5 h-3.5" /> İzleniyor
           </span>
         );
       case 'plan_to_watch':
         return (
           <span className="inline-flex items-center gap-1 text-xs font-semibold bg-blue-500 text-white px-2 py-0.5 rounded-md shadow-md">
-            <Clock className="w-3.5 h-3.5" /> İzleyeceğim
+            <Clock className="w-3.5 h-3.5" /> İzlenecek
           </span>
         );
       case 'watched':

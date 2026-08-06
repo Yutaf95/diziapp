@@ -25,7 +25,7 @@ import { sortFranchiseAlphabetical } from './lib/sorting';
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
 import { getTrending, search, getDetails, getSeasonDetails } from './lib/tmdb';
 import { CURRENT_USER, INITIAL_USER_WATCH_STATUSES, INITIAL_ACTIVITIES, INITIAL_REVIEWS, INITIAL_COLLECTIONS, getMockProfileData } from './data/mockData';
-import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp } from 'lucide-react';
+import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp, Pin } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
 
@@ -239,6 +239,7 @@ export default function App() {
             created_at: r.created_at,
             media_title: r.media_title || r.title,
             media_poster: r.media_poster || r.poster_path,
+            is_pinned: r.is_pinned || false,
             likes: r.likes || 0,
             likes_count: r.likes_count || r.likes || 0,
             comments_count: r.comments_count || 0
@@ -1631,6 +1632,34 @@ export default function App() {
     }
   };
 
+  // Toggle Pin Review
+  const handleTogglePinReview = async (reviewId: string) => {
+    let nextPinnedState = false;
+
+    setReviews(prev => prev.map(r => {
+      const isMatch = r.id === reviewId || `rev_${r.media_id}` === reviewId || String(r.media_id) === reviewId;
+      if (isMatch) {
+        nextPinnedState = !r.is_pinned;
+        return { ...r, is_pinned: nextPinnedState };
+      }
+      return r;
+    }));
+
+    if (session && isSupabaseConfigured) {
+      try {
+        const targetRev = reviews.find(r => r.id === reviewId || `rev_${r.media_id}` === reviewId || String(r.media_id) === reviewId);
+        if (targetRev && targetRev.id) {
+          await supabase
+            .from('ratings_reviews')
+            .update({ is_pinned: nextPinnedState })
+            .eq('id', targetRev.id);
+        }
+      } catch (err) {
+        console.warn('Pin review error:', err);
+      }
+    }
+  };
+
   // Select media by id for Activity Feed item or grid clicks
   const handleSelectMediaById = async (mediaId: number, type: MediaType) => {
     try {
@@ -1765,7 +1794,7 @@ export default function App() {
 
       {/* 2. Main Layout Container: Full-Width for Profile vs 3-Column Grid for Dashboard */}
       {activeTab === 'profile' ? (
-        <main className="flex-1 w-full px-4 md:px-8 lg:px-12 py-6 sm:py-8 pb-20 md:pb-8 overflow-x-hidden">
+        <main className="flex-1 w-full pb-20 md:pb-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={`profile-${viewingUsername}`}
@@ -2306,11 +2335,19 @@ export default function App() {
                                     {rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın zamanda'}
                                   </span>
 
-                                  <div className="flex items-center gap-4">
-                                    <span className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition font-medium">
-                                      <ThumbsUp className="w-3.5 h-3.5 text-emerald-400" />
-                                      <span>{rev.likes_count ?? rev.likes ?? 0}</span>
-                                    </span>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      onClick={() => handleTogglePinReview(rev.id || `rev_${rev.media_id}`)}
+                                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                        rev.is_pinned
+                                          ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-sm'
+                                          : 'bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                                      }`}
+                                      title={rev.is_pinned ? 'Profilinizden sabitlemeyi kaldırın' : 'Profilinize sabitleyin'}
+                                    >
+                                      <Pin className={`w-3.5 h-3.5 ${rev.is_pinned ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                      <span>{rev.is_pinned ? 'Profilde Sabitlendi' : 'Profile Sabitle'}</span>
+                                    </button>
                                   </div>
                                 </div>
                               </div>

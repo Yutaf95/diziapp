@@ -72,6 +72,7 @@ export interface RatingReview {
   profile?: Profile;
   media_title?: string;
   media_poster?: string;
+  is_pinned?: boolean;
 }
 
 export interface EpisodeRating {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Clock, Film, Tv, Star, Heart, Calendar, Play, Sparkles, CheckCircle2, Award, 
   Settings, MoreHorizontal, Users, UserCheck, X, Edit3, ShieldCheck, Check, ArrowLeft, Layers, UserPlus,
-  Camera, Upload, Link, Image as ImageIcon, Flame, BarChart2, MessageSquare, ThumbsUp, Eye, Zap, Share2
+  Camera, Upload, Link, Image as ImageIcon, Flame, BarChart2, MessageSquare, ThumbsUp, Eye, Zap, Share2, Pin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Profile, WatchStatus, EpisodeProgress, RatingReview, CustomCollection } from '../types';
@@ -192,7 +192,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const displayReviews = reviews;
 
   return (
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-20 sm:-mt-24 -mb-12 min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24">
+    <div className="w-full min-h-screen bg-[#14181c] text-[#8a9096] font-sans pb-24">
 
       {/* ================================================================ */}
       {/* PROFILE HEADER — Letterboxd Overlap & Gradient Style             */}
@@ -514,8 +514,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
 
               <div className="space-y-5">
-                {displayReviews.length > 0 ? (
-                  displayReviews.slice(0, 3).map(rev => {
+                {reviews.filter(r => r.is_pinned).length > 0 ? (
+                  reviews.filter(r => r.is_pinned).map(rev => {
                     const mediaInfo = getReviewMediaInfo(rev);
                     return (
                       <div
@@ -562,23 +562,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                           <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
                             <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
-                            <div className="flex items-center gap-4">
-                              <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
-                                <ThumbsUp className="w-4 h-4 text-[#00e054]" />
-                                <span>{rev.likes_count ?? rev.likes ?? 0}</span>
-                              </span>
-                              <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
-                                <MessageSquare className="w-4 h-4 text-[#9ab]" />
-                                <span>{rev.comments_count ?? 0}</span>
-                              </span>
-                            </div>
                           </div>
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <p className="text-xs sm:text-sm text-[#9ab] italic">Henüz eklenmiş bir inceleme yok.</p>
+                  <div className="py-8 text-center bg-[#0e1116] border border-[#2c3440]/60 rounded-xl p-5 space-y-2">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                      <Pin className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs sm:text-sm font-bold text-slate-200">Henüz sabitlenmiş bir inceleme yok</p>
+                      <p className="text-xs text-[#9ab] max-w-md mx-auto">
+                        Sol menüdeki <strong className="text-white">İncelemelerin</strong> sekmesine giderek dilediğiniz incelemenin altındaki <strong className="text-amber-400">"Profile Sabitle"</strong> butonuna tıklayıp burada öne çıkarabilirsiniz.
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -718,16 +718,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                         <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
                           <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
-                          <div className="flex items-center gap-4">
-                            <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
-                              <ThumbsUp className="w-4 h-4 text-[#00e054]" />
-                              <span>{rev.likes_count ?? rev.likes ?? 0}</span>
-                            </span>
-                            <span className="flex items-center gap-1.5 hover:text-white transition cursor-pointer font-medium">
-                              <MessageSquare className="w-4 h-4 text-[#9ab]" />
-                              <span>{rev.comments_count ?? 0}</span>
-                            </span>
-                          </div>
                         </div>
                       </div>
                     </div>

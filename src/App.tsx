@@ -24,7 +24,7 @@ import { sortFranchiseAlphabetical } from './lib/sorting';
 
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
 import { getTrending, search, getDetails, getSeasonDetails } from './lib/tmdb';
-import { CURRENT_USER, INITIAL_USER_WATCH_STATUSES, INITIAL_ACTIVITIES, INITIAL_REVIEWS, INITIAL_COLLECTIONS, getMockProfileData } from './data/mockData';
+import { CURRENT_USER, INITIAL_USER_WATCH_STATUSES, INITIAL_ACTIVITIES, INITIAL_REVIEWS, INITIAL_COLLECTIONS, getMockProfileData, DEFAULT_AVATAR_URL } from './data/mockData';
 import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp, Pin } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
@@ -446,6 +446,7 @@ export default function App() {
     watchList: WatchStatus[];
     episodeProgress: EpisodeProgress[];
     reviews: RatingReview[];
+    favorites: WatchStatus[];
     collections: CustomCollection[];
   } | null>(null);
 
@@ -478,32 +479,136 @@ export default function App() {
               bio: pData.bio || ''
             };
 
-            // Fetch target user's watchlist, progress, reviews
-            const [{ data: extWl }, { data: extEp }, { data: extRev }] = await Promise.all([
+            // Fetch target user's watchlist, progress, reviews, favorites
+            const [{ data: extWl }, { data: extEp }, { data: extRev }, { data: extFav }] = await Promise.all([
               supabase.from('watch_status').select('*').eq('user_id', pData.id),
               supabase.from('episode_progress').select('*').eq('user_id', pData.id),
-              supabase.from('ratings_reviews').select('*').eq('user_id', pData.id)
+              supabase.from('ratings_reviews').select('*').eq('user_id', pData.id),
+              supabase.from('favorites').select('*').eq('user_id', pData.id)
             ]);
+
+            // Enrich watchlist with TMDB details for complete title & poster info
+            const mappedWl: WatchStatus[] = [];
+            if (extWl && extWl.length > 0) {
+              for (const w of extWl) {
+                try {
+                  const details = await getDetails(w.media_id, w.media_type);
+                  mappedWl.push({
+                    media_id: w.media_id,
+                    media_type: w.media_type,
+                    status: w.status,
+                    title: details?.title || details?.name || w.title || 'Yapım',
+                    poster_path: details?.poster_path || w.poster_path || '',
+                    vote_average: details?.vote_average || w.vote_average || 8.0,
+                    updated_at: w.updated_at,
+                    created_at: w.created_at
+                  });
+                } catch (e) {
+                  mappedWl.push({
+                    media_id: w.media_id,
+                    media_type: w.media_type,
+                    status: w.status,
+                    title: w.title || 'Yapım',
+                    poster_path: w.poster_path || '',
+                    vote_average: w.vote_average || 8.0,
+                    updated_at: w.updated_at,
+                    created_at: w.created_at
+                  });
+                }
+              }
+            }
+
+            // Map favorites
+            const mappedFavorites: WatchStatus[] = [];
+            if (extFav && extFav.length > 0) {
+              for (const f of extFav) {
+                const watchMatch = mappedWl.find(w => w.media_id === f.media_id && w.media_type === f.media_type);
+                if (watchMatch) {
+                  mappedFavorites.push(watchMatch);
+                } else {
+                  try {
+                    const details = await getDetails(f.media_id, f.media_type);
+                    mappedFavorites.push({
+                      media_id: f.media_id,
+                      media_type: f.media_type,
+                      status: 'watched',
+                      title: details?.title || details?.name || 'Yapım',
+                      poster_path: details?.poster_path || '',
+                      vote_average: details?.vote_average || 8.5
+                    });
+                  } catch (e) {
+                    mappedFavorites.push({
+                      media_id: f.media_id,
+                      media_type: f.media_type,
+                      status: 'watched',
+                      title: 'Yapım',
+                      poster_path: '',
+                      vote_average: 8.5
+                    });
+                  }
+                }
+              }
+            }
+
+            // Enrich reviews with TMDB titles and posters
+            const mappedReviews: RatingReview[] = [];
+            if (extRev && extRev.length > 0) {
+              for (const r of extRev) {
+                const watchMatch = mappedWl.find(w => w.media_id === r.media_id && w.media_type === r.media_type);
+                let title = r.media_title || watchMatch?.title;
+                let poster = r.media_poster || watchMatch?.poster_path;
+                if (!title || !poster) {
+                  try {
+                    const details = await getDetails(r.media_id, r.media_type);
+                    title = title || details?.title || details?.name || 'Yapım';
+                    poster = poster || details?.poster_path || '';
+                  } catch (e) {}
+                }
+                mappedReviews.push({
+                  id: r.id,
+                  user_id: r.user_id,
+                  media_id: r.media_id,
+                  media_type: r.media_type,
+                  media_title: title || 'Yapım',
+                  media_poster: poster || '',
+                  rating: r.rating,
+                  review_text: r.review_text,
+                  contains_spoiler: r.contains_spoiler,
+                  created_at: r.created_at,
+                  profile: extProfile
+                });
+              }
+            }
 
             if (isMounted) {
               setExternalProfileData({
                 profile: extProfile,
-                watchList: extWl || [],
+                watchList: mappedWl,
                 episodeProgress: extEp || [],
-                reviews: extRev || [],
+                reviews: mappedReviews,
+                favorites: mappedFavorites,
                 collections: []
               });
             }
           } else if (isMounted) {
-            setExternalProfileData(getMockProfileData(viewingUsername));
+            setExternalProfileData({
+              ...getMockProfileData(viewingUsername),
+              favorites: []
+            });
           }
         } else if (isMounted) {
-          setExternalProfileData(getMockProfileData(viewingUsername));
+          setExternalProfileData({
+            ...getMockProfileData(viewingUsername),
+            favorites: []
+          });
         }
       } catch (e) {
         console.error('Error fetching external profile:', e);
         if (isMounted) {
-          setExternalProfileData(getMockProfileData(viewingUsername));
+          setExternalProfileData({
+            ...getMockProfileData(viewingUsername),
+            favorites: []
+          });
         }
       }
     }
@@ -1961,25 +2066,35 @@ export default function App() {
                       watchList,
                       episodeProgress,
                       reviews,
+                      favorites,
                       collections
                     }
-                  : (externalProfileData || getMockProfileData(viewingUsername));
+                  : (externalProfileData || {
+                      profile: getMockProfileData(viewingUsername).profile,
+                      watchList: [],
+                      episodeProgress: [],
+                      reviews: [],
+                      favorites: [],
+                      collections: []
+                    });
 
                 return (
                   <ProfileView
                     user={profileData.profile}
                     watchList={profileData.watchList}
-                    favorites={favorites}
+                    favorites={profileData.favorites}
                     episodeProgress={profileData.episodeProgress}
                     reviews={profileData.reviews}
                     onSelectTab={handleTabChange}
                     onSelectMediaById={handleSelectMediaById}
+                    onNavigateToProfile={handleNavigateToProfile}
                     collections={profileData.collections}
                     onSelectCollection={setSelectedCollectionId}
                     currentUserId={currentUser.id}
                     currentUserProfile={currentUser}
                     currentUserWatchList={watchList}
                     isFollowing={followingUserIds.includes(profileData.profile.id)}
+                    followingUserIds={followingUserIds}
                     onToggleFollowUser={handleToggleFollowUser}
                     onUpdateProfile={handleUpdateProfile}
                     initialSubTab={profileSubTab}

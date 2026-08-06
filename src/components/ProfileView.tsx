@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Clock, Film, Tv, Star, Heart, Calendar, Play, Sparkles, CheckCircle2, Award, 
   Settings, MoreHorizontal, Users, UserCheck, X, Edit3, ShieldCheck, Check, ArrowLeft, Layers, UserPlus,
-  Camera, Upload, Link, Image as ImageIcon, Flame, BarChart2, MessageSquare, ThumbsUp, Eye, Zap, Share2, Pin
+  Camera, Upload, Link, Image as ImageIcon, Flame, BarChart2, MessageSquare, ThumbsUp, Eye, Zap, Share2, Pin, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Profile, WatchStatus, EpisodeProgress, RatingReview, CustomCollection } from '../types';
 import { getPosterUrl } from '../lib/tmdb';
-import { CURRENT_USER } from '../data/mockData';
+import { CURRENT_USER, DEFAULT_AVATAR_URL } from '../data/mockData';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { MonthlyRecapModal } from './MonthlyRecapModal';
 import { UserAvatar } from './UserAvatar';
 
@@ -19,12 +20,14 @@ interface ProfileViewProps {
   reviews: RatingReview[];
   onSelectTab: (tab: string) => void;
   onSelectMediaById?: (id: number, mediaType: 'movie' | 'tv') => void;
+  onNavigateToProfile?: (username: string) => void;
   collections?: CustomCollection[];
   onSelectCollection?: (id: string) => void;
   currentUserId?: string;
   currentUserProfile?: Profile;
   currentUserWatchList?: WatchStatus[];
   isFollowing?: boolean;
+  followingUserIds?: string[];
   onToggleFollowUser?: (userId: string) => void;
   onUpdateProfile?: (updated: Partial<Profile>) => void;
   initialSubTab?: 'profil' | 'movies' | 'tv' | 'reviews' | 'stats';
@@ -66,16 +69,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   reviews,
   onSelectTab,
   onSelectMediaById,
+  onNavigateToProfile,
   collections = [],
   onSelectCollection,
   currentUserId = 'usr_me_101',
   currentUserProfile,
   currentUserWatchList,
   isFollowing = false,
+  followingUserIds = [],
   onToggleFollowUser,
   onUpdateProfile
 }) => {
-  const isOwnProfile = !currentUserId || user.id === currentUserId || user.username === currentUserProfile?.username || user.username === 'yufus_m' || user.username === 'yufusmutaf';
+  const isOwnProfile = Boolean(
+    (currentUserId && user.id === currentUserId) ||
+    (currentUserProfile && user.username === currentUserProfile.username) ||
+    (currentUserProfile && user.id === currentUserProfile.id)
+  );
   
   const [activeSubTab, setActiveSubTab] = useState<'profil' | 'movies' | 'tv' | 'reviews' | 'stats'>('profil');
   const [showMonthlyRecapModal, setShowMonthlyRecapModal] = useState(false);
@@ -154,9 +163,71 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Followers / Following Lists (Initialized empty, no test data)
-  const [followers, setFollowers] = useState<any[]>([]);
-  const [following, setFollowing] = useState<any[]>([]);
+  // Followers / Following Lists (Loaded live from Supabase)
+  const [followers, setFollowers] = useState<Profile[]>([]);
+  const [following, setFollowing] = useState<Profile[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSocialConnections() {
+      if (!user?.id) return;
+
+      try {
+        if (isSupabaseConfigured) {
+          // 1. Fetch profiles that THIS user is following
+          const { data: followingsData } = await supabase
+            .from('follows')
+            .select('following_id, profiles!follows_following_id_fkey(id, username, full_name, avatar_url, bio)')
+            .eq('follower_id', user.id);
+
+          // 2. Fetch profiles that follow THIS user
+          const { data: followersData } = await supabase
+            .from('follows')
+            .select('follower_id, profiles!follows_follower_id_fkey(id, username, full_name, avatar_url, bio)')
+            .eq('following_id', user.id);
+
+          if (isMounted) {
+            if (followingsData) {
+              const mappedFollowing: Profile[] = followingsData
+                .map((item: any) => item.profiles)
+                .filter(Boolean)
+                .map((p: any) => ({
+                  id: p.id,
+                  username: p.username,
+                  full_name: p.full_name || p.username,
+                  avatar_url: p.avatar_url || DEFAULT_AVATAR_URL,
+                  bio: p.bio || ''
+                }));
+              setFollowing(mappedFollowing);
+            } else {
+              setFollowing([]);
+            }
+
+            if (followersData) {
+              const mappedFollowers: Profile[] = followersData
+                .map((item: any) => item.profiles)
+                .filter(Boolean)
+                .map((p: any) => ({
+                  id: p.id,
+                  username: p.username,
+                  full_name: p.full_name || p.username,
+                  avatar_url: p.avatar_url || DEFAULT_AVATAR_URL,
+                  bio: p.bio || ''
+                }));
+              setFollowers(mappedFollowers);
+            } else {
+              setFollowers([]);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching social connections:', err);
+      }
+    }
+
+    loadSocialConnections();
+  }, [user?.id, user?.username, isOwnProfile, isFollowing, followingUserIds]);
 
   // Helper to dynamically resolve title and poster from watchList if missing on review
   const getReviewMediaInfo = (rev: RatingReview) => {
@@ -319,14 +390,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               />
               
               <div 
-                onClick={handleAvatarClick}
-                className="relative w-[110px] h-[110px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl ring-2 ring-white/10 bg-[#2c3440] cursor-pointer"
+                onClick={isOwnProfile ? handleAvatarClick : undefined}
+                className={`relative w-[110px] h-[110px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl ring-2 ring-white/10 bg-[#2c3440] ${isOwnProfile ? 'cursor-pointer' : ''}`}
               >
                 {user.avatar_url ? (
                   <img
                     src={user.avatar_url}
                     alt={user.username}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover/avatar:scale-105"
+                    className={`w-full h-full object-cover ${isOwnProfile ? 'transition-transform duration-300 group-hover/avatar:scale-105' : ''}`}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-[#2c3440]">
@@ -336,13 +407,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </div>
                 )}
 
-                {/* Hover overlay for changing profile photo */}
-                <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] opacity-0 group-hover/avatar:opacity-100 transition-all duration-200 flex flex-col items-center justify-center text-center p-2 z-20">
-                  <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-white mb-1 drop-shadow" />
-                  <span className="text-xs sm:text-sm font-bold text-white leading-tight px-1 drop-shadow">
-                    Profil fotoğrafını değiştir
-                  </span>
-                </div>
+                {/* Hover overlay for changing profile photo ONLY on own profile */}
+                {isOwnProfile && (
+                  <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] opacity-0 group-hover/avatar:opacity-100 transition-all duration-200 flex flex-col items-center justify-center text-center p-2 z-20">
+                    <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-white mb-1 drop-shadow" />
+                    <span className="text-xs sm:text-sm font-bold text-white leading-tight px-1 drop-shadow">
+                      Profil fotoğrafını değiştir
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -886,27 +959,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {activeSubTab === 'stats' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             
-            {/* SPOTIFY WRAPPED PROMINENT BUTTON BANNER */}
-            <div className="bg-gradient-to-r from-emerald-950 via-[#181e23] to-amber-950 border border-[#00e054]/40 rounded-2xl p-6 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4 text-center sm:text-left">
-                <div className="p-3.5 rounded-2xl bg-[#00e054] text-slate-950 shadow-xl shrink-0">
-                  <Sparkles className="w-7 h-7 fill-current" />
+            {/* SPOTIFY WRAPPED PROMINENT BUTTON BANNER (KULLANICININ KENDİSİNE ÖZEL) */}
+            {isOwnProfile && (
+              <div className="bg-gradient-to-r from-emerald-950 via-[#181e23] to-amber-950 border border-[#00e054]/40 rounded-2xl p-6 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4 text-center sm:text-left">
+                  <div className="p-3.5 rounded-2xl bg-[#00e054] text-slate-950 shadow-xl shrink-0">
+                    <Sparkles className="w-7 h-7 fill-current" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-xl font-black text-white tracking-tight">✨ {previousMonthName} Ayı Aylık Özetin</h3>
+                    <p className="text-xs text-slate-300 font-medium mt-0.5">Bu ayki tüm izleme dakikaların, favori türlerin ve zirve yapımların animasyonlu hikaye formatında hazır!</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base sm:text-xl font-black text-white tracking-tight">✨ {previousMonthName} Ayı Aylık Özetin</h3>
-                  <p className="text-xs text-slate-300 font-medium mt-0.5">Bu ayki tüm izleme dakikaların, favori türlerin ve zirve yapımların animasyonlu hikaye formatında hazır!</p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => setShowMonthlyRecapModal(true)}
-                className="px-6 py-3 rounded-xl bg-[#00e054] hover:bg-[#00c84b] text-slate-950 font-black text-xs shadow-xl shadow-[#00e054]/20 transition hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
-              >
-                <Sparkles className="w-4 h-4 fill-current" />
-                <span>Aylık Özeti Aç (Wrapped)</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMonthlyRecapModal(true)}
+                  className="px-6 py-3 rounded-xl bg-[#00e054] hover:bg-[#00c84b] text-slate-950 font-black text-xs shadow-xl shadow-[#00e054]/20 transition hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
+                >
+                  <Sparkles className="w-4 h-4 fill-current" />
+                  <span>Aylık Özeti Aç (Wrapped)</span>
+                </button>
+              </div>
+            )}
 
             {/* STAT CARDS GRID */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1149,7 +1224,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   followerTab === 'followers' ? 'border-[#00e054] text-white font-extrabold' : 'border-transparent text-slate-400'
                 }`}
               >
-                Takipçiler ({followers.length + (!isOwnProfile && isFollowing ? 1 : 0)})
+                Takipçiler ({followers.length})
               </button>
               <button
                 onClick={() => setFollowerTab('following')}
@@ -1162,17 +1237,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             <div className="overflow-y-auto space-y-2 pr-1 flex-1 custom-scrollbar">
-              {(followerTab === 'followers' ? followers : following).map(person => (
-                <div key={person.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#14181c] border border-[#2c3440]">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img src={person.avatar} alt={person.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-white truncate">{person.name}</div>
-                      <div className="text-[10px] text-slate-400 truncate">@{person.username}</div>
-                    </div>
-                  </div>
+              {(followerTab === 'followers' ? followers : following).length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  Henüz {followerTab === 'followers' ? 'takipçi' : 'takip edilen kullanıcı'} bulunmuyor.
                 </div>
-              ))}
+              ) : (
+                (followerTab === 'followers' ? followers : following).map(person => (
+                  <div 
+                    key={person.id}
+                    onClick={() => {
+                      if (onNavigateToProfile && person.username) {
+                        setShowFollowersModal(false);
+                        onNavigateToProfile(person.username);
+                      }
+                    }}
+                    className="flex items-center justify-between p-3 rounded-xl bg-[#14181c] hover:bg-[#232833] border border-[#2c3440] cursor-pointer transition group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <UserAvatar user={person} size="sm" />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white group-hover:text-[#40bcf4] transition truncate">
+                          {person.full_name || person.username}
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate font-mono">
+                          @{person.username}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#40bcf4] bg-[#40bcf4]/10 px-2 py-0.5 rounded border border-[#40bcf4]/20 group-hover:bg-[#40bcf4] group-hover:text-black transition">
+                      Profil →
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
 
           </div>

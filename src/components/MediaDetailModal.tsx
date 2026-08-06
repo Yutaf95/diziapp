@@ -55,6 +55,16 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 }) => {
   if (!media) return null;
 
+  // Lock background body scroll while modal is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   const reviewSectionRef = useRef<HTMLDivElement>(null);
   const [showAddToCollectionModal, setShowAddToCollectionModal] = useState<boolean>(false);
   const [showCompleteConfirmModal, setShowCompleteConfirmModal] = useState<boolean>(false);
@@ -314,7 +324,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 overflow-y-auto bg-[#0B0C0E]/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 cursor-pointer"
+      className="fixed inset-0 z-50 bg-[#0B0C0E]/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 cursor-pointer overscroll-none touch-none"
     >
       
       {/* Outer Card Container */}
@@ -323,7 +333,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.97 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="relative w-full max-w-5xl bg-[#0B0C0E] border border-[#232833] rounded-3xl overflow-y-auto shadow-2xl text-white max-h-[94vh] cursor-default scrollbar-thin scrollbar-thumb-white/10"
+        className="relative w-full max-w-5xl bg-[#0B0C0E] border border-[#232833] rounded-3xl overflow-y-auto shadow-2xl text-white max-h-[90vh] sm:max-h-[94vh] cursor-default custom-scrollbar touch-pan-y overscroll-contain my-auto"
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-96 py-20 space-y-4">
@@ -763,20 +773,21 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
           {/* 4. GENEL İNCELEME & YORUM ALANI */}
           <div ref={reviewSectionRef} className="bg-[#14171D] border border-[#232833] rounded-3xl p-5 sm:p-6 space-y-6 shadow-xl">
             
-            <div className="flex items-center justify-between pb-3 border-b border-[#232833]">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  <Star className="w-5 h-5 fill-amber-400" />
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#232833]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+                  <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-amber-400" />
                 </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-white">Genel İnceleme & Yorumlar</h3>
-                  <p className="text-[11px] text-slate-400">Bu yapım hakkındaki puanını ver, eleştirini yaz</p>
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-base font-extrabold text-white whitespace-nowrap truncate">Genel İnceleme & Yorumlar</h3>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">Bu yapım hakkındaki puanını ver, eleştirini yaz</p>
                 </div>
               </div>
 
-              <span className="text-xs font-mono font-bold bg-[#0B0C0E] text-slate-300 px-3 py-1 rounded-xl border border-[#232833]">
-                {mediaReviews.length} Değerlendirme
-              </span>
+              <div className="flex flex-col items-center justify-center text-center bg-[#0B0C0E] px-3 py-1.5 rounded-xl border border-[#232833] shrink-0">
+                <span className="text-xs sm:text-sm font-extrabold text-white leading-none mb-0.5">{mediaReviews.length}</span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 leading-tight">Değerlendirme</span>
+              </div>
             </div>
 
             {/* WRITE REVIEW FORM: Sadece yapım 'İzlendi' olarak işaretlendiğinde aktif olur */}
@@ -788,7 +799,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
                     Genel Puanınız (1 - 10)
                   </label>
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="grid grid-cols-10 gap-1 sm:gap-1.5 w-full">
                     {Array.from({ length: 10 }).map((_, idx) => {
                       const val = idx + 1;
                       const isSelected = userGeneralRating === val;
@@ -797,9 +808,9 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                           type="button"
                           key={val}
                           onClick={() => setUserGeneralRating(val)}
-                          className={`w-9 h-9 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center ${
+                          className={`w-full aspect-square rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-extrabold transition-all flex items-center justify-center p-0 cursor-pointer ${
                             isSelected
-                              ? 'bg-[#E63946] text-white shadow-lg shadow-[#E63946]/30 scale-110 border-2 border-[#E63946]'
+                              ? 'bg-[#E63946] text-white shadow-lg shadow-[#E63946]/30 scale-105 border-2 border-[#E63946]'
                               : 'bg-[#14171D] text-slate-300 hover:text-white hover:bg-[#232833] border border-[#232833]'
                           }`}
                         >
@@ -857,13 +868,13 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
               </form>
             ) : (
-              <div className="bg-[#0B0C0E] border border-amber-500/30 rounded-2xl p-4 sm:p-5 text-center space-y-2 shadow-inner">
-                <div className="flex items-center justify-center gap-2 text-amber-400 font-bold text-xs">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>İnceleme & Puan Kısıtlaması</span>
+              <div className="bg-[#0B0C0E] border border-slate-800 rounded-2xl p-4 sm:p-5 text-center space-y-2 shadow-inner">
+                <div className="flex items-center justify-center gap-2 text-slate-300 font-bold text-xs">
+                  <Star className="w-4 h-4 text-amber-400" />
+                  <span>İnceleme & Puan Değerlendirmesi</span>
                 </div>
                 <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
-                  Puan vermek ve inceleme yazmak için bu yapımı öncelikle <strong className="text-emerald-400 font-extrabold">"İzlendi"</strong> olarak işaretlemelisiniz.
+                  Puan vermek ve inceleme yazmak için öncelikle bu yapımı izlemelisiniz.
                 </p>
               </div>
             )}

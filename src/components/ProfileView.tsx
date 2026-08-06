@@ -568,15 +568,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     );
                   })
                 ) : (
-                  <div className="py-8 text-center bg-[#0e1116] border border-[#2c3440]/60 rounded-xl p-5 space-y-2">
-                    <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
-                      <Pin className="w-5 h-5" />
+                  <div className="py-8 text-center bg-[#0e1116] border border-[#2c3440]/60 rounded-2xl p-6 space-y-3 shadow-md">
+                    <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                      <Pin className="w-6 h-6" />
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs sm:text-sm font-bold text-slate-200">Henüz sabitlenmiş bir inceleme yok</p>
-                      <p className="text-xs text-[#9ab] max-w-md mx-auto">
-                        Sol menüdeki <strong className="text-white">İncelemelerin</strong> sekmesine giderek dilediğiniz incelemenin altındaki <strong className="text-amber-400">"Profile Sabitle"</strong> butonuna tıklayıp burada öne çıkarabilirsiniz.
-                      </p>
+                    <div className="space-y-1.5">
+                      <p className="text-base sm:text-lg font-extrabold text-white">Henüz sabitlenmiş bir inceleme yok</p>
+                      {isOwnProfile && (
+                        <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
+                          Sol menüdeki <strong className="text-white font-bold">İncelemelerin</strong> sekmesine giderek dilediğiniz incelemenin altındaki <strong className="text-amber-400 font-bold">"Profile Sabitle"</strong> butonuna tıklayıp burada öne çıkarabilirsiniz.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

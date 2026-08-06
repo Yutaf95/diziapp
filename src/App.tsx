@@ -254,20 +254,34 @@ export default function App() {
           .order('created_at', { ascending: false });
 
         if (actData) {
-          setActivityFeed(actData.map((a: any) => ({
-            id: a.id,
-            user_id: a.user_id,
-            username: a.profiles?.username || 'kullanıcı',
-            user_avatar: a.profiles?.avatar_url || '',
-            action_type: a.action_type as any,
-            media_id: a.media_id,
-            media_type: a.media_type as MediaType,
-            media_title: a.details?.media_title || 'Yapım',
-            poster_path: a.details?.media_poster || '',
-            detail_text: a.details?.status || '',
-            contains_spoiler: a.details?.contains_spoiler || false,
-            created_at: a.created_at
-          })));
+          setActivityFeed(actData.map((a: any) => {
+            const profile = {
+              id: a.user_id,
+              username: a.profiles?.username || (a.user_id === currentUser.id ? currentUser.username : 'kullanıcı'),
+              full_name: a.profiles?.full_name || (a.user_id === currentUser.id ? currentUser.full_name : 'Kullanıcı'),
+              avatar_url: a.profiles?.avatar_url || (a.user_id === currentUser.id ? currentUser.avatar_url : '')
+            };
+            return {
+              id: a.id,
+              user_id: a.user_id,
+              username: profile.username,
+              user_fullname: profile.full_name,
+              user_avatar: profile.avatar_url,
+              profile: profile,
+              action_type: a.action_type as any,
+              media_id: a.media_id,
+              media_type: a.media_type as MediaType,
+              media_title: a.details?.media_title || 'Yapım',
+              poster_path: a.details?.media_poster || '',
+              detail_text: a.details?.status || '',
+              contains_spoiler: a.details?.contains_spoiler || false,
+              details: a.details || {
+                media_title: a.media_title || 'Yapım',
+                media_poster: a.poster_path || ''
+              },
+              created_at: a.created_at
+            };
+          }));
         }
       } catch (err) { console.warn('activity_feed fetch error:', err); }
 

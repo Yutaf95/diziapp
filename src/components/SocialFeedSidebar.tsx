@@ -105,8 +105,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
         {(() => {
           const validActivities = activities
             .filter(a => 
-              (a.details?.media_title || a.media_title) && 
-              (a.profile?.username || (a.username && a.username !== 'kullanıcı'))
+              a.details?.media_title || a.media_title || a.action_type === 'status_update'
             )
             .slice(0, 6);
 
@@ -120,109 +119,120 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
           }
 
           return validActivities.map((item) => {
-          const profile = item.profile;
-          const isLiked = likedActivities[item.id];
+            const displayFullName = item.profile?.full_name || item.user_fullname || (currentUser && item.user_id === currentUser.id ? currentUser.full_name : 'Kullanıcı');
+            const displayUsername = item.profile?.username || item.username || (currentUser && item.user_id === currentUser.id ? currentUser.username : 'kullanici');
+            const displayAvatar = item.profile?.avatar_url || item.user_avatar || (currentUser && item.user_id === currentUser.id ? currentUser.avatar_url : '');
+            const mediaTitle = item.details?.media_title || item.media_title || 'Yapım';
+            const mediaPoster = item.details?.media_poster || item.poster_path;
+            const isLiked = likedActivities[item.id];
 
-          return (
-            <div
-              key={item.id}
-              onClick={() => item.media_id && item.media_type && onSelectMediaById(item.media_id, item.media_type)}
-              className="bg-[#14171D] border border-[#232833] hover:border-[#E63946]/50 rounded-xl p-2.5 shadow-sm hover:shadow-md transition cursor-pointer group space-y-2"
-            >
-              {/* User Avatar & Header */}
-              <div className="flex items-center justify-between gap-2">
-                <div 
-                  onClick={(e) => {
-                    if (profile?.username && onNavigateToProfile) {
-                      e.stopPropagation();
-                      onNavigateToProfile(profile.username);
-                    }
-                  }}
-                  className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer p-0.5 rounded-lg hover:bg-white/5"
-                  title={`${profile?.full_name || 'Kullanıcı'} profilini gör`}
-                >
-                  <UserAvatar
-                    user={profile}
-                    size="xs"
-                  />
-                  <div>
-                    <h4 className="text-xs font-bold text-white leading-tight hover:text-[#E63946] transition-colors">
-                      {profile?.full_name || 'Arkadaşın'}
-                    </h4>
-                    <span className="text-[10px] text-[#E63946] font-semibold hover:underline">@{profile?.username || 'kullanici'}</span>
+            return (
+              <div
+                key={item.id}
+                onClick={() => item.media_id && item.media_type && onSelectMediaById(item.media_id, item.media_type)}
+                className="bg-[#14171D] border border-[#232833] hover:border-[#E63946]/50 rounded-xl p-2.5 shadow-sm hover:shadow-md transition cursor-pointer group space-y-2"
+              >
+                {/* User Avatar & Header */}
+                <div className="flex items-center justify-between gap-2">
+                  <div 
+                    onClick={(e) => {
+                      if (displayUsername && onNavigateToProfile) {
+                        e.stopPropagation();
+                        onNavigateToProfile(displayUsername);
+                      }
+                    }}
+                    className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer p-0.5 rounded-lg hover:bg-white/5"
+                    title={`${displayFullName} profilini gör`}
+                  >
+                    <UserAvatar
+                      user={{
+                        full_name: displayFullName,
+                        username: displayUsername,
+                        avatar_url: displayAvatar
+                      }}
+                      size="xs"
+                    />
+                    <div>
+                      <h4 className="text-xs font-bold text-white leading-tight hover:text-[#E63946] transition-colors">
+                        {displayFullName}
+                      </h4>
+                      <span className="text-[10px] text-[#E63946] font-semibold hover:underline">@{displayUsername}</span>
+                    </div>
                   </div>
+
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {formatTimestamp(item.created_at)}
+                  </span>
                 </div>
 
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {formatTimestamp(item.created_at)}
-                </span>
-              </div>
+                {/* Action Details Card */}
+                <div className="bg-[#0B0C0E] border border-[#232833] rounded-lg p-2 flex items-center justify-between gap-2.5">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    
+                    {/* Action Description */}
+                    {item.action_type === 'episode_watched' && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
+                        <Eye className="w-3 h-3 text-[#E63946] shrink-0" />
+                        <span className="truncate">
+                          <strong className="text-white">{mediaTitle}</strong>
+                          {item.details?.season_number && item.details?.episode_number
+                            ? ` S${item.details.season_number.toString().padStart(2, '0')}E${item.details.episode_number.toString().padStart(2, '0')}`
+                            : ''} izledi
+                        </span>
+                      </div>
+                    )}
 
-              {/* Action Details Card */}
-              <div className="bg-[#0B0C0E] border border-[#232833] rounded-lg p-2 flex items-center justify-between gap-2.5">
-                <div className="space-y-0.5 min-w-0 flex-1">
-                  
-                  {/* Action Description */}
-                  {item.action_type === 'episode_watched' && (
-                    <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
-                      <Eye className="w-3 h-3 text-[#E63946] shrink-0" />
-                      <span className="truncate">
-                        <strong className="text-white">{item.details?.media_title}</strong> S{item.details?.season_number?.toString().padStart(2, '0')}E{item.details?.episode_number?.toString().padStart(2, '0')} izledi
-                      </span>
-                    </div>
-                  )}
+                    {item.action_type === 'review_added' && (
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
+                          <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                          <span className="truncate">
+                            <strong className="text-white">{mediaTitle}</strong> <span className="text-amber-400 font-bold">{item.details?.rating || 10}/10</span>
+                          </span>
+                        </div>
+                        {item.details?.review_text && (
+                          <p className="text-[10px] text-slate-400 italic line-clamp-1 pl-1.5 border-l border-[#E63946]">
+                            "{item.details.review_text}"
+                          </p>
+                        )}
+                      </div>
+                    )}
 
-                  {item.action_type === 'review_added' && (
-                    <div className="space-y-0.5">
+                    {item.action_type === 'rating_given' && (
                       <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
                         <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
                         <span className="truncate">
-                          <strong className="text-white">{item.details?.media_title}</strong> <span className="text-amber-400 font-bold">{item.details?.rating}/10</span>
+                          <strong className="text-white">{mediaTitle}</strong> <span className="text-amber-400 font-bold">{item.details?.rating}/10</span>
                         </span>
                       </div>
-                      {item.details?.review_text && (
-                        <p className="text-[10px] text-slate-400 italic line-clamp-1 pl-1.5 border-l border-[#E63946]">
-                          "{item.details.review_text}"
-                        </p>
-                      )}
-                    </div>
-                  )}
+                    )}
 
-                  {item.action_type === 'rating_given' && (
-                    <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
-                      <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
-                      <span className="truncate">
-                        <strong className="text-white">{item.details?.media_title}</strong> <span className="text-amber-400 font-bold">{item.details?.rating}/10</span>
-                      </span>
-                    </div>
-                  )}
+                    {item.action_type === 'status_update' && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
+                        <Sparkles className="w-3 h-3 text-[#E63946] shrink-0" />
+                        <span className="truncate">
+                          {item.media_id ? (
+                            <>
+                              <strong className="text-white">{mediaTitle}</strong> listesine eklendi
+                            </>
+                          ) : (
+                            <strong className="text-white">{mediaTitle}</strong>
+                          )}
+                        </span>
+                      </div>
+                    )}
 
-                  {item.action_type === 'status_update' && (
-                    <div className="flex items-center gap-1 text-[11px] text-slate-200 font-medium">
-                      <Sparkles className="w-3 h-3 text-[#E63946] shrink-0" />
-                      <span className="truncate">
-                        {item.media_id ? (
-                          <>
-                            <strong className="text-white">{item.details?.media_title}</strong> listesine eklendi
-                          </>
-                        ) : (
-                          <strong className="text-white">{item.details?.media_title}</strong>
-                        )}
-                      </span>
-                    </div>
-                  )}
+                  </div>
 
+                  {/* Poster Thumbnail */}
+                  {mediaPoster && (
+                    <img
+                      src={mediaPoster}
+                      alt={mediaTitle}
+                      className="w-7 h-10 rounded object-cover border border-[#232833] shrink-0"
+                    />
+                  )}
                 </div>
-
-                {/* Poster Thumbnail */}
-                {item.details?.media_poster && (
-                  <img
-                    src={item.details.media_poster}
-                    alt={item.details?.media_title || 'Poster'}
-                    className="w-7 h-10 rounded object-cover border border-[#232833] shrink-0"
-                  />
-                )}
-              </div>
 
               {/* Card Footer: Interaction Like / Comment */}
               <div className="flex items-center justify-between pt-0.5 text-[10px] text-slate-400">

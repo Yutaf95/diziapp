@@ -205,8 +205,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     return () => { isMounted = false; };
   }, [isOpen, watchList, episodeProgress, reviews]);
 
-  if (!isOpen) return null;
-
   // Dynamic calculation for Peak Day of Week & 7-Day Weekly Breakdown
   const daysMap = [
     { short: 'Pzt', full: 'Pazartesi' },
@@ -265,18 +263,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
 
   // Check if user has sufficient data (at least 1 watched episode or movie)
   const hasData = (episodeCount + movieCount) > 0;
-
-  // Prevent body scrolling when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
 
   if (!isOpen) return null;
 

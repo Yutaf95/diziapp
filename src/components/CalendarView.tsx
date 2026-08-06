@@ -634,7 +634,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         title="Bu bölümü izlendi olarak işaretle"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>İzledim</span>
+                        <span>İzlendi</span>
                       </button>
                     )}
 

@@ -419,53 +419,53 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* RIGHT — Stats (Films | Series | Following | Followers) */}
-          <div className="flex items-center gap-4 sm:gap-8 pl-0 flex-wrap sm:flex-nowrap sm:self-end pb-1">
+          <div className="flex items-center justify-between sm:justify-start gap-1 sm:gap-6 w-full sm:w-auto pt-3 sm:pt-0 sm:self-end pb-1 border-t sm:border-t-0 border-[#2c3440]/40">
             <button
               onClick={() => setActiveSubTab('movies')}
-              className="text-center hover:bg-white/5 px-2.5 py-1 rounded-xl transition cursor-pointer group/stat"
+              className="text-center hover:bg-white/5 px-2 sm:px-3 py-1.5 rounded-xl transition cursor-pointer group/stat flex-1 sm:flex-initial"
             >
-              <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tabular-nums leading-none pt-1 pb-1 group-hover/stat:text-[#40bcf4] transition font-baskerville">
+              <div className="text-lg sm:text-3xl lg:text-4xl font-extrabold text-white tabular-nums leading-none group-hover/stat:text-[#40bcf4] transition">
                 {moviesWatchedCount.toLocaleString('tr-TR')}
               </div>
-              <div className="text-xs sm:text-[13px] font-extrabold text-[#9ab] uppercase tracking-widest mt-1.5">Filmler</div>
+              <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Filmler</div>
             </button>
 
             <button
               onClick={() => setActiveSubTab('tv')}
-              className="text-center hover:bg-white/5 px-2.5 py-1 rounded-xl transition cursor-pointer group/stat"
+              className="text-center hover:bg-white/5 px-2 sm:px-3 py-1.5 rounded-xl transition cursor-pointer group/stat flex-1 sm:flex-initial"
             >
-              <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tabular-nums leading-none pt-1 pb-1 group-hover/stat:text-[#40bcf4] transition font-baskerville">
+              <div className="text-lg sm:text-3xl lg:text-4xl font-extrabold text-white tabular-nums leading-none group-hover/stat:text-[#40bcf4] transition">
                 {tvShowsWatchedCount.toLocaleString('tr-TR')}
               </div>
-              <div className="text-xs sm:text-[13px] font-extrabold text-[#9ab] uppercase tracking-widest mt-1.5">Diziler</div>
+              <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Diziler</div>
             </button>
 
             <button
               onClick={() => { setFollowerTab('following'); setShowFollowersModal(true); }}
-              className="text-center hover:bg-white/5 px-2.5 py-1 rounded-xl transition cursor-pointer group/stat"
+              className="text-center hover:bg-white/5 px-2 sm:px-3 py-1.5 rounded-xl transition cursor-pointer group/stat flex-1 sm:flex-initial"
             >
-              <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tabular-nums leading-none pt-1 pb-1 group-hover/stat:text-[#40bcf4] transition font-baskerville">
+              <div className="text-lg sm:text-3xl lg:text-4xl font-extrabold text-white tabular-nums leading-none group-hover/stat:text-[#40bcf4] transition">
                 {following.length.toLocaleString('tr-TR')}
               </div>
-              <div className="text-xs sm:text-[13px] font-extrabold text-[#9ab] uppercase tracking-widest mt-1.5">Takip</div>
+              <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Takip</div>
             </button>
 
             <button
               onClick={() => { setFollowerTab('followers'); setShowFollowersModal(true); }}
-              className="text-center hover:bg-white/5 px-2.5 py-1 rounded-xl transition cursor-pointer group/stat"
+              className="text-center hover:bg-white/5 px-2 sm:px-3 py-1.5 rounded-xl transition cursor-pointer group/stat flex-1 sm:flex-initial"
             >
-              <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tabular-nums leading-none pt-1 pb-1 group-hover/stat:text-[#40bcf4] transition font-baskerville">
+              <div className="text-lg sm:text-3xl lg:text-4xl font-extrabold text-white tabular-nums leading-none group-hover/stat:text-[#40bcf4] transition">
                 {(followers.length + (!isOwnProfile && isFollowing ? 1 : 0)).toLocaleString('tr-TR')}
               </div>
-              <div className="text-xs sm:text-[13px] font-extrabold text-[#9ab] uppercase tracking-widest mt-1.5">Takipçiler</div>
+              <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Takipçiler</div>
             </button>
           </div>
 
         </div>
 
         {/* ── TAB SWITCHER ── */}
-        <div className="border-b border-[#2c3440] pb-4 pt-2">
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+        <div className="border-b border-[#2c3440] pb-1 pt-1">
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar scrollbar-none">
           {[
             { id: 'profil', label: 'Profil' },
             { id: 'movies', label: `Filmler (${moviesWatchedCount})` },
@@ -478,7 +478,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id as any)}
-                className={`pb-3.5 pt-5 px-5 sm:px-6 text-sm sm:text-base font-bold whitespace-nowrap transition-all relative cursor-pointer ${
+                className={`py-2.5 px-2.5 sm:px-5 text-xs sm:text-sm font-bold whitespace-nowrap transition-all relative cursor-pointer ${
                   isActive ? 'text-white font-extrabold' : 'text-[#9ab] hover:text-slate-200'
                 }`}
               >

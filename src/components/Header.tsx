@@ -498,11 +498,19 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#14171D] z-20" />
           </button>
 
-          {/* Yan Yana Tip Filtreleri (Pill Buttons): Tümü | Diziler | Filmler OR Page Title */}
-          {activeTab === 'profile' || activeTab === 'activity' || activeTab === 'discover' || activeTab === 'search' ? (
+          {/* Yan Yana Tip Filtreleri (Pill Buttons): ONLY ON WATCHLIST (Kütüphane) PAGE */}
+          {activeTab !== 'watchlist' ? (
             <div className="flex-1 min-w-0 px-2 flex items-center gap-2">
               <span className="text-sm font-black text-white tracking-tight">
-                {activeTab === 'profile' ? 'Profilim' : activeTab === 'activity' ? 'Akış' : 'Arama & Keşfet'}
+                {activeTab === 'profile'
+                  ? 'Profilim'
+                  : activeTab === 'activity'
+                  ? 'Akış'
+                  : activeTab === 'tracker'
+                  ? 'Bölüm Takipçisi'
+                  : activeTab === 'calendar'
+                  ? 'Takvim'
+                  : 'Arama & Keşfet'}
               </span>
               {activeTab === 'profile' && (
                 <span className="text-[10px] bg-[#E63946]/20 text-[#E63946] px-2 py-0.5 rounded-full font-bold">
@@ -557,28 +565,30 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* 2. KATMAN: Durum Filtreleri (İzliyorum | İzleyeceğim | Tamamlandı) - Hidden on Profile, Akış, and Arama pages */}
-        {activeTab !== 'profile' && activeTab !== 'activity' && activeTab !== 'discover' && activeTab !== 'search' && (
-          <div className="grid grid-cols-3 gap-1.5 border-t border-white/10 pt-2">
-            <button
-              type="button"
-              onClick={() => handleSelectStatusFilter(statusFilter === 'watching' ? 'all' : 'watching')}
-              className={`py-1.5 px-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 w-full ${
-                statusFilter === 'watching'
-                  ? 'bg-white text-black font-extrabold shadow-md ring-2 ring-white/50'
-                  : 'bg-[#181A22] text-slate-300 font-medium border border-white/10 hover:text-white'
-              }`}
-            >
-              <Eye className={`w-3.5 h-3.5 ${statusFilter === 'watching' ? 'text-[#E63946]' : 'text-slate-400'}`} />
-              <span>İzleniyor</span>
-            </button>
+        {/* 2. KATMAN: Durum Filtreleri (İzleniyor | İzlenecek | Tamamlandı) - ONLY ON KÜTÜPHANE (WATCHLIST) PAGE */}
+        {activeTab === 'watchlist' && (
+          <div className={`grid ${mediaFilter === 'movie' ? 'grid-cols-2' : 'grid-cols-3'} gap-1.5 border-t border-white/10 pt-2`}>
+            {mediaFilter !== 'movie' && (
+              <button
+                type="button"
+                onClick={() => handleSelectStatusFilter(statusFilter === 'watching' ? 'all' : 'watching')}
+                className={`py-1.5 px-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 w-full ${
+                  statusFilter === 'watching'
+                    ? 'bg-white text-black font-extrabold shadow-md ring-2 ring-white/50'
+                    : 'bg-[#181A22] text-slate-300 font-medium border border-white/10 hover:text-white'
+                }`}
+              >
+                <Eye className={`w-3.5 h-3.5 ${statusFilter === 'watching' ? 'text-[#E63946]' : 'text-slate-400'}`} />
+                <span>İzleniyor</span>
+              </button>
+            )}
 
             <button
               type="button"
               onClick={() => handleSelectStatusFilter(statusFilter === 'plan_to_watch' ? 'all' : 'plan_to_watch')}
               className={`py-1.5 px-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 w-full ${
                 statusFilter === 'plan_to_watch'
-                  ? 'bg-white text-black font-extrabold shadow-md ring-2 ring-white/50'
+                  ? 'bg-white text-black font-extrabold shadow-md ring-[#ffffff]/50'
                   : 'bg-[#181A22] text-slate-300 font-medium border border-white/10 hover:text-white'
               }`}
             >

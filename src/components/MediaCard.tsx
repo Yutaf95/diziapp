@@ -73,15 +73,15 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
 
         {/* Type Badge (Movie / TV) */}
-        <div className="absolute top-2 left-2 flex items-center gap-1 bg-slate-950/85 backdrop-blur-md px-2 py-0.5 rounded text-xs font-semibold text-slate-200 border border-slate-700/50">
-          {isTv ? <Tv className="w-3 h-3 text-amber-400" /> : <Film className="w-3 h-3 text-blue-400" />}
-          <span>{isTv ? 'Dizi' : 'Film'}</span>
+        <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-slate-950/85 backdrop-blur-md px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold text-slate-200 border border-slate-700/50">
+          {isTv ? <Tv className="w-3 h-3 text-amber-400 shrink-0" /> : <Film className="w-3 h-3 text-blue-400 shrink-0" />}
+          <span className="hidden sm:inline">{isTv ? 'Dizi' : 'Film'}</span>
         </div>
 
         {/* Rating Badge */}
         {media.vote_average > 0 && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 bg-slate-950/90 backdrop-blur-md px-2 py-0.5 rounded text-xs font-black text-amber-400 border border-amber-500/30 shadow">
-            <Star className="w-3 h-3 fill-amber-400" />
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-slate-950/90 backdrop-blur-md px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-black text-amber-400 border border-amber-500/30 shadow">
+            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 shrink-0" />
             <span>{media.vote_average.toFixed(1)}</span>
           </div>
         )}

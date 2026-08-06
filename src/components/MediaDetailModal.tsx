@@ -429,18 +429,19 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Actions Bar: Durum Değiştirici & 'Puan Ver / Yorum Yap' CTA (Üst Satır) & 'Listeye Ekle' (Alt Satır) */}
-            <div className="p-2 sm:p-2.5 rounded-2xl bg-[#14171D]/90 backdrop-blur-md border border-[#232833] shadow-2xl space-y-2">
+            {/* Actions Bar: Durum Değiştirici & Favori */}
+            <div className="p-2 sm:p-2.5 rounded-2xl bg-[#14171D]/90 backdrop-blur-md border border-[#232833] shadow-2xl">
               
-              {/* Üst Satır: Durum Değiştirici & 'Puan Ver / Yorum Yap' (Strictly Side-by-Side) */}
-              <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full">
-              <div className="flex items-center gap-0.5 sm:gap-1 bg-[#0B0C0E] p-0.5 sm:p-1 rounded-xl border border-[#232833] shrink-0">
-
-                  {/* İzliyorum — only for TV shows, always visible */}
+              {/* Üst Satır: Durum Değiştirici & Favori Butonu */}
+              <div className="flex items-center justify-between gap-2 w-full">
+                
+                {/* Durum Değiştirici Capsule */}
+                <div className="flex items-center gap-0.5 sm:gap-1 bg-[#0B0C0E] p-1 rounded-xl border border-[#232833] flex-1 min-w-0 justify-between sm:justify-start">
+                  {/* İzliyorum — only for TV shows */}
                   {isTv && (
                     <button
                       onClick={() => onUpdateWatchStatus(details, userWatchStatus === 'watching' ? null : 'watching')}
-                      className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                      className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-1.5 sm:px-2.5 py-1.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                         userWatchStatus === 'watching'
                           ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 font-extrabold'
                           : 'text-slate-400 hover:text-white hover:bg-[#232833]'
@@ -450,10 +451,10 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     </button>
                   )}
 
-                  {/* İzleyeceğim — always visible */}
+                  {/* İzleyeceğim */}
                   <button
                     onClick={() => onUpdateWatchStatus(details, userWatchStatus === 'plan_to_watch' ? null : 'plan_to_watch')}
-                    className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                    className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-1.5 sm:px-2.5 py-1.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                       userWatchStatus === 'plan_to_watch'
                         ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30 font-extrabold'
                         : 'text-slate-400 hover:text-white hover:bg-[#232833]'
@@ -462,7 +463,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400" /> İzlenecek
                   </button>
 
-                  {/* İzledim — always visible, active when watched */}
+                  {/* İzlendi */}
                   <button
                     onClick={() => {
                       if (userWatchStatus === 'watched') {
@@ -471,64 +472,43 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                         setShowCompleteConfirmModal(true);
                       }
                     }}
-                    className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                    className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-1.5 sm:px-2.5 py-1.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                       userWatchStatus === 'watched'
                         ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-md shadow-emerald-500/30'
                         : 'text-slate-400 hover:text-white hover:bg-[#232833]'
                     }`}
                   >
-                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" /> İzledim
+                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" /> İzlendi
                   </button>
 
-                  {/* Trash: remove from list entirely */}
+                  {/* Trash */}
                   {userWatchStatus !== null && (
                     <button
                       onClick={() => onUpdateWatchStatus(details, null)}
-                      className="flex items-center justify-center p-1 rounded-lg text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer ml-0.5"
+                      className="flex items-center justify-center p-1.5 sm:p-1 rounded-lg text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer shrink-0"
                       title="Listemden Tamamen Kaldır"
                     >
-                      <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
-                {/* 'Puan Ver / Yorum Yap' CTA Butonu */}
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {/* Favori Butonu — Sadece kullanıcı yapımı 'İzlendi' olarak işaretlediğinde gösterilir */}
+                {onToggleFavorite && userWatchStatus === 'watched' && (
                   <button
-                    onClick={() => reviewSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                    className="flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-1.5 rounded-xl bg-[#E63946] hover:bg-[#d62839] text-white text-[10px] sm:text-xs font-bold sm:font-extrabold shadow-md shadow-[#E63946]/25 transition hover:scale-[1.02] active:scale-[0.98] shrink-0 cursor-pointer whitespace-nowrap"
+                    onClick={() => onToggleFavorite(details)}
+                    className={`p-2.5 sm:p-2 rounded-xl border transition cursor-pointer flex items-center justify-center shrink-0 ${
+                      isFavorited
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-500 hover:bg-rose-500/30'
+                        : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                    }`}
+                    title={isFavorited ? "Favorilerimden Çıkar" : "Favorilerime Ekle"}
                   >
-                    <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current shrink-0" />
-                    <span>Puan Ver / Yorum Yap</span>
+                    <Heart className={`w-4 h-4 ${isFavorited ? 'fill-rose-500 text-rose-500' : 'text-slate-400'}`} />
                   </button>
+                )}
 
-                  {onToggleFavorite && (
-                    <button
-                      onClick={() => onToggleFavorite(details)}
-                      className={`p-1.5 rounded-xl border transition cursor-pointer flex items-center justify-center shrink-0 ${
-                        isFavorited
-                          ? 'bg-rose-500/20 border-rose-500 text-rose-500 hover:bg-rose-500/30'
-                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                      }`}
-                      title={isFavorited ? "Favorilerimden Çıkar" : "Favorilerime Ekle"}
-                    >
-                      <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isFavorited ? 'fill-rose-500 text-rose-500' : 'text-slate-400'}`} />
-                    </button>
-                  )}
-                </div>
               </div>
-
-              {/* Alt Satır: Listeye Ekle Butonu */}
-              {onToggleItemInCollection && (
-                <button
-                  onClick={() => setShowAddToCollectionModal(true)}
-                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white text-[11px] sm:text-xs font-bold transition border border-white/10 cursor-pointer"
-                  title="Özel Listelerine Ekle"
-                >
-                  <Layers className="w-3.5 h-3.5 text-[#E63946]" />
-                  <span>Listeye Ekle</span>
-                </button>
-              )}
 
             </div>
 
@@ -550,13 +530,15 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
         {/* 2. BODY CONTENT */}
         <div className="p-4 sm:p-8 space-y-8">
           
-          {/* Özet & Hikaye - Her zaman gösterilir */}
-          <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 shadow-lg space-y-2">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#E63946]">Özet & Hikaye</h3>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              {details.overview || 'Açıklama bulunmuyor.'}
-            </p>
-          </div>
+          {/* Özet & Hikaye - Sadece yapım henüz bitirilmediyse gösterilir */}
+          {userWatchStatus !== 'watched' && (
+            <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 shadow-lg space-y-2">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#E63946]">Özet & Hikaye</h3>
+              <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                {details.overview || 'Açıklama bulunmuyor.'}
+              </p>
+            </div>
+          )}
 
           {/* 3. SEZON BUTONLARI & BÖLÜM KARTLARI GRID'I (Tamamlanan dizilerde varsayılan kapalı, diğerlerinde açık gösterilir) */}
           {isTv && (
@@ -797,82 +779,94 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               </span>
             </div>
 
-            {/* WRITE REVIEW FORM */}
-            <form onSubmit={handleReviewSubmit} className="bg-[#0B0C0E] border border-[#232833] rounded-2xl p-4 sm:p-5 space-y-4 shadow-inner">
-              
-              {/* Genel 1-10 Puan Seçimi */}
-              <div>
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
-                  Genel Puanınız (1 - 10)
-                </label>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {Array.from({ length: 10 }).map((_, idx) => {
-                    const val = idx + 1;
-                    const isSelected = userGeneralRating === val;
-                    return (
-                      <button
-                        type="button"
-                        key={val}
-                        onClick={() => setUserGeneralRating(val)}
-                        className={`w-9 h-9 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center ${
-                          isSelected
-                            ? 'bg-[#E63946] text-white shadow-lg shadow-[#E63946]/30 scale-110 border-2 border-[#E63946]'
-                            : 'bg-[#14171D] text-slate-300 hover:text-white hover:bg-[#232833] border border-[#232833]'
-                        }`}
-                      >
-                        {val}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Yazılı Yorum Kutusu */}
-              <div>
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
-                  Yazılı Yorum & Değerlendirme
-                </label>
-                <textarea
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                  placeholder="Bu yapım hakkındaki detaylı düşüncelerinizi, senaryo ve oyunculuk yorumlarınızı yazın..."
-                  rows={3}
-                  className="w-full bg-[#14171D] border border-[#232833] rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#E63946] focus:ring-1 focus:ring-[#E63946] transition"
-                />
-              </div>
-
-              {/* Spoiler Toggle & Submit */}
-              <div className="flex items-center justify-between flex-wrap gap-4 pt-1">
+            {/* WRITE REVIEW FORM: Sadece yapım 'İzlendi' olarak işaretlendiğinde aktif olur */}
+            {userWatchStatus === 'watched' ? (
+              <form onSubmit={handleReviewSubmit} className="bg-[#0B0C0E] border border-[#232833] rounded-2xl p-4 sm:p-5 space-y-4 shadow-inner">
                 
-                {/* 'Spoiler İçerir' toggle seçeneği */}
-                <label className="flex items-center gap-2.5 text-xs text-amber-400 cursor-pointer select-none font-bold bg-amber-500/10 px-3 py-2 rounded-xl border border-amber-500/20 hover:bg-amber-500/20 transition">
-                  <input
-                    type="checkbox"
-                    checked={containsSpoiler}
-                    onChange={(e) => setContainsSpoiler(e.target.checked)}
-                    className="w-4 h-4 rounded bg-[#0B0C0E] border-[#232833] text-[#E63946] focus:ring-0 cursor-pointer"
-                  />
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  <span>Spoiler</span>
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={!reviewText.trim()}
-                  className="px-6 py-2.5 bg-[#E63946] hover:bg-[#d62839] disabled:opacity-40 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-[#E63946]/30 cursor-pointer"
-                >
-                  <Send className="w-4 h-4" /> Yorumu Paylaş
-                </button>
-
-              </div>
-
-              {showReviewSubmitted && (
-                <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold text-center animate-in fade-in">
-                  ✓ İncelemeniz ve puanınız başarıyla kaydedildi!
+                {/* Genel 1-10 Puan Seçimi */}
+                <div>
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
+                    Genel Puanınız (1 - 10)
+                  </label>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {Array.from({ length: 10 }).map((_, idx) => {
+                      const val = idx + 1;
+                      const isSelected = userGeneralRating === val;
+                      return (
+                        <button
+                          type="button"
+                          key={val}
+                          onClick={() => setUserGeneralRating(val)}
+                          className={`w-9 h-9 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center ${
+                            isSelected
+                              ? 'bg-[#E63946] text-white shadow-lg shadow-[#E63946]/30 scale-110 border-2 border-[#E63946]'
+                              : 'bg-[#14171D] text-slate-300 hover:text-white hover:bg-[#232833] border border-[#232833]'
+                          }`}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
 
-            </form>
+                {/* Yazılı Yorum Kutusu */}
+                <div>
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
+                    Yazılı Yorum & Değerlendirme
+                  </label>
+                  <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Bu yapım hakkındaki detaylı düşüncelerinizi, senaryo ve oyunculuk yorumlarınızı yazın..."
+                    rows={3}
+                    className="w-full bg-[#14171D] border border-[#232833] rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#E63946] focus:ring-1 focus:ring-[#E63946] transition"
+                  />
+                </div>
+
+                {/* Spoiler Toggle & Submit */}
+                <div className="flex items-center justify-between flex-wrap gap-4 pt-1">
+                  
+                  {/* 'Spoiler İçerir' toggle seçeneği */}
+                  <label className="flex items-center gap-2.5 text-xs text-amber-400 cursor-pointer select-none font-bold bg-amber-500/10 px-3 py-2 rounded-xl border border-amber-500/20 hover:bg-amber-500/20 transition">
+                    <input
+                      type="checkbox"
+                      checked={containsSpoiler}
+                      onChange={(e) => setContainsSpoiler(e.target.checked)}
+                      className="w-4 h-4 rounded bg-[#0B0C0E] border-[#232833] text-[#E63946] focus:ring-0 cursor-pointer"
+                    />
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <span>Spoiler</span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={!reviewText.trim()}
+                    className="px-6 py-2.5 bg-[#E63946] hover:bg-[#d62839] disabled:opacity-40 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-2 shadow-lg shadow-[#E63946]/30 cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" /> Yorumu Paylaş
+                  </button>
+
+                </div>
+
+                {showReviewSubmitted && (
+                  <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold text-center animate-in fade-in">
+                    ✓ İncelemeniz ve puanınız başarıyla kaydedildi!
+                  </div>
+                )}
+
+              </form>
+            ) : (
+              <div className="bg-[#0B0C0E] border border-amber-500/30 rounded-2xl p-4 sm:p-5 text-center space-y-2 shadow-inner">
+                <div className="flex items-center justify-center gap-2 text-amber-400 font-bold text-xs">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>İnceleme & Puan Kısıtlaması</span>
+                </div>
+                <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                  Puan vermek ve inceleme yazmak için bu yapımı öncelikle <strong className="text-emerald-400 font-extrabold">"İzlendi"</strong> olarak işaretlemelisiniz.
+                </p>
+              </div>
+            )}
 
             {/* REVIEWS LIST: Spoiler'lı Yorumlar Blur Gösterimi */}
             <div className="space-y-4">

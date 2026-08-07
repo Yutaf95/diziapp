@@ -1399,7 +1399,7 @@ export default function App() {
               }
             });
             if (allEpisodes.length > 0) {
-              await handleBatchMarkEpisodes(media.id, allEpisodes);
+              await handleBatchMarkEpisodes(media.id, allEpisodes, undefined, true);
             }
           } catch (err) {
             console.error('Failed to auto-mark all episodes as watched:', err);
@@ -1612,7 +1612,8 @@ export default function App() {
   const handleBatchMarkEpisodes = async (
     showId: number,
     seasonNumOrItems: number | Array<{ season_number: number; episode_number: number }>,
-    epNums?: number[]
+    epNums?: number[],
+    skipActivity?: boolean
   ) => {
     let itemsToMark: Array<{ season_number: number; episode_number: number }> = [];
 
@@ -1658,25 +1659,27 @@ export default function App() {
       return prev;
     });
 
-    // Add activity for batch
-    const showItem = watchList.find(w => w.media_id === showId);
-    const lastItem = itemsToMark[itemsToMark.length - 1];
-    const newActivity: ActivityFeedItem = {
-      id: `act_${Date.now()}`,
-      user_id: currentUser.id,
-      profile: currentUser,
-      action_type: 'episode_watched',
-      media_id: showId,
-      media_type: 'tv',
-      details: {
-        media_title: showItem?.title || 'Dizi',
-        media_poster: showItem?.poster_path,
-        season_number: lastItem.season_number,
-        episode_number: lastItem.episode_number
-      },
-      created_at: now
-    };
-    setActivityFeed(prev => [newActivity, ...prev]);
+    if (!skipActivity) {
+      // Add activity for batch
+      const showItem = watchList.find(w => w.media_id === showId);
+      const lastItem = itemsToMark[itemsToMark.length - 1];
+      const newActivity: ActivityFeedItem = {
+        id: `act_${Date.now()}`,
+        user_id: currentUser.id,
+        profile: currentUser,
+        action_type: 'episode_watched',
+        media_id: showId,
+        media_type: 'tv',
+        details: {
+          media_title: showItem?.title || 'Dizi',
+          media_poster: showItem?.poster_path,
+          season_number: lastItem.season_number,
+          episode_number: lastItem.episode_number
+        },
+        created_at: now
+      };
+      setActivityFeed(prev => [newActivity, ...prev]);
+    }
 
     if (session && isSupabaseConfigured) {
       try {
@@ -1705,21 +1708,25 @@ export default function App() {
           .from('episode_progress')
           .upsert(upsertData);
 
-        // 3. Log activity
-        await supabase
-          .from('activity_feed')
-          .insert({
-            user_id: userId,
-            action_type: 'episode_watched',
-            media_id: showId,
-            media_type: 'tv',
-            details: {
-              media_title: showItem?.title || 'Dizi',
-              media_poster: showItem?.poster_path,
-              season_number: lastItem.season_number,
-              episode_number: lastItem.episode_number
-            }
-          });
+        // 3. Log activity if not skipped
+        if (!skipActivity) {
+          const showItem = watchList.find(w => w.media_id === showId);
+          const lastItem = itemsToMark[itemsToMark.length - 1];
+          await supabase
+            .from('activity_feed')
+            .insert({
+              user_id: userId,
+              action_type: 'episode_watched',
+              media_id: showId,
+              media_type: 'tv',
+              details: {
+                media_title: showItem?.title || 'Dizi',
+                media_poster: showItem?.poster_path,
+                season_number: lastItem.season_number,
+                episode_number: lastItem.episode_number
+              }
+            });
+        }
       } catch (err) {
         console.error('Failed to sync batch episode progress to Supabase:', err);
       }

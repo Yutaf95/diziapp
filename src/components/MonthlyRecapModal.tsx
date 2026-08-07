@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Sparkles, Film, Tv, Clock, Star, Calendar, Trophy, User, Download, 
+  Sparkles, Film, Tv, Clock, Star, Calendar, Trophy, User, 
   Share2, X, ChevronRight, ChevronLeft, Flame, Award, Heart, CheckCircle2,
   Play, BarChart2, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import html2canvas from 'html2canvas';
 import { Profile, WatchStatus, EpisodeProgress, RatingReview } from '../types';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { getDetails } from '../lib/tmdb';
@@ -31,7 +30,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
 }) => {
   // ALL HOOKS DECLARED UNCONDITIONALLY AT TOP
   const [currentSlide, setCurrentSlide] = useState<number>(0);
-  const [isDownloading, setIsDownloading] = useState(false);
 
   const [spotlightDetails, setSpotlightDetails] = useState<{
     id: number;
@@ -50,8 +48,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     appearances: string;
     description: string;
   } | null>(null);
-
-  const cardRef = useRef<HTMLDivElement>(null);
 
   // Month & Year string
   const currentMonthName = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
@@ -333,7 +329,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
           ) : (
             /* VERTICAL SUMMARY STORY CARD (Large readable text & images) */
             <div 
-              ref={cardRef}
               className="bg-gradient-to-b from-[#131622] via-[#0E101A] to-[#090A10] border-2 border-amber-500/60 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl relative overflow-hidden w-full text-white ring-1 ring-white/10"
             >
               {/* Background Ambient Glows */}

@@ -236,8 +236,8 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
         )}
       </div>
 
-      {/* Feed List */}
-      <div className="space-y-4">
+      {/* Feed List - Scrollable Dedicated Container */}
+      <div className="max-h-[calc(100vh-260px)] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
         {(() => {
           const validActivities = activities.filter(a => 
             (a.details?.media_title || a.media_title) && 

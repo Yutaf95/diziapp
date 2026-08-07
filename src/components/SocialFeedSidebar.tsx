@@ -66,8 +66,8 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
 
 
 
-      {/* Activity List - Scrollable Dedicated Container (Max ~6 cards height, independent inner scroll) */}
-      <div className="max-h-[620px] xl:max-h-[680px] overflow-y-auto pr-1.5 space-y-3 custom-scrollbar">
+      {/* Activity List - Static Top 6 Items */}
+      <div className="space-y-3">
         {(() => {
           const now = new Date().getTime();
           const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 48 hours
@@ -86,7 +86,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
               }
               return true;
             })
-            .slice(0, 30);
+            .slice(0, 6);
 
           if (validActivities.length === 0) {
             return (

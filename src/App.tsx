@@ -275,13 +275,27 @@ export default function App() {
           .order('created_at', { ascending: false });
 
         if (actData) {
-          setActivityFeed(actData.map((a: any) => {
+          const enrichedActivities = await Promise.all(actData.map(async (a: any) => {
+            let mediaTitle = a.details?.media_title || a.media_title;
+            let mediaPoster = a.details?.media_poster || a.poster_path;
+
+            if ((!mediaTitle || mediaTitle === 'Dizi' || mediaTitle === 'Yapım') && a.media_id) {
+              try {
+                const details = await getDetails(a.media_id, a.media_type || 'tv');
+                if (details) {
+                  mediaTitle = details.name || details.title || mediaTitle;
+                  mediaPoster = mediaPoster || details.poster_path;
+                }
+              } catch (e) {}
+            }
+
             const profile = {
               id: a.user_id,
               username: a.profiles?.username || (a.user_id === currentUser.id ? currentUser.username : 'kullanıcı'),
               full_name: a.profiles?.full_name || (a.user_id === currentUser.id ? currentUser.full_name : 'Kullanıcı'),
               avatar_url: a.profiles?.avatar_url || (a.user_id === currentUser.id ? currentUser.avatar_url : '')
             };
+
             return {
               id: a.id,
               user_id: a.user_id,
@@ -292,17 +306,20 @@ export default function App() {
               action_type: a.action_type as any,
               media_id: a.media_id,
               media_type: a.media_type as MediaType,
-              media_title: a.details?.media_title || 'Yapım',
-              poster_path: a.details?.media_poster || '',
+              media_title: mediaTitle || 'Yapım',
+              poster_path: mediaPoster || '',
               detail_text: a.details?.status || '',
               contains_spoiler: a.details?.contains_spoiler || false,
-              details: a.details || {
-                media_title: a.media_title || 'Yapım',
-                media_poster: a.poster_path || ''
+              details: {
+                ...(a.details || {}),
+                media_title: mediaTitle || 'Yapım',
+                media_poster: mediaPoster || ''
               },
               created_at: a.created_at
             };
           }));
+
+          setActivityFeed(enrichedActivities);
         }
       } catch (err) { console.warn('activity_feed fetch error:', err); }
 
@@ -1502,6 +1519,19 @@ export default function App() {
       });
 
       const showItem = watchList.find(w => w.media_id === showId);
+      let resolvedShowTitle = showItem?.title || (selectedMedia?.id === showId ? (selectedMedia.name || selectedMedia.title) : undefined);
+      let resolvedShowPoster = showItem?.poster_path || (selectedMedia?.id === showId ? selectedMedia.poster_path : undefined);
+
+      if (!resolvedShowTitle || resolvedShowTitle === 'Dizi' || resolvedShowTitle === 'Yapım') {
+        try {
+          const details = await getDetails(showId, 'tv');
+          if (details) {
+            resolvedShowTitle = details.name || details.title || resolvedShowTitle || 'Dizi';
+            resolvedShowPoster = resolvedShowPoster || details.poster_path;
+          }
+        } catch (e) {}
+      }
+
       const newActivity: ActivityFeedItem = {
         id: `act_${Date.now()}`,
         user_id: currentUser.id,
@@ -1510,8 +1540,8 @@ export default function App() {
         media_id: showId,
         media_type: 'tv',
         details: {
-          media_title: showItem?.title || 'Dizi',
-          media_poster: showItem?.poster_path,
+          media_title: resolvedShowTitle || 'Dizi',
+          media_poster: resolvedShowPoster,
           season_number: seasonNum,
           episode_number: epNum
         },
@@ -1550,8 +1580,8 @@ export default function App() {
               media_id: showId,
               media_type: 'tv',
               details: {
-                media_title: showItem?.title || 'Dizi',
-                media_poster: showItem?.poster_path,
+                media_title: resolvedShowTitle || 'Dizi',
+                media_poster: resolvedShowPoster,
                 season_number: seasonNum,
                 episode_number: epNum
               }

@@ -163,9 +163,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Followers / Following Lists (Loaded live from Supabase)
-  const [followers, setFollowers] = useState<Profile[]>([]);
-  const [following, setFollowing] = useState<Profile[]>([]);
+  // Followers / Following Lists (Loaded live from Supabase with instant local fallback)
+  const [followers, setFollowers] = useState<Profile[]>(() => {
+    if (!isOwnProfile && isFollowing && currentUserProfile) {
+      return [currentUserProfile];
+    }
+    return [];
+  });
+
+  const [following, setFollowing] = useState<Profile[]>(() => {
+    if (isOwnProfile && followingUserIds && followingUserIds.length > 0) {
+      return followingUserIds.map(id => ({
+        id,
+        username: id,
+        full_name: id,
+        avatar_url: DEFAULT_AVATAR_URL,
+        bio: ''
+      }));
+    }
+    return [];
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -178,52 +195,45 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         let fetchedFollowers: Profile[] = [];
 
         if (isSupabaseConfigured) {
-          // 1. Fetch IDs of users THIS user is following
-          const { data: followRows } = await supabase
-            .from('follows')
-            .select('following_id')
-            .eq('follower_id', user.id);
+          // PARALLEL QUERIES FOR MAX SPEED
+          const [followRowsRes, followerRowsRes] = await Promise.all([
+            supabase.from('follows').select('following_id').eq('follower_id', user.id),
+            supabase.from('follows').select('follower_id').eq('following_id', user.id)
+          ]);
 
-          if (followRows && followRows.length > 0) {
-            const targetIds = followRows.map((r: any) => r.following_id);
-            const { data: pList } = await supabase
-              .from('profiles')
-              .select('id, username, full_name, avatar_url, bio')
-              .in('id', targetIds);
+          const followRows = followRowsRes.data;
+          const followerRows = followerRowsRes.data;
 
-            if (pList) {
-              fetchedFollowing = pList.map((p: any) => ({
-                id: p.id,
-                username: p.username,
-                full_name: p.full_name || p.username,
-                avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
-                bio: p.bio || ''
-              }));
-            }
+          const targetFollowingIds = followRows ? followRows.map((r: any) => r.following_id) : [];
+          const targetFollowerIds = followerRows ? followerRows.map((r: any) => r.follower_id) : [];
+
+          const [pListFollowingRes, pListFollowerRes] = await Promise.all([
+            targetFollowingIds.length > 0
+              ? supabase.from('profiles').select('id, username, full_name, avatar_url, bio').in('id', targetFollowingIds)
+              : Promise.resolve({ data: [] }),
+            targetFollowerIds.length > 0
+              ? supabase.from('profiles').select('id, username, full_name, avatar_url, bio').in('id', targetFollowerIds)
+              : Promise.resolve({ data: [] })
+          ]);
+
+          if (pListFollowingRes.data) {
+            fetchedFollowing = pListFollowingRes.data.map((p: any) => ({
+              id: p.id,
+              username: p.username,
+              full_name: p.full_name || p.username,
+              avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
+              bio: p.bio || ''
+            }));
           }
 
-          // 2. Fetch IDs of users that follow THIS user
-          const { data: followerRows } = await supabase
-            .from('follows')
-            .select('follower_id')
-            .eq('following_id', user.id);
-
-          if (followerRows && followerRows.length > 0) {
-            const targetIds = followerRows.map((r: any) => r.follower_id);
-            const { data: pList } = await supabase
-              .from('profiles')
-              .select('id, username, full_name, avatar_url, bio')
-              .in('id', targetIds);
-
-            if (pList) {
-              fetchedFollowers = pList.map((p: any) => ({
-                id: p.id,
-                username: p.username,
-                full_name: p.full_name || p.username,
-                avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
-                bio: p.bio || ''
-              }));
-            }
+          if (pListFollowerRes.data) {
+            fetchedFollowers = pListFollowerRes.data.map((p: any) => ({
+              id: p.id,
+              username: p.username,
+              full_name: p.full_name || p.username,
+              avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
+              bio: p.bio || ''
+            }));
           }
         }
 

@@ -120,13 +120,13 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
         targetType = topRatedWatchItem.media_type;
         userRating = topRatedWatchItem.rating || null;
         reviewText = 'Kütüphanende kendi verdiğin puanla öne çıkan içerik.';
-        badge = topRatedWatchItem.rating ? `★ ${topRatedWatchItem.rating}/10 Puanın` : 'Tamamlandı';
+        badge = topRatedWatchItem.rating ? `★ ${topRatedWatchItem.rating}/10 Puanın` : 'İzledim';
       } else if (anyWatchedItem && anyWatchedItem.media_id) {
         targetId = Number(anyWatchedItem.media_id);
         targetType = anyWatchedItem.media_type;
         userRating = null;
         reviewText = 'Bu ay kütüphanende en çok vakit geçirdiğin içerik.';
-        badge = anyWatchedItem.status === 'watched' ? 'Tamamlandı' : 'İzleniyor';
+        badge = anyWatchedItem.status === 'watched' ? 'İzledim' : 'İzliyorum';
       }
 
       if (!targetId) {

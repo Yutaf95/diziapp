@@ -2101,6 +2101,18 @@ export default function App() {
             >
               {(() => {
                 const isOwnProfile = !viewingUsername || viewingUsername === currentUser.username || viewingUsername === 'me' || viewingUsername === currentUser.id;
+                
+                if (!isOwnProfile && !externalProfileData) {
+                  return (
+                    <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-3.5">
+                      <div className="p-4 rounded-2xl bg-[#14181c] border border-[#2c3440] shadow-xl flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 text-[#00e054] animate-spin" />
+                        <p className="text-xs font-bold text-slate-300 tracking-wide">Profil Yükleniyor...</p>
+                      </div>
+                    </div>
+                  );
+                }
+
                 const profileData = isOwnProfile 
                   ? {
                       profile: currentUser,
@@ -2110,14 +2122,7 @@ export default function App() {
                       favorites,
                       collections
                     }
-                  : (externalProfileData || {
-                      profile: getMockProfileData(viewingUsername).profile,
-                      watchList: [],
-                      episodeProgress: [],
-                      reviews: [],
-                      favorites: [],
-                      collections: []
-                    });
+                  : externalProfileData!;
 
                 return (
                   <ProfileView
@@ -2218,11 +2223,11 @@ export default function App() {
                           )}
                           <h2 className="text-lg font-bold text-white">
                             {statusFilter === 'watching'
-                              ? `İzleniyor (${gridDisplayMedia.length})`
+                              ? `İzliyorum (${gridDisplayMedia.length})`
                               : statusFilter === 'plan_to_watch'
                               ? `İzlenecek (${gridDisplayMedia.length})`
                               : statusFilter === 'watched'
-                              ? `Tamamlandı (${gridDisplayMedia.length})`
+                              ? `İzledim (${gridDisplayMedia.length})`
                               : 'Dizi & Film Önerileri'}
                           </h2>
                         </div>
@@ -2277,11 +2282,11 @@ export default function App() {
                         )}
                         <h2 className="text-lg font-bold text-white">
                           {statusFilter === 'watching'
-                            ? `İzleniyor (${filteredGridMedia.length})`
+                            ? `İzliyorum (${filteredGridMedia.length})`
                             : statusFilter === 'plan_to_watch'
                             ? `İzlenecek (${filteredGridMedia.length})`
                             : statusFilter === 'watched'
-                            ? `Tamamlandı (${filteredGridMedia.length})`
+                            ? `İzledim (${filteredGridMedia.length})`
                             : `Kitaplığım (${filteredGridMedia.length})`}
                         </h2>
                       </div>

@@ -151,7 +151,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           >
             <div className="flex items-center gap-3">
               <Eye className="w-4.5 h-4.5 text-[#E63946]" />
-              <span>İzleniyor</span>
+              <span>İzliyorum</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-extrabold bg-[#E63946]/20 text-[#E63946]">
               {watchingCount}
@@ -180,7 +180,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           </span>
         </button>
 
-        {/* Tamamlandı Filtresi */}
+        {/* İzledim Filtresi */}
         <button
           onClick={() => {
             setActiveStatusFilter('watched');
@@ -194,7 +194,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         >
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
-            <span>Tamamlandı</span>
+            <span>İzledim</span>
           </div>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-extrabold bg-emerald-400/20 text-emerald-400">
             {watchedCount}

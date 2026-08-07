@@ -458,7 +458,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                           : 'text-slate-400 hover:text-white hover:bg-[#232833]'
                       }`}
                     >
-                      <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> İzleniyor
+                      <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> İzliyorum
                     </button>
                   )}
 
@@ -575,7 +575,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                       <h3 className="text-base font-extrabold text-white">Bölüm Listesi & Takibi</h3>
                       {userWatchStatus === 'watched' && (
                         <span className="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                          Tamamlandı
+                          İzledim
                         </span>
                       )}
                     </div>
@@ -1254,7 +1254,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   Kategoriyi Değiştir
                 </h3>
                 <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                  {isTv ? 'Diziyi' : 'Yapımı'} tamamlandı kategorisine taşımak istiyor musunuz?
+                  {isTv ? 'Diziyi' : 'Yapımı'} "İzledim" kategorisine taşımak istiyor musunuz?
                 </p>
               </div>
 

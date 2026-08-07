@@ -202,7 +202,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
         </div>
         <h2 className="text-xl font-bold text-white mb-2">Takip Ettiğin Dizi Bulunmuyor</h2>
         <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
-          Dizilerini "İzleniyor" listesine ekleyerek bölüm bölüm gelişimini takip edebilir ve izlediğin bölümleri tek tıkla işaretleyebilirsin.
+          Dizilerini "İzliyorum" listesine ekleyerek bölüm bölüm gelişimini takip edebilir ve izlediğin bölümleri tek tıkla işaretleyebilirsin.
         </p>
       </div>
     );
@@ -296,7 +296,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                       }`}
                     >
                       <Check className="w-4 h-4 stroke-[3]" />
-                      <span>{isEpWatched(showId, nextEp.season_number, nextEp.episode_number) ? 'Tamamlandı' : 'Sıradakini İzlendi Yap'}</span>
+                      <span>{isEpWatched(showId, nextEp.season_number, nextEp.episode_number) ? 'İzledim' : 'Sıradakini İzlendi Yap'}</span>
                     </button>
                   )}
 

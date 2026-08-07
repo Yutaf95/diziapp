@@ -497,7 +497,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
                   {userStatus === 'watching' ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Listede ({isMovie ? 'İzlendi/İzleniyor' : 'İzleniyor'})</span>
+                      <span>Listede ({isMovie ? 'İzledim/İzliyorum' : 'İzliyorum'})</span>
                     </>
                   ) : (
                     <>

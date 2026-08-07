@@ -28,20 +28,23 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     switch (userWatchStatus) {
       case 'watching':
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-500 text-slate-950 px-2 py-0.5 rounded-md shadow-md">
-            <Eye className="w-3.5 h-3.5" /> İzleniyor
+          <span className="inline-flex items-center gap-1 text-[9px] sm:text-xs font-extrabold bg-amber-500 text-slate-950 px-1.5 sm:px-2 py-0.5 rounded-md shadow-md max-w-full truncate">
+            <Eye className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="truncate">İzliyorum</span>
           </span>
         );
       case 'plan_to_watch':
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-blue-500 text-white px-2 py-0.5 rounded-md shadow-md">
-            <Clock className="w-3.5 h-3.5" /> İzlenecek
+          <span className="inline-flex items-center gap-1 text-[9px] sm:text-xs font-extrabold bg-blue-500 text-white px-1.5 sm:px-2 py-0.5 rounded-md shadow-md max-w-full truncate">
+            <Clock className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="truncate">İzlenecek</span>
           </span>
         );
       case 'watched':
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-md shadow-md">
-            <Check className="w-3.5 h-3.5" /> İzlendi
+          <span className="inline-flex items-center gap-1 text-[9px] sm:text-xs font-extrabold bg-emerald-500 text-slate-950 px-1.5 sm:px-2 py-0.5 rounded-md shadow-md max-w-full truncate">
+            <Check className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="truncate">İzlendi</span>
           </span>
         );
       default:
@@ -88,7 +91,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
         {/* Current Watch Status Badge */}
         {userWatchStatus && (
-          <div className="absolute bottom-2 left-2">
+          <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center min-w-0 pointer-events-none">
             {getStatusBadge()}
           </div>
         )}

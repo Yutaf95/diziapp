@@ -142,7 +142,7 @@ export const HorizontalPosterGrid: React.FC<HorizontalPosterGridProps> = ({
 
                 <div className="pt-1 border-t border-[#14171D] flex items-center justify-between text-[10px]">
                   <span className="text-slate-400 font-semibold">
-                    {type === 'watching' ? 'Devam Ediyor' : type === 'plan_to_watch' ? 'Sırada' : 'Tamamlandı'}
+                    {type === 'watching' ? 'Devam Ediyor' : type === 'plan_to_watch' ? 'Sırada' : 'İzledim'}
                   </span>
 
                   <span className="text-[#E63946] font-bold group-hover:underline">

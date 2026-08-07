@@ -7,7 +7,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Profile, WatchStatus, EpisodeProgress, RatingReview, CustomCollection } from '../types';
 import { getPosterUrl } from '../lib/tmdb';
-import { CURRENT_USER, DEFAULT_AVATAR_URL } from '../data/mockData';
+import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { MonthlyRecapModal } from './MonthlyRecapModal';
 import { UserAvatar } from './UserAvatar';
@@ -33,33 +33,7 @@ interface ProfileViewProps {
   initialSubTab?: 'profil' | 'movies' | 'tv' | 'reviews' | 'stats';
 }
 
-// Default Fallback Pinned Reviews
-const MOCK_PINNED_REVIEWS: RatingReview[] = [
-  {
-    id: 'rev_pin_1',
-    user_id: 'usr_me_101',
-    media_id: 157336,
-    media_type: 'movie',
-    media_title: 'Interstellar',
-    media_poster: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=600&q=80',
-    rating: 9.8,
-    review_text: 'Christopher Nolan senaryo, görsellik ve Hans Zimmer imzalı müziklerle sinema tarihinin en güçlü bilim kurgu başyapıtlarından birini sunuyor. Kara delik sahnesi ve zaman kırılması büyüleyici.',
-    contains_spoiler: false,
-    created_at: '24 Temmuz 2026'
-  },
-  {
-    id: 'rev_pin_2',
-    user_id: 'usr_me_101',
-    media_id: 110492,
-    media_type: 'tv',
-    media_title: 'Severance',
-    media_poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-    rating: 9.6,
-    review_text: 'İş ve özel hayat ayrımını fiziksel beyin ameliyatına bağlayan harika bir konsept. Sezon finalindeki gerilim seviyesi inanılmaz yüksek.',
-    contains_spoiler: false,
-    created_at: '18 Temmuz 2026'
-  }
-];
+const MOCK_PINNED_REVIEWS: RatingReview[] = [];
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   user,

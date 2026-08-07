@@ -1,7 +1,7 @@
 import React from 'react';
 import { Profile } from '../types';
 import { Camera } from 'lucide-react';
-import { DEFAULT_AVATAR_URL } from '../data/mockData';
+import { DEFAULT_AVATAR_URL } from '../lib/constants';
 
 export interface UserAvatarProps {
   user?: Partial<Profile> | null;

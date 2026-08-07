@@ -1,25 +1,22 @@
 import { Profile, ActivityFeedItem, RatingReview, WatchStatus, CustomCollection } from '../types';
+import { DEFAULT_AVATAR_URL } from '../lib/constants';
 
-export const DEFAULT_AVATAR_URL = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect width='128' height='128' rx='64' fill='%231F2430'/><circle cx='64' cy='44' r='22' fill='%2364748B'/><path d='M64 76c-24 0-42 14-42 28v8h84v-8c0-14-18-28-42-28z' fill='%2364748B'/></svg>`;
+export { DEFAULT_AVATAR_URL };
 
 export const CURRENT_USER: Profile = {
-  id: 'usr_me_101',
-  username: 'yufus_m',
-  full_name: 'Yusuf Mutaf',
+  id: '',
+  username: '',
+  full_name: '',
   avatar_url: DEFAULT_AVATAR_URL,
-  banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
-  featured_media_title: 'Severance',
-  bio: 'Sinema ve dizi tutkunu 🎬 ttime bağımlısı!'
+  banner_url: '',
+  featured_media_title: '',
+  bio: ''
 };
 
 export const MOCK_FRIENDS: Profile[] = [];
-
 export const INITIAL_USER_WATCH_STATUSES: WatchStatus[] = [];
-
 export const INITIAL_ACTIVITIES: ActivityFeedItem[] = [];
-
 export const INITIAL_REVIEWS: RatingReview[] = [];
-
 export const INITIAL_COLLECTIONS: CustomCollection[] = [];
 
 export const MOCK_USER_PROFILES: Record<string, {
@@ -32,48 +29,6 @@ export const MOCK_USER_PROFILES: Record<string, {
   following?: Profile[];
 }> = {};
 
-export function getMockProfileData(username: string) {
-  const norm = username.toLowerCase();
-  if (norm === 'yutaf' || norm === 'yufus_m' || norm === 'yufusmutaf') {
-    const yutafFavorites = INITIAL_USER_WATCH_STATUSES.filter(w => w.media_id === 205715 || w.media_id === 1417);
-    return {
-      profile: {
-        id: CURRENT_USER.id,
-        username: username,
-        full_name: 'Yusuf Mutaf',
-        avatar_url: CURRENT_USER.avatar_url,
-        banner_url: CURRENT_USER.banner_url,
-        featured_media_title: CURRENT_USER.featured_media_title,
-        bio: CURRENT_USER.bio
-      },
-      watchList: INITIAL_USER_WATCH_STATUSES,
-      reviews: INITIAL_REVIEWS,
-      collections: INITIAL_COLLECTIONS,
-      favorites: yutafFavorites,
-      episodeProgress: [],
-      followers: [],
-      following: []
-    };
-  }
-
-  if (MOCK_USER_PROFILES[username]) {
-    return MOCK_USER_PROFILES[username];
-  }
-  const formattedName = username.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  return {
-    profile: {
-      id: `usr_gen_${username}`,
-      username: username,
-      full_name: formattedName,
-      avatar_url: DEFAULT_AVATAR_URL,
-      bio: `Cinephile & dizi tutkunu. @${username} profili.`
-    },
-    watchList: [],
-    reviews: [],
-    collections: [],
-    favorites: [],
-    episodeProgress: [],
-    followers: [],
-    following: []
-  };
+export function getMockProfileData(_username: string) {
+  return null;
 }

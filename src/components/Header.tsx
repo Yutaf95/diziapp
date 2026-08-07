@@ -3,8 +3,9 @@ import { Tv, Search, Bell, LogOut, Star, Loader2, X, Film, Eye, Clock, CheckCirc
 import { Profile, TMDBMedia, WatchStatusType } from '../types';
 import { getPosterUrl } from '../lib/tmdb';
 import { MobileSidebarDrawer } from './MobileSidebarDrawer';
-import { SettingsModal } from './SettingsModal';
 import { UserAvatar } from './UserAvatar';
+
+const SettingsModal = React.lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
 
 interface HeaderProps {
   user: Profile;
@@ -728,11 +729,15 @@ export const Header: React.FC<HeaderProps> = ({
             }}
           />
 
-          <SettingsModal
-            isOpen={isSettingsOpen}
-            onClose={() => setIsSettingsOpen(false)}
-            user={user}
-          />
+          {isSettingsOpen && (
+            <React.Suspense fallback={null}>
+              <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                user={user}
+              />
+            </React.Suspense>
+          )}
         </>
       )}
     </header>

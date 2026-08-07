@@ -3,7 +3,7 @@ import { Star, Eye, CheckCircle2, MessageSquare, AlertTriangle, UserPlus, UserCh
 import { ActivityFeedItem, Profile } from '../types';
 import { EmptyState } from './EmptyState';
 import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix } from '../utils/textUtils';
-import { DEFAULT_AVATAR_URL, MOCK_USER_PROFILES } from '../data/mockData';
+import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { UserAvatar } from './UserAvatar';
 
@@ -64,11 +64,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
             })));
           }
         } else {
-          const matches = Object.values(MOCK_USER_PROFILES).map(p => p.profile).filter(p => 
-            p.username.toLowerCase().includes(query) || 
-            (p.full_name || '').toLowerCase().includes(query)
-          );
-          if (isMounted) setMatchingUsers(matches);
+          if (isMounted) setMatchingUsers([]);
         }
       } catch (e) {
         console.error(e);

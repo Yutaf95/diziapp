@@ -1,0 +1,1 @@
+export const DEFAULT_AVATAR_URL = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect width='128' height='128' rx='64' fill='%231F2430'/><circle cx='64' cy='44' r='22' fill='%2364748B'/><path d='M64 76c-24 0-42 14-42 28v8h84v-8c0-14-18-28-42-28z' fill='%2364748B'/></svg>`;

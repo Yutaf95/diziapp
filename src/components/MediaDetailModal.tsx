@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem } from '../types';
 import { getDetails, getSeasonDetails, getBackdropUrl, getPosterUrl } from '../lib/tmdb';
-import { DEFAULT_AVATAR_URL } from '../data/mockData';
+import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { AddToCollectionModal } from './AddToCollectionModal';
 
 interface MediaDetailModalProps {

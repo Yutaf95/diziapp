@@ -9,22 +9,37 @@ import { HeroSpotlight } from './components/HeroSpotlight';
 import { SocialFeedSidebar } from './components/SocialFeedSidebar';
 
 import { MediaCard } from './components/MediaCard';
-import { MediaDetailModal } from './components/MediaDetailModal';
 import { EpisodeTracker } from './components/EpisodeTracker';
-import { CalendarView } from './components/CalendarView';
-import { ActivityFeedView } from './components/ActivityFeedView';
-import { ProfileView } from './components/ProfileView';
-import { CollectionsView } from './components/CollectionsView';
 import { EmptyState } from './components/EmptyState';
-import { MonthlyRecapModal } from './components/MonthlyRecapModal';
 import { MobileSidebarDrawer } from './components/MobileSidebarDrawer';
-import { SettingsModal } from './components/SettingsModal';
 import { RecommendationsSection } from './components/RecommendationsSection';
+
+// Dynamic imports with React.lazy for initial bundle optimization
+const MediaDetailModal = React.lazy(() => import('./components/MediaDetailModal').then(m => ({ default: m.MediaDetailModal })));
+const CalendarView = React.lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
+const ActivityFeedView = React.lazy(() => import('./components/ActivityFeedView').then(m => ({ default: m.ActivityFeedView })));
+const ProfileView = React.lazy(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
+const CollectionsView = React.lazy(() => import('./components/CollectionsView').then(m => ({ default: m.CollectionsView })));
+const MonthlyRecapModal = React.lazy(() => import('./components/MonthlyRecapModal').then(m => ({ default: m.MonthlyRecapModal })));
+const SettingsModal = React.lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
+
+// Sleek loading fallback for React.Suspense
+const PageLoader = () => (
+  <div className="flex flex-col items-center justify-center min-h-[300px] w-full py-16 text-slate-400">
+    <div className="relative flex items-center justify-center">
+      <div className="absolute w-12 h-12 rounded-full border-2 border-indigo-500/20 animate-ping" />
+      <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+    </div>
+    <span className="mt-4 text-xs font-medium tracking-wider text-slate-400 uppercase animate-pulse">
+      Yükleniyor...
+    </span>
+  </div>
+);
 import { sortFranchiseAlphabetical } from './lib/sorting';
 
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
 import { getTrending, search, getDetails, getSeasonDetails } from './lib/tmdb';
-import { CURRENT_USER, INITIAL_USER_WATCH_STATUSES, INITIAL_ACTIVITIES, INITIAL_REVIEWS, INITIAL_COLLECTIONS, getMockProfileData, DEFAULT_AVATAR_URL } from './data/mockData';
+import { DEFAULT_AVATAR_URL } from './lib/constants';
 import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp, Pin } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
@@ -32,6 +47,7 @@ import { AuthView } from './components/AuthView';
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(isSupabaseConfigured);
+  const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
 
   // Global unhandled promise rejection catcher
   useEffect(() => {
@@ -396,29 +412,14 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'watching' | 'plan_to_watch' | 'watched'>('all');
 
   // Dynamic Profile Navigation & Follow State
-  const [currentUser, setCurrentUser] = useState<Profile>(() => {
-    try {
-      const saved = localStorage.getItem('cine_current_user');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.username) return parsed;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-
-    if (isSupabaseConfigured) {
-      return {
-        id: '',
-        username: 'kullanici',
-        full_name: 'Kullanıcı',
-        avatar_url: DEFAULT_AVATAR_URL,
-        banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
-        featured_media_title: 'Severance',
-        bio: ''
-      };
-    }
-    return CURRENT_USER;
+  const [currentUser, setCurrentUser] = useState<Profile>({
+    id: '',
+    username: 'kullanici',
+    full_name: 'Kullanıcı',
+    avatar_url: DEFAULT_AVATAR_URL,
+    banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
+    featured_media_title: '',
+    bio: ''
   });
 
   useEffect(() => {
@@ -643,30 +644,26 @@ export default function App() {
             const norm = viewingUsername.toLowerCase();
             const isYutafProfile = norm === 'yutaf' || norm === 'yufus_m' || norm === 'yufusmutaf';
 
-            const finalWatchList = (mappedWl.length === 0 && isYutafProfile) ? INITIAL_USER_WATCH_STATUSES : mappedWl;
-            const finalFavorites = (mappedFavorites.length === 0 && isYutafProfile) ? INITIAL_USER_WATCH_STATUSES.filter(w => w.media_id === 205715 || w.media_id === 1417) : mappedFavorites;
-            const finalReviews = (mappedReviews.length === 0 && isYutafProfile) ? INITIAL_REVIEWS : mappedReviews;
-
             if (isMounted) {
               setExternalProfileData({
                 profile: extProfile,
-                watchList: finalWatchList,
+                watchList: mappedWl,
                 episodeProgress: extEp || [],
-                reviews: finalReviews,
-                favorites: finalFavorites,
+                reviews: mappedReviews,
+                favorites: mappedFavorites,
                 collections: []
               });
             }
           } else if (isMounted) {
-            setExternalProfileData(getMockProfileData(viewingUsername));
+            setExternalProfileData(null);
           }
         } else if (isMounted) {
-          setExternalProfileData(getMockProfileData(viewingUsername));
+          setExternalProfileData(null);
         }
       } catch (e) {
         console.error('Error fetching external profile:', e);
         if (isMounted) {
-          setExternalProfileData(getMockProfileData(viewingUsername));
+          setExternalProfileData(null);
         }
       }
     }
@@ -674,15 +671,7 @@ export default function App() {
     loadExternalProfile();
   }, [viewingUsername, currentUser.username, currentUser.id]);
 
-  const [followingUserIds, setFollowingUserIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('cine_following_user_ids');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return ['usr_friend_1', 'usr_friend_2', 'usr_friend_3'];
-  });
+  const [followingUserIds, setFollowingUserIds] = useState<string[]>([]);
 
   useEffect(() => {
     try {
@@ -850,16 +839,7 @@ export default function App() {
     } catch {}
   }, [episodeProgress]);
 
-  const [reviews, setReviews] = useState<RatingReview[]>(() => {
-    try {
-      const stored = localStorage.getItem('diziapp_reviews');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return INITIAL_REVIEWS;
-  });
+  const [reviews, setReviews] = useState<RatingReview[]>([]);
 
   useEffect(() => {
     try {
@@ -2071,10 +2051,16 @@ export default function App() {
   // Alias for watchlist grid (sorted, full)
   const filteredGridMedia = sortFranchiseAlphabetical(rawFilteredGridMedia);
 
-  if (authLoading) {
+  if (authLoading || (session && isDataLoading)) {
     return (
-      <div className="min-h-screen bg-[#0B0C0E] flex items-center justify-center text-[#E63946]">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0B0D12] text-white">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-16 h-16 rounded-full border-2 border-indigo-500/20 animate-ping" />
+          <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+        </div>
+        <p className="mt-6 text-sm font-semibold tracking-wider text-slate-400 uppercase animate-pulse">
+          Yükleniyor...
+        </p>
       </div>
     );
   }
@@ -2155,26 +2141,28 @@ export default function App() {
                   : externalProfileData!;
 
                 return (
-                  <ProfileView
-                    user={profileData.profile}
-                    watchList={profileData.watchList}
-                    favorites={profileData.favorites}
-                    episodeProgress={profileData.episodeProgress}
-                    reviews={profileData.reviews}
-                    onSelectTab={handleTabChange}
-                    onSelectMediaById={handleSelectMediaById}
-                    onNavigateToProfile={handleNavigateToProfile}
-                    collections={profileData.collections}
-                    onSelectCollection={setSelectedCollectionId}
-                    currentUserId={currentUser.id}
-                    currentUserProfile={currentUser}
-                    currentUserWatchList={watchList}
-                    isFollowing={followingUserIds.includes(profileData.profile.id)}
-                    followingUserIds={followingUserIds}
-                    onToggleFollowUser={handleToggleFollowUser}
-                    onUpdateProfile={handleUpdateProfile}
-                    initialSubTab={profileSubTab}
-                  />
+                  <React.Suspense fallback={<PageLoader />}>
+                    <ProfileView
+                      user={profileData.profile}
+                      watchList={profileData.watchList}
+                      favorites={profileData.favorites}
+                      episodeProgress={profileData.episodeProgress}
+                      reviews={profileData.reviews}
+                      onSelectTab={handleTabChange}
+                      onSelectMediaById={handleSelectMediaById}
+                      onNavigateToProfile={handleNavigateToProfile}
+                      collections={profileData.collections}
+                      onSelectCollection={setSelectedCollectionId}
+                      currentUserId={currentUser.id}
+                      currentUserProfile={currentUser}
+                      currentUserWatchList={watchList}
+                      isFollowing={followingUserIds.includes(profileData.profile.id)}
+                      followingUserIds={followingUserIds}
+                      onToggleFollowUser={handleToggleFollowUser}
+                      onUpdateProfile={handleUpdateProfile}
+                      initialSubTab={profileSubTab}
+                    />
+                  </React.Suspense>
                 );
               })()}
             </motion.div>
@@ -2392,33 +2380,39 @@ export default function App() {
                   onSelectMedia={(m) => setSelectedMedia(m)}
                 />
               ) : activeTab === 'calendar' ? (
-                <CalendarView
-                  watchingList={watchList.filter(w => w.status === 'watching')}
-                  episodeProgress={episodeProgress}
-                  onToggleEpisode={handleToggleEpisode}
-                  onSelectMedia={(m) => setSelectedMedia(m)}
-                />
+                <React.Suspense fallback={<PageLoader />}>
+                  <CalendarView
+                    watchingList={watchList.filter(w => w.status === 'watching')}
+                    episodeProgress={episodeProgress}
+                    onToggleEpisode={handleToggleEpisode}
+                    onSelectMedia={(m) => setSelectedMedia(m)}
+                  />
+                </React.Suspense>
               ) : activeTab === 'activity' ? (
-                <ActivityFeedView
-                  activities={followedActivities}
-                  onSelectMediaById={handleSelectMediaById}
-                  onNavigateToProfile={handleNavigateToProfile}
-                  followingUserIds={followingUserIds}
-                  onToggleFollowUser={handleToggleFollowUser}
-                />
+                <React.Suspense fallback={<PageLoader />}>
+                  <ActivityFeedView
+                    activities={followedActivities}
+                    onSelectMediaById={handleSelectMediaById}
+                    onNavigateToProfile={handleNavigateToProfile}
+                    followingUserIds={followingUserIds}
+                    onToggleFollowUser={handleToggleFollowUser}
+                  />
+                </React.Suspense>
               ) : activeTab === 'collections' ? (
-                <CollectionsView
-                  collections={collections}
-                  onCreateCollection={handleCreateCollection}
-                  onUpdateCollection={handleUpdateCollection}
-                  onDeleteCollection={handleDeleteCollection}
-                  onRemoveItemFromCollection={handleRemoveItemFromCollection}
-                  onAddItemToCollection={handleAddItemToCollection}
-                  onSelectMediaById={handleSelectMediaById}
-                  userWatchList={watchList}
-                  selectedCollectionId={selectedCollectionId}
-                  onSelectCollectionId={setSelectedCollectionId}
-                />
+                <React.Suspense fallback={<PageLoader />}>
+                  <CollectionsView
+                    collections={collections}
+                    onCreateCollection={handleCreateCollection}
+                    onUpdateCollection={handleUpdateCollection}
+                    onDeleteCollection={handleDeleteCollection}
+                    onRemoveItemFromCollection={handleRemoveItemFromCollection}
+                    onAddItemToCollection={handleAddItemToCollection}
+                    onSelectMediaById={handleSelectMediaById}
+                    userWatchList={watchList}
+                    selectedCollectionId={selectedCollectionId}
+                    onSelectCollectionId={setSelectedCollectionId}
+                  />
+                </React.Suspense>
               ) : activeTab === 'favorites' ? (
                 <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 space-y-4 shadow-lg">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232833] gap-3">
@@ -2726,38 +2720,44 @@ export default function App() {
       {/* Selected Media Detail Modal */}
       <AnimatePresence>
         {selectedMedia && (
-          <MediaDetailModal
-            media={selectedMedia}
-            onClose={() => setSelectedMedia(null)}
-            userWatchStatus={getUserWatchStatus(selectedMedia.id, selectedMedia.media_type === 'tv' || !!selectedMedia.first_air_date ? 'tv' : 'movie')}
-            onUpdateWatchStatus={handleUpdateWatchStatus}
-            episodeProgress={episodeProgress}
-            onToggleEpisode={handleToggleEpisode}
-            onBatchMarkEpisodes={handleBatchMarkEpisodes}
-            onRateEpisode={handleRateEpisode}
-            onSaveEpisodeNote={handleSaveEpisodeNote}
-            onAddReview={handleAddReview}
-            reviews={reviews}
-            currentUserId={currentUser.id}
-            collections={collections}
-            onToggleItemInCollection={handleToggleItemInCollection}
-            onCreateCollection={handleCreateCollection}
-            isFavorited={favorites.some(f => f.media_id === selectedMedia.id && f.media_type === (selectedMedia.media_type === 'tv' || !!selectedMedia.first_air_date ? 'tv' : 'movie'))}
-            onToggleFavorite={handleToggleFavorite}
-          />
+          <React.Suspense fallback={<PageLoader />}>
+            <MediaDetailModal
+              media={selectedMedia}
+              onClose={() => setSelectedMedia(null)}
+              userWatchStatus={getUserWatchStatus(selectedMedia.id, selectedMedia.media_type === 'tv' || !!selectedMedia.first_air_date ? 'tv' : 'movie')}
+              onUpdateWatchStatus={handleUpdateWatchStatus}
+              episodeProgress={episodeProgress}
+              onToggleEpisode={handleToggleEpisode}
+              onBatchMarkEpisodes={handleBatchMarkEpisodes}
+              onRateEpisode={handleRateEpisode}
+              onSaveEpisodeNote={handleSaveEpisodeNote}
+              onAddReview={handleAddReview}
+              reviews={reviews}
+              currentUserId={currentUser.id}
+              collections={collections}
+              onToggleItemInCollection={handleToggleItemInCollection}
+              onCreateCollection={handleCreateCollection}
+              isFavorited={favorites.some(f => f.media_id === selectedMedia.id && f.media_type === (selectedMedia.media_type === 'tv' || !!selectedMedia.first_air_date ? 'tv' : 'movie'))}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          </React.Suspense>
         )}
       </AnimatePresence>
 
       {/* Monthly Recap / Stats Modal */}
-      <MonthlyRecapModal
-        isOpen={showRecapModal}
-        onClose={() => setShowRecapModal(false)}
-        user={currentUser}
-        watchList={watchList}
-        episodeProgress={episodeProgress}
-        reviews={reviews}
-        onSelectMediaById={handleSelectMediaById}
-      />
+      {showRecapModal && (
+        <React.Suspense fallback={<PageLoader />}>
+          <MonthlyRecapModal
+            isOpen={showRecapModal}
+            onClose={() => setShowRecapModal(false)}
+            user={currentUser}
+            watchList={watchList}
+            episodeProgress={episodeProgress}
+            reviews={reviews}
+            onSelectMediaById={handleSelectMediaById}
+          />
+        </React.Suspense>
+      )}
 
       {/* Sol Panel (Sidebar Drawer) for Mobile (< 768px) - High z-index root render */}
       <MobileSidebarDrawer
@@ -2776,11 +2776,15 @@ export default function App() {
       />
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        user={currentUser}
-      />
+      {isSettingsOpen && (
+        <React.Suspense fallback={<PageLoader />}>
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            user={currentUser}
+          />
+        </React.Suspense>
+      )}
 
       {/* Mobile Bottom Navigation Bar (< 768px - Spotify Style) */}
       <MobileBottomNav

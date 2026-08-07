@@ -98,308 +98,320 @@ export default function App() {
 
   // Fetch user data from Supabase when session is active
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) {
+      setIsDataLoading(false);
+      return;
+    }
 
     if (!session) {
-      if (authLoading) return; // Do not clear state while auth is loading!
+      if (!authLoading) {
+        setIsDataLoading(false);
+      }
       return;
     }
 
     const fetchUserData = async () => {
+      setIsDataLoading(true);
       const userId = session.user.id;
 
-      // 1. Profile
       try {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
+        // 1. Profile
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
 
-        if (profileData) {
-          const profileObj = {
-            id: profileData.id,
-            username: profileData.username,
-            full_name: profileData.full_name || '',
-            avatar_url: (!profileData.avatar_url || profileData.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : profileData.avatar_url,
-            banner_url: profileData.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
-            featured_media_title: profileData.featured_media_title || 'Severance',
-            bio: profileData.bio || '',
-            email: profileData.email || session.user.email || ''
-          };
-          setCurrentUser(profileObj);
-          
-          // Only update viewingUsername to currentUser if not currently on a specific /user/... URL
-          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/user/')) {
-            const urlUsername = window.location.pathname.replace('/user/', '').trim();
-            if (urlUsername) {
-              setViewingUsername(urlUsername);
+          if (profileData) {
+            const profileObj = {
+              id: profileData.id,
+              username: profileData.username,
+              full_name: profileData.full_name || '',
+              avatar_url: (!profileData.avatar_url || profileData.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : profileData.avatar_url,
+              banner_url: profileData.banner_url || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
+              featured_media_title: profileData.featured_media_title || 'Severance',
+              bio: profileData.bio || '',
+              email: profileData.email || session.user.email || ''
+            };
+            setCurrentUser(profileObj);
+            
+            // Only update viewingUsername to currentUser if not currently on a specific /user/... URL
+            if (typeof window !== 'undefined' && window.location.pathname.startsWith('/user/')) {
+              const urlUsername = window.location.pathname.replace('/user/', '').trim();
+              if (urlUsername) {
+                setViewingUsername(urlUsername);
+              }
+            } else {
+              setViewingUsername(profileData.username);
             }
-          } else {
-            setViewingUsername(profileData.username);
           }
-        }
-      } catch (err) { console.warn('profiles fetch error:', err); }
+        } catch (err) { console.warn('profiles fetch error:', err); }
 
-      // 2. Watch Status List - Load FULLY from Supabase on login (cross-device sync)
-      try {
-        console.log('[SYNC] Fetching watch_status from Supabase for userId:', userId);
-        const { data: wlData, error: wlError } = await supabase
-          .from('watch_status')
-          .select('*')
-          .eq('user_id', userId);
+        // 2. Watch Status List - Load FULLY from Supabase on login (cross-device sync)
+        try {
+          console.log('[SYNC] Fetching watch_status from Supabase for userId:', userId);
+          const { data: wlData, error: wlError } = await supabase
+            .from('watch_status')
+            .select('*')
+            .eq('user_id', userId);
 
-        if (wlError) {
-          console.error('[SYNC] watch_status fetch ERROR:', wlError);
-        } else {
-          console.log('[SYNC] watch_status fetched from Supabase:', wlData?.length, 'items', wlData);
-        }
+          if (wlError) {
+            console.error('[SYNC] watch_status fetch ERROR:', wlError);
+          } else {
+            console.log('[SYNC] watch_status fetched from Supabase:', wlData?.length, 'items', wlData);
+          }
 
-        if (wlData) {
-          const supabaseItems: WatchStatus[] = wlData.map((w: any) => ({
-            media_id: w.media_id,
-            media_type: w.media_type as MediaType,
-            status: w.status as WatchStatusType,
-            title: w.title || 'Yapım',
-            poster_path: w.poster_path || '',
-            vote_average: w.vote_average || 0,
-            updated_at: w.updated_at
-          }));
+          if (wlData) {
+            const supabaseItems: WatchStatus[] = wlData.map((w: any) => ({
+              media_id: w.media_id,
+              media_type: w.media_type as MediaType,
+              status: w.status as WatchStatusType,
+              title: w.title || 'Yapım',
+              poster_path: w.poster_path || '',
+              vote_average: w.vote_average || 0,
+              updated_at: w.updated_at
+            }));
 
-          // Get local-only items that are NOT yet in Supabase, then push them up
-          const localItems: WatchStatus[] = (() => {
+            // Get local-only items that are NOT yet in Supabase, then push them up
+            const localItems: WatchStatus[] = (() => {
+              try {
+                const saved = localStorage.getItem('diziapp_watch_list');
+                return saved ? JSON.parse(saved) : [];
+              } catch { return []; }
+            })();
+
+            console.log('[SYNC] localStorage items:', localItems.length);
+
+            const localOnlyItems = localItems.filter(local =>
+              !supabaseItems.some(s => s.media_id === local.media_id && s.media_type === local.media_type)
+            );
+
+            // Push local-only items to Supabase
+            if (localOnlyItems.length > 0) {
+              console.log('[SYNC] Pushing', localOnlyItems.length, 'local-only items to Supabase');
+              const results = await Promise.allSettled(localOnlyItems.map(localItem =>
+                supabase.from('watch_status').upsert({
+                  user_id: userId,
+                  media_id: localItem.media_id,
+                  media_type: localItem.media_type,
+                  status: localItem.status,
+                  title: localItem.title,
+                  poster_path: localItem.poster_path,
+                  vote_average: localItem.vote_average
+                })
+              ));
+              results.forEach((r, i) => {
+                if (r.status === 'rejected') console.error('[SYNC] Upsert failed for item', i, r.reason);
+                else if ((r.value as any).error) console.error('[SYNC] Upsert error for item', i, (r.value as any).error);
+              });
+            }
+
+            // Authoritative list = Supabase + local-only items not yet synced
+            const authoritative = [...supabaseItems, ...localOnlyItems];
+            console.log('[SYNC] Final authoritative list:', authoritative.length, 'items');
+
+            setWatchList(authoritative);
             try {
-              const saved = localStorage.getItem('diziapp_watch_list');
-              return saved ? JSON.parse(saved) : [];
-            } catch { return []; }
-          })();
+              localStorage.setItem('diziapp_watch_list', JSON.stringify(authoritative));
+            } catch {}
+          }
+        } catch (err) { console.error('[SYNC] watch_status fetch EXCEPTION:', err); }
 
-          console.log('[SYNC] localStorage items:', localItems.length);
+        // 3. Episode Progress - Smart Merge
+        try {
+          const { data: epData } = await supabase
+            .from('episode_progress')
+            .select('*')
+            .eq('user_id', userId);
 
-          const localOnlyItems = localItems.filter(local =>
-            !supabaseItems.some(s => s.media_id === local.media_id && s.media_type === local.media_type)
-          );
+          if (epData) {
+            const supabaseEpItems: EpisodeProgress[] = epData.map((ep: any) => ({
+              user_id: ep.user_id,
+              show_id: ep.show_id,
+              season_number: ep.season_number,
+              episode_number: ep.episode_number,
+              is_watched: ep.is_watched
+            }));
 
-          // Push local-only items to Supabase
-          if (localOnlyItems.length > 0) {
-            console.log('[SYNC] Pushing', localOnlyItems.length, 'local-only items to Supabase');
-            const results = await Promise.allSettled(localOnlyItems.map(localItem =>
-              supabase.from('watch_status').upsert({
-                user_id: userId,
-                media_id: localItem.media_id,
-                media_type: localItem.media_type,
-                status: localItem.status,
-                title: localItem.title,
-                poster_path: localItem.poster_path,
-                vote_average: localItem.vote_average
-              })
-            ));
-            results.forEach((r, i) => {
-              if (r.status === 'rejected') console.error('[SYNC] Upsert failed for item', i, r.reason);
-              else if ((r.value as any).error) console.error('[SYNC] Upsert error for item', i, (r.value as any).error);
+            setEpisodeProgress(prev => {
+              const map = new Map<string, EpisodeProgress>();
+              prev.forEach(item => map.set(`${item.show_id}-${item.season_number}-${item.episode_number}`, item));
+              supabaseEpItems.forEach(item => map.set(`${item.show_id}-${item.season_number}-${item.episode_number}`, item));
+              const merged = Array.from(map.values());
+
+              try {
+                localStorage.setItem('diziapp_episode_progress', JSON.stringify(merged));
+              } catch {}
+
+              return merged;
             });
           }
+        } catch (err) { console.warn('episode_progress fetch error:', err); }
 
-          // Authoritative list = Supabase + local-only items not yet synced
-          const authoritative = [...supabaseItems, ...localOnlyItems];
-          console.log('[SYNC] Final authoritative list:', authoritative.length, 'items');
+        // 4. Ratings & Reviews
+        try {
+          const { data: revData } = await supabase
+            .from('ratings_reviews')
+            .select('*, profiles(username, full_name, avatar_url)')
+            .order('created_at', { ascending: false });
 
-          setWatchList(authoritative);
-          try {
-            localStorage.setItem('diziapp_watch_list', JSON.stringify(authoritative));
-          } catch {}
-        }
-      } catch (err) { console.error('[SYNC] watch_status fetch EXCEPTION:', err); }
+          if (revData && revData.length > 0) {
+            const fetchedReviews: RatingReview[] = revData.map((r: any) => ({
+              id: r.id,
+              user_id: r.user_id,
+              username: r.profiles?.username || 'kullanıcı',
+              user_fullname: r.profiles?.full_name || 'Kullanıcı',
+              user_avatar: r.profiles?.avatar_url || '',
+              media_id: r.media_id,
+              media_type: r.media_type as MediaType,
+              rating: r.rating,
+              review_text: r.review_text,
+              contains_spoiler: r.contains_spoiler,
+              created_at: r.created_at,
+              media_title: r.media_title || r.title,
+              media_poster: r.media_poster || r.poster_path,
+              is_pinned: r.is_pinned || false,
+              likes: r.likes || 0,
+              likes_count: r.likes_count || r.likes || 0,
+              comments_count: r.comments_count || 0
+            }));
 
-      // 3. Episode Progress - Smart Merge
-      try {
-        const { data: epData } = await supabase
-          .from('episode_progress')
-          .select('*')
-          .eq('user_id', userId);
-
-        if (epData) {
-          const supabaseEpItems: EpisodeProgress[] = epData.map((ep: any) => ({
-            user_id: ep.user_id,
-            show_id: ep.show_id,
-            season_number: ep.season_number,
-            episode_number: ep.episode_number,
-            is_watched: ep.is_watched
-          }));
-
-          setEpisodeProgress(prev => {
-            const map = new Map<string, EpisodeProgress>();
-            prev.forEach(item => map.set(`${item.show_id}-${item.season_number}-${item.episode_number}`, item));
-            supabaseEpItems.forEach(item => map.set(`${item.show_id}-${item.season_number}-${item.episode_number}`, item));
-            const merged = Array.from(map.values());
-
-            try {
-              localStorage.setItem('diziapp_episode_progress', JSON.stringify(merged));
-            } catch {}
-
-            return merged;
-          });
-        }
-      } catch (err) { console.warn('episode_progress fetch error:', err); }
-
-      // 4. Ratings & Reviews
-      try {
-        const { data: revData } = await supabase
-          .from('ratings_reviews')
-          .select('*, profiles(username, full_name, avatar_url)')
-          .order('created_at', { ascending: false });
-
-        if (revData && revData.length > 0) {
-          const fetchedReviews: RatingReview[] = revData.map((r: any) => ({
-            id: r.id,
-            user_id: r.user_id,
-            username: r.profiles?.username || 'kullanıcı',
-            user_fullname: r.profiles?.full_name || 'Kullanıcı',
-            user_avatar: r.profiles?.avatar_url || '',
-            media_id: r.media_id,
-            media_type: r.media_type as MediaType,
-            rating: r.rating,
-            review_text: r.review_text,
-            contains_spoiler: r.contains_spoiler,
-            created_at: r.created_at,
-            media_title: r.media_title || r.title,
-            media_poster: r.media_poster || r.poster_path,
-            is_pinned: r.is_pinned || false,
-            likes: r.likes || 0,
-            likes_count: r.likes_count || r.likes || 0,
-            comments_count: r.comments_count || 0
-          }));
-
-          setReviews(prev => {
-            const map = new Map<string, RatingReview>();
-            prev.forEach(r => map.set(String(r.id), r));
-            fetchedReviews.forEach(r => map.set(String(r.id), r));
-            const merged = Array.from(map.values());
-            try {
-              localStorage.setItem('diziapp_reviews', JSON.stringify(merged));
-            } catch {}
-            return merged;
-          });
-        }
-      } catch (err) { console.warn('ratings_reviews fetch error:', err); }
-
-      // 5. Activity Feed
-      try {
-        const { data: actData } = await supabase
-          .from('activity_feed')
-          .select('*, profiles(username, full_name, avatar_url)')
-          .order('created_at', { ascending: false });
-
-        if (actData) {
-          const enrichedActivities = await Promise.all(actData.map(async (a: any) => {
-            let mediaTitle = a.details?.media_title || a.media_title;
-            let mediaPoster = a.details?.media_poster || a.poster_path;
-
-            if ((!mediaTitle || mediaTitle === 'Dizi' || mediaTitle === 'Yapım') && a.media_id) {
+            setReviews(prev => {
+              const map = new Map<string, RatingReview>();
+              prev.forEach(r => map.set(String(r.id), r));
+              fetchedReviews.forEach(r => map.set(String(r.id), r));
+              const merged = Array.from(map.values());
               try {
-                const details = await getDetails(a.media_id, a.media_type || 'tv');
-                if (details) {
-                  mediaTitle = details.name || details.title || mediaTitle;
-                  mediaPoster = mediaPoster || details.poster_path;
-                }
-              } catch (e) {}
-            }
+                localStorage.setItem('diziapp_reviews', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
+        } catch (err) { console.warn('ratings_reviews fetch error:', err); }
 
-            const profile = {
-              id: a.user_id,
-              username: a.profiles?.username || (a.user_id === currentUser.id ? currentUser.username : 'kullanıcı'),
-              full_name: a.profiles?.full_name || (a.user_id === currentUser.id ? currentUser.full_name : 'Kullanıcı'),
-              avatar_url: a.profiles?.avatar_url || (a.user_id === currentUser.id ? currentUser.avatar_url : '')
-            };
+        // 5. Activity Feed
+        try {
+          const { data: actData } = await supabase
+            .from('activity_feed')
+            .select('*, profiles(username, full_name, avatar_url)')
+            .order('created_at', { ascending: false });
 
-            return {
-              id: a.id,
-              user_id: a.user_id,
-              username: profile.username,
-              user_fullname: profile.full_name,
-              user_avatar: profile.avatar_url,
-              profile: profile,
-              action_type: a.action_type as any,
-              media_id: a.media_id,
-              media_type: a.media_type as MediaType,
-              media_title: mediaTitle || 'Yapım',
-              poster_path: mediaPoster || '',
-              detail_text: a.details?.status || '',
-              contains_spoiler: a.details?.contains_spoiler || false,
-              details: {
-                ...(a.details || {}),
+          if (actData) {
+            const enrichedActivities = await Promise.all(actData.map(async (a: any) => {
+              let mediaTitle = a.details?.media_title || a.media_title;
+              let mediaPoster = a.details?.media_poster || a.poster_path;
+
+              if ((!mediaTitle || mediaTitle === 'Dizi' || mediaTitle === 'Yapım') && a.media_id) {
+                try {
+                  const details = await getDetails(a.media_id, a.media_type || 'tv');
+                  if (details) {
+                    mediaTitle = details.name || details.title || mediaTitle;
+                    mediaPoster = mediaPoster || details.poster_path;
+                  }
+                } catch (e) {}
+              }
+
+              const profile = {
+                id: a.user_id,
+                username: a.profiles?.username || 'kullanıcı',
+                full_name: a.profiles?.full_name || 'Kullanıcı',
+                avatar_url: a.profiles?.avatar_url || ''
+              };
+
+              return {
+                id: a.id,
+                user_id: a.user_id,
+                username: profile.username,
+                user_fullname: profile.full_name,
+                user_avatar: profile.avatar_url,
+                profile: profile,
+                action_type: a.action_type as any,
+                media_id: a.media_id,
+                media_type: a.media_type as MediaType,
                 media_title: mediaTitle || 'Yapım',
-                media_poster: mediaPoster || ''
-              },
-              created_at: a.created_at
-            };
-          }));
+                poster_path: mediaPoster || '',
+                detail_text: a.details?.status || '',
+                contains_spoiler: a.details?.contains_spoiler || false,
+                details: {
+                  ...(a.details || {}),
+                  media_title: mediaTitle || 'Yapım',
+                  media_poster: mediaPoster || ''
+                },
+                created_at: a.created_at
+              };
+            }));
 
-          setActivityFeed(enrichedActivities);
-        }
-      } catch (err) { console.warn('activity_feed fetch error:', err); }
+            setActivityFeed(enrichedActivities);
+          }
+        } catch (err) { console.warn('activity_feed fetch error:', err); }
 
-      // 6. Favorites
-      try {
-        const { data: favData } = await supabase
-          .from('favorites')
-          .select('*')
-          .eq('user_id', userId);
+        // 6. Favorites
+        try {
+          const { data: favData } = await supabase
+            .from('favorites')
+            .select('*')
+            .eq('user_id', userId);
 
-        if (favData) {
-          setFavorites(favData.map((f: any) => ({
-            media_id: f.media_id,
-            media_type: f.media_type as MediaType,
-            status: 'watched',
-            title: f.title || 'Yapım',
-            poster_path: f.poster_path || '',
-            vote_average: f.vote_average || 0
-          })));
-        }
-      } catch (err) { console.warn('favorites fetch error:', err); }
+          if (favData) {
+            setFavorites(favData.map((f: any) => ({
+              media_id: f.media_id,
+              media_type: f.media_type as MediaType,
+              status: 'watched',
+              title: f.title || 'Yapım',
+              poster_path: f.poster_path || '',
+              vote_average: f.vote_average || 0
+            })));
+          }
+        } catch (err) { console.warn('favorites fetch error:', err); }
 
-      // 7. Custom Collections
-      try {
-        const { data: collData } = await supabase
-          .from('custom_collections')
-          .select('*, collection_items(*)')
-          .eq('user_id', userId);
+        // 7. Custom Collections
+        try {
+          const { data: collData } = await supabase
+            .from('custom_collections')
+            .select('*, collection_items(*)')
+            .eq('user_id', userId);
 
-        if (collData) {
-          setCollections(collData.map((c: any) => ({
-            id: c.id,
-            user_id: c.user_id,
-            title: c.name,
-            description: c.description || '',
-            color: 'from-blue-600 to-cyan-600',
-            icon: 'Tv',
-            created_at: c.created_at,
-            items: (c.collection_items || []).map((ci: any) => ({
-              media_id: ci.media_id,
-              media_type: ci.media_type as MediaType,
-              title: ci.title || 'Yapım',
-              poster_path: ci.poster_path || '',
-              added_at: c.created_at
-            }))
-          })));
-        }
-      } catch (err) { console.warn('custom_collections fetch error:', err); }
+          if (collData) {
+            setCollections(collData.map((c: any) => ({
+              id: c.id,
+              user_id: c.user_id,
+              title: c.name,
+              description: c.description || '',
+              color: 'from-blue-600 to-cyan-600',
+              icon: 'Tv',
+              created_at: c.created_at,
+              items: (c.collection_items || []).map((ci: any) => ({
+                media_id: ci.media_id,
+                media_type: ci.media_type as MediaType,
+                title: ci.title || 'Yapım',
+                poster_path: ci.poster_path || '',
+                added_at: c.created_at
+              }))
+            })));
+          }
+        } catch (err) { console.warn('custom_collections fetch error:', err); }
 
-      // 8. Following
-      try {
-        const { data: followData } = await supabase
-          .from('follows')
-          .select('following_id')
-          .eq('follower_id', userId);
+        // 8. Following
+        try {
+          const { data: followData } = await supabase
+            .from('follows')
+            .select('following_id')
+            .eq('follower_id', userId);
 
-        if (followData) {
-          setFollowingUserIds(followData.map((f: any) => f.following_id));
-        }
-      } catch (err) { console.warn('follows fetch error:', err); }
+          if (followData) {
+            setFollowingUserIds(followData.map((f: any) => f.following_id));
+          }
+        } catch (err) { console.warn('follows fetch error:', err); }
+      } catch (err) {
+        console.error('fetchUserData error:', err);
+      } finally {
+        setIsDataLoading(false);
+      }
     };
 
     fetchUserData();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, authLoading]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [userSearchResults, setUserSearchResults] = useState<Profile[]>([]);
   const [showRecapModal, setShowRecapModal] = useState<boolean>(false);

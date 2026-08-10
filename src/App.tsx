@@ -173,19 +173,7 @@ export default function App() {
             updated_at: w.updated_at
           }));
 
-          const localItems: WatchStatus[] = (() => {
-            try {
-              const saved = localStorage.getItem('diziapp_watch_list');
-              return saved ? JSON.parse(saved) : [];
-            } catch { return []; }
-          })();
-
-          const localOnlyItems = localItems.filter(local =>
-            !supabaseItems.some(s => s.media_id === local.media_id && s.media_type === local.media_type)
-          );
-
-          const authoritative = [...supabaseItems, ...localOnlyItems];
-          setWatchList(authoritative);
+          setWatchList(supabaseItems);
         }
 
         // 3. Episode Progress

@@ -67,11 +67,17 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   const totalWatchMinutes = (episodeCount * 45) + (movieCount * 125);
   const totalHours = Math.floor(totalWatchMinutes / 60);
 
+  // Target User's own reviews only (Strictly prevent cross-user leak)
+  const targetUserReviews = reviews.filter(r => 
+    (r.user_id && user.id && r.user_id === user.id) || 
+    (r.username && user.username && r.username.toLowerCase() === user.username.toLowerCase())
+  );
+
   // Real Average Rating calculation for target user
   const ratedItems = watchList.filter(w => typeof w.rating === 'number' && w.rating > 0);
   const realAvgRating = ratedItems.length > 0
     ? (ratedItems.reduce((acc, item) => acc + (item.rating || 0), 0) / ratedItems.length).toFixed(1)
-    : (reviews.length > 0 && typeof reviews[0].rating === 'number' ? String(reviews[0].rating) : null);
+    : (targetUserReviews.length > 0 && typeof targetUserReviews[0].rating === 'number' ? String(targetUserReviews[0].rating) : null);
 
   const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80';
   
@@ -79,8 +85,8 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   const watchedItems = watchList.filter(w => w.status === 'watched' || w.status === 'watching');
   const anyWatchedItem = watchedItems[0];
 
-  // User rated items strictly from user's explicit reviews or explicit ratings
-  const userRatedReviews = reviews.filter(r => typeof r.rating === 'number' && r.rating > 0);
+  // User rated items strictly from target user's explicit reviews
+  const userRatedReviews = targetUserReviews.filter(r => typeof r.rating === 'number' && r.rating > 0);
   const topUserReview = userRatedReviews.length > 0 
     ? [...userRatedReviews].sort((a, b) => b.rating - a.rating)[0]
     : null;

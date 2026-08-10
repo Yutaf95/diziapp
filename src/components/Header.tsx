@@ -4,8 +4,9 @@ import { Profile, TMDBMedia, WatchStatusType } from '../types';
 import { getPosterUrl } from '../lib/tmdb';
 import { MobileSidebarDrawer } from './MobileSidebarDrawer';
 import { UserAvatar } from './UserAvatar';
+import { lazyWithRetry } from '../lib/lazyWithRetry';
 
-const SettingsModal = React.lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
+const SettingsModal = lazyWithRetry(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
 
 interface HeaderProps {
   user: Profile;

@@ -14,14 +14,16 @@ import { EmptyState } from './components/EmptyState';
 import { MobileSidebarDrawer } from './components/MobileSidebarDrawer';
 import { RecommendationsSection } from './components/RecommendationsSection';
 
-// Dynamic imports with React.lazy for initial bundle optimization
-const MediaDetailModal = React.lazy(() => import('./components/MediaDetailModal').then(m => ({ default: m.MediaDetailModal })));
-const CalendarView = React.lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
-const ActivityFeedView = React.lazy(() => import('./components/ActivityFeedView').then(m => ({ default: m.ActivityFeedView })));
-const ProfileView = React.lazy(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
-const CollectionsView = React.lazy(() => import('./components/CollectionsView').then(m => ({ default: m.CollectionsView })));
-const MonthlyRecapModal = React.lazy(() => import('./components/MonthlyRecapModal').then(m => ({ default: m.MonthlyRecapModal })));
-const SettingsModal = React.lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
+import { lazyWithRetry } from './lib/lazyWithRetry';
+
+// Dynamic imports with lazyWithRetry for initial bundle optimization & deployment safety
+const MediaDetailModal = lazyWithRetry(() => import('./components/MediaDetailModal').then(m => ({ default: m.MediaDetailModal })));
+const CalendarView = lazyWithRetry(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
+const ActivityFeedView = lazyWithRetry(() => import('./components/ActivityFeedView').then(m => ({ default: m.ActivityFeedView })));
+const ProfileView = lazyWithRetry(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
+const CollectionsView = lazyWithRetry(() => import('./components/CollectionsView').then(m => ({ default: m.CollectionsView })));
+const MonthlyRecapModal = lazyWithRetry(() => import('./components/MonthlyRecapModal').then(m => ({ default: m.MonthlyRecapModal })));
+const SettingsModal = lazyWithRetry(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
 
 // Sleek loading fallback for React.Suspense
 const PageLoader = () => (

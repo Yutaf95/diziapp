@@ -46,6 +46,8 @@ export interface WatchStatus {
   vote_average?: number;
   total_episodes?: number;
   total_seasons?: number;
+  genre_ids?: number[];
+  genres?: { id?: number; name: string }[];
 }
 
 export interface EpisodeProgress {

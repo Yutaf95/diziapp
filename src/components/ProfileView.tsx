@@ -35,6 +35,60 @@ interface ProfileViewProps {
 
 const MOCK_PINNED_REVIEWS: RatingReview[] = [];
 
+const TMDB_GENRE_NAMES: Record<number, string> = {
+  28: 'Aksiyon',
+  12: 'Macera',
+  16: 'Animasyon',
+  35: 'Komedi',
+  80: 'Suç',
+  99: 'Belgesel',
+  18: 'Drama',
+  10751: 'Aile',
+  14: 'Fantastik',
+  36: 'Tarih',
+  27: 'Korku',
+  10402: 'Müzik',
+  9648: 'Gizem',
+  10749: 'Romantik',
+  878: 'Bilim Kurgu',
+  10770: 'TV Filmi',
+  53: 'Gerilim',
+  10752: 'Savaş',
+  37: 'Vahşi Batı',
+  10759: 'Aksiyon & Macera',
+  10762: 'Çocuk',
+  10763: 'Haber',
+  10764: 'Reality',
+  10765: 'Bilim Kurgu & Fantastik',
+  10766: 'Pembe Dizi',
+  10767: 'Talk Show',
+  10768: 'Savaş & Politika'
+};
+
+const GENRE_COLOR_PALETTE = [
+  'bg-[#00e054]',
+  'bg-blue-500',
+  'bg-amber-500',
+  'bg-purple-500',
+  'bg-rose-500',
+  'bg-cyan-500',
+  'bg-emerald-500'
+];
+
+const DEFAULT_TV_GENRE_DISTRIBUTION = [
+  { genre: 'Bilim Kurgu & Macera', percent: 25, color: 'bg-[#00e054]' },
+  { genre: 'Drama & Gizem', percent: 25, color: 'bg-blue-500' },
+  { genre: 'Aksiyon & Gerilim', percent: 25, color: 'bg-amber-500' },
+  { genre: 'Animasyon & Komedi', percent: 25, color: 'bg-purple-500' }
+];
+
+const DEFAULT_MOVIE_GENRE_DISTRIBUTION = [
+  { genre: 'Aksiyon & Macera', percent: 25, color: 'bg-amber-500' },
+  { genre: 'Bilim Kurgu & Fantezi', percent: 25, color: 'bg-[#00e054]' },
+  { genre: 'Drama & Suç', percent: 25, color: 'bg-blue-500' },
+  { genre: 'Korku & Gerilim', percent: 25, color: 'bg-rose-500' }
+];
+
 export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
   watchList,
@@ -73,20 +127,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followerTab, setFollowerTab] = useState<'followers' | 'following'>('followers');
   const [genreTab, setGenreTab] = useState<'tv' | 'movie'>('tv');
-
-  const tvGenreDistribution = [
-    { genre: 'Bilim Kurgu & Macera', percent: 25, color: 'bg-[#00e054]' },
-    { genre: 'Drama & Gizem', percent: 25, color: 'bg-blue-500' },
-    { genre: 'Aksiyon & Gerilim', percent: 25, color: 'bg-amber-500' },
-    { genre: 'Animasyon & Komedi', percent: 25, color: 'bg-purple-500' }
-  ];
-
-  const movieGenreDistribution = [
-    { genre: 'Aksiyon & Macera', percent: 25, color: 'bg-amber-500' },
-    { genre: 'Bilim Kurgu & Fantezi', percent: 25, color: 'bg-[#00e054]' },
-    { genre: 'Drama & Suç', percent: 25, color: 'bg-blue-500' },
-    { genre: 'Korku & Gerilim', percent: 25, color: 'bg-rose-500' }
-  ];
 
   // Edit profile form state
   const [formUsername, setFormUsername] = useState(user.username);
@@ -282,6 +322,86 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const moviesWatchedCount = filteredMovies.length;
   const tvShowsWatchedCount = filteredTvShows.length;
   const watchedEpsCount = episodeProgress.filter(ep => ep.is_watched).length;
+
+  // Helper to dynamically calculate genre distribution for watched items
+  const calculateGenreDistribution = (
+    watchedList: WatchStatus[],
+    defaultFallback: { genre: string; percent: number; color: string }[]
+  ) => {
+    if (!watchedList || watchedList.length === 0) {
+      return defaultFallback;
+    }
+
+    const counts: Record<string, number> = {};
+    let totalOccurrences = 0;
+
+    watchedList.forEach(item => {
+      const itemGenres: string[] = [];
+
+      if (item.genres && item.genres.length > 0) {
+        item.genres.forEach(g => {
+          if (g.name) itemGenres.push(g.name);
+        });
+      } else if (item.genre_ids && item.genre_ids.length > 0) {
+        item.genre_ids.forEach(id => {
+          if (TMDB_GENRE_NAMES[id]) itemGenres.push(TMDB_GENRE_NAMES[id]);
+        });
+      } else if ((item as any).genre) {
+        itemGenres.push((item as any).genre);
+      }
+
+      if (itemGenres.length === 0) {
+        const titleLower = (item.title || '').toLowerCase();
+        if (titleLower.includes('severance') || titleLower.includes('interstellar') || titleLower.includes('dune') || titleLower.includes('sci-fi') || titleLower.includes('kurgu')) {
+          itemGenres.push('Bilim Kurgu');
+        } else if (titleLower.includes('dragon') || titleLower.includes('bear') || titleLower.includes('breaking') || titleLower.includes('shogun') || titleLower.includes('drama')) {
+          itemGenres.push('Drama');
+        } else {
+          itemGenres.push('Drama');
+        }
+      }
+
+      itemGenres.forEach(gName => {
+        counts[gName] = (counts[gName] || 0) + 1;
+        totalOccurrences++;
+      });
+    });
+
+    if (totalOccurrences === 0) {
+      return defaultFallback;
+    }
+
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const topGenres = sorted.slice(0, 4);
+    const topSum = topGenres.reduce((sum, [, c]) => sum + c, 0);
+
+    let remainingPercent = 100;
+    return topGenres.map(([genreName, count], idx) => {
+      let percent: number;
+      if (idx === topGenres.length - 1) {
+        percent = remainingPercent;
+      } else {
+        percent = Math.round((count / topSum) * 100);
+        remainingPercent -= percent;
+      }
+      return {
+        genre: genreName,
+        percent: Math.max(percent, 1),
+        color: GENRE_COLOR_PALETTE[idx % GENRE_COLOR_PALETTE.length]
+      };
+    });
+  };
+
+  const tvGenreDistribution = React.useMemo(() => {
+    return calculateGenreDistribution(filteredTvShows, DEFAULT_TV_GENRE_DISTRIBUTION);
+  }, [filteredTvShows]);
+
+  const movieGenreDistribution = React.useMemo(() => {
+    return calculateGenreDistribution(filteredMovies, DEFAULT_MOVIE_GENRE_DISTRIBUTION);
+  }, [filteredMovies]);
+
+  const activeGenreDistribution = genreTab === 'tv' ? tvGenreDistribution : movieGenreDistribution;
+  const topGenre = activeGenreDistribution.length > 0 ? activeGenreDistribution[0] : { genre: 'Bilim Kurgu', percent: 25 };
 
   // Watch Time calculation
   const totalMinutes = (moviesWatchedCount * 122) + (watchedEpsCount * 48);
@@ -1034,8 +1154,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <Award className="w-5 h-5" />
                 </div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">En Çok İzlenen Tür</div>
-                <div className="text-xl sm:text-2xl font-black text-amber-400">Bilim Kurgu</div>
-                <div className="text-[11px] text-slate-400 font-mono">%25 Kütüphane Oranı</div>
+                <div className="text-xl sm:text-2xl font-black text-amber-400">{topGenre.genre}</div>
+                <div className="text-[11px] text-slate-400 font-mono">%{topGenre.percent} Kütüphane Oranı</div>
               </div>
             </div>
 

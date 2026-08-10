@@ -45,6 +45,7 @@ import { DEFAULT_AVATAR_URL } from './lib/constants';
 import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp, Pin } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
+import { CURRENT_USER, MOCK_USER_PROFILES } from './data/mockData';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -1252,7 +1253,14 @@ export default function App() {
         const exists = prev.some(item => item.media_id === media.id && item.media_type === type);
         if (exists) {
           return prev.map(item => 
-            item.media_id === media.id && item.media_type === type ? { ...item, status } : item
+            item.media_id === media.id && item.media_type === type 
+              ? { 
+                  ...item, 
+                  status,
+                  genre_ids: media.genre_ids || item.genre_ids,
+                  genres: media.genres || item.genres
+                } 
+              : item
           );
         } else {
           return [
@@ -1264,7 +1272,9 @@ export default function App() {
               status,
               title,
               poster_path: media.poster_path ? (media.poster_path.startsWith('http') ? media.poster_path : `https://image.tmdb.org/t/p/w500${media.poster_path}`) : undefined,
-              vote_average: media.vote_average
+              vote_average: media.vote_average,
+              genre_ids: media.genre_ids,
+              genres: media.genres
             }
           ];
         }

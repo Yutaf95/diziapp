@@ -52,7 +52,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   isFollowing = false,
   followingUserIds = [],
   onToggleFollowUser,
-  onUpdateProfile
+  onUpdateProfile,
+  initialSubTab = 'profil'
 }) => {
   const isOwnProfile = Boolean(
     (currentUserId && user.id === currentUserId) ||
@@ -60,7 +61,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     (currentUserProfile && user.id === currentUserProfile.id)
   );
   
-  const [activeSubTab, setActiveSubTab] = useState<'profil' | 'movies' | 'tv' | 'reviews' | 'stats'>('profil');
+  const [activeSubTab, setActiveSubTab] = useState<'profil' | 'movies' | 'tv' | 'reviews' | 'stats'>(initialSubTab);
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [showMonthlyRecapModal, setShowMonthlyRecapModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);

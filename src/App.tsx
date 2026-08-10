@@ -139,8 +139,30 @@ export default function App() {
         ]);
 
         // 1. Profile
-        if (profileRes.status === 'fulfilled' && profileRes.value?.data) {
-          const profileData = profileRes.value.data;
+        let profileData = profileRes.status === 'fulfilled' ? profileRes.value?.data : null;
+
+        if (!profileData && session?.user) {
+          const fallbackUserStr = session.user.email ? session.user.email.split('@')[0] : `user_${session.user.id.slice(0, 6)}`;
+          try {
+            const { data: created } = await supabase
+              .from('profiles')
+              .upsert({
+                id: session.user.id,
+                username: fallbackUserStr,
+                full_name: fallbackUserStr,
+                email: session.user.email,
+                avatar_url: DEFAULT_AVATAR_URL
+              })
+              .select('*')
+              .maybeSingle();
+
+            if (created) profileData = created;
+          } catch (e) {
+            console.warn('Auto profile creation error:', e);
+          }
+        }
+
+        if (profileData) {
           const profileObj = {
             id: profileData.id,
             username: profileData.username,
@@ -158,6 +180,22 @@ export default function App() {
             if (urlUsername) setViewingUsername(urlUsername);
           } else {
             setViewingUsername(profileData.username);
+          }
+        } else if (session?.user) {
+          const fallbackUserStr = session.user.email ? session.user.email.split('@')[0] : 'kullanici';
+          const fallbackObj = {
+            id: session.user.id,
+            username: fallbackUserStr,
+            full_name: fallbackUserStr,
+            avatar_url: DEFAULT_AVATAR_URL,
+            banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
+            featured_media_title: '',
+            bio: '',
+            email: session.user.email || ''
+          };
+          setCurrentUser(fallbackObj);
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/user/')) {
+            setViewingUsername(fallbackUserStr);
           }
         }
 
@@ -2008,7 +2046,11 @@ export default function App() {
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               {(() => {
-                const isOwnProfile = !viewingUsername || viewingUsername === currentUser.username || viewingUsername === 'me' || viewingUsername === currentUser.id;
+                const isOwnProfile = !viewingUsername || 
+                  (currentUser.username && viewingUsername.toLowerCase() === currentUser.username.toLowerCase()) || 
+                  viewingUsername === 'me' || 
+                  viewingUsername === currentUser.id ||
+                  (session?.user?.id && viewingUsername === session.user.id);
                 
                 if (!isOwnProfile && !externalProfileData) {
                   return (

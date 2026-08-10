@@ -68,17 +68,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [genreTab, setGenreTab] = useState<'tv' | 'movie'>('tv');
 
   const tvGenreDistribution = [
-    { genre: 'Bilim Kurgu & Macera', percent: 38, color: 'bg-[#00e054]' },
-    { genre: 'Drama & Gizem', percent: 28, color: 'bg-blue-500' },
-    { genre: 'Aksiyon & Gerilim', percent: 20, color: 'bg-amber-500' },
-    { genre: 'Animasyon & Komedi', percent: 14, color: 'bg-purple-500' }
+    { genre: 'Bilim Kurgu & Macera', percent: 25, color: 'bg-[#00e054]' },
+    { genre: 'Drama & Gizem', percent: 25, color: 'bg-blue-500' },
+    { genre: 'Aksiyon & Gerilim', percent: 25, color: 'bg-amber-500' },
+    { genre: 'Animasyon & Komedi', percent: 25, color: 'bg-purple-500' }
   ];
 
   const movieGenreDistribution = [
-    { genre: 'Aksiyon & Macera', percent: 42, color: 'bg-amber-500' },
-    { genre: 'Bilim Kurgu & Fantezi', percent: 26, color: 'bg-[#00e054]' },
-    { genre: 'Drama & Suç', percent: 18, color: 'bg-blue-500' },
-    { genre: 'Korku & Gerilim', percent: 14, color: 'bg-rose-500' }
+    { genre: 'Aksiyon & Macera', percent: 25, color: 'bg-amber-500' },
+    { genre: 'Bilim Kurgu & Fantezi', percent: 25, color: 'bg-[#00e054]' },
+    { genre: 'Drama & Suç', percent: 25, color: 'bg-blue-500' },
+    { genre: 'Korku & Gerilim', percent: 25, color: 'bg-rose-500' }
   ];
 
   // Edit profile form state
@@ -1028,7 +1028,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">En Çok İzlenen Tür</div>
                 <div className="text-xl sm:text-2xl font-black text-amber-400">Bilim Kurgu</div>
-                <div className="text-[11px] text-slate-400 font-mono">%38 Kütüphane Oranı</div>
+                <div className="text-[11px] text-slate-400 font-mono">%25 Kütüphane Oranı</div>
               </div>
             </div>
 

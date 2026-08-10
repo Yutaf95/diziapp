@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Profile, WatchStatus, EpisodeProgress, RatingReview } from '../types';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { getDetails } from '../lib/tmdb';
+import { DEFAULT_AVATAR_URL } from '../lib/constants';
 
 interface MonthlyRecapModalProps {
   isOpen: boolean;
@@ -53,17 +54,24 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   const currentMonthName = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
   const formattedMonthTitle = `${currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)}`;
 
-  // Filter watched movies & episodes (100% Live User Data Only)
+  // Filter watched movies, tv shows & episodes (100% Live Target User Data Only)
   const watchedEpisodes = episodeProgress.filter(ep => ep.is_watched);
-  const watchedMovies = watchList.filter(w => w.status === 'watched' && w.media_type === 'movie');
-  const watchingShows = watchList.filter(w => w.status === 'watching' || w.status === 'watched');
+  const watchedMovies = watchList.filter(w => (w.status === 'watched' || w.status === 'watching') && w.media_type === 'movie');
+  const watchedTvShows = watchList.filter(w => (w.status === 'watched' || w.status === 'watching') && w.media_type === 'tv');
 
   // Calculation totals
-  const episodeCount = watchedEpisodes.length;
   const movieCount = watchedMovies.length;
+  const tvCount = watchedTvShows.length;
+  const episodeCount = watchedEpisodes.length > 0 ? watchedEpisodes.length : (tvCount * 8);
+
   const totalWatchMinutes = (episodeCount * 45) + (movieCount * 125);
   const totalHours = Math.floor(totalWatchMinutes / 60);
-  const remainingMinutes = totalWatchMinutes % 60;
+
+  // Real Average Rating calculation for target user
+  const ratedItems = watchList.filter(w => typeof w.rating === 'number' && w.rating > 0);
+  const realAvgRating = ratedItems.length > 0
+    ? (ratedItems.reduce((acc, item) => acc + (item.rating || 0), 0) / ratedItems.length).toFixed(1)
+    : (reviews.length > 0 && typeof reviews[0].rating === 'number' ? String(reviews[0].rating) : null);
 
   const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80';
   
@@ -257,8 +265,8 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   const peakDayName = daysMap[peakDayIdx].full;
   const maxBarValue = Math.max(...weeklyCounts, 1);
 
-  // Check if user has sufficient data (at least 1 watched episode or movie)
-  const hasData = (episodeCount + movieCount) > 0;
+  // Check if target user has sufficient data
+  const hasData = (movieCount + tvCount + watchedEpisodes.length) > 0;
 
   if (!isOpen) return null;
 
@@ -335,14 +343,28 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               <div className="absolute -top-20 -right-20 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
               <div className="absolute top-1/2 -left-24 w-72 h-72 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
 
-              {/* 1. HEADER TITLE */}
-              <div className="text-center space-y-1.5 pt-1">
-                <h1 className="text-4xl sm:text-5xl font-black tracking-widest text-amber-400 uppercase font-mono drop-shadow-lg">
-                  {formattedMonthTitle}
-                </h1>
+              {/* 1. HEADER & USER PROFILE BANNER */}
+              <div className="flex items-center justify-between bg-[#161926]/90 border border-amber-500/40 rounded-2xl p-3.5 shadow-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={(!user.avatar_url || user.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : user.avatar_url}
+                    alt={user.username}
+                    className="w-11 h-11 rounded-full object-cover border-2 border-amber-400/80 shadow-md shrink-0"
+                  />
+                  <div className="text-left min-w-0">
+                    <h3 className="text-sm sm:text-base font-black text-white leading-tight truncate">{user.full_name || user.username}</h3>
+                    <p className="text-xs font-bold text-amber-400 truncate">@{user.username}</p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <h1 className="text-lg sm:text-2xl font-black tracking-wider text-amber-400 uppercase font-mono">
+                    {formattedMonthTitle}
+                  </h1>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block font-mono">AYLIK ÖZET</span>
+                </div>
               </div>
 
-              <div className="border-t-2 border-dashed border-white/20 my-3" />
+              <div className="border-t-2 border-dashed border-white/20 my-2" />
 
               {/* 2. MAIN HERO EKRAN SÜRESİ */}
               <div className="text-center space-y-2 my-4">
@@ -428,7 +450,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                     ★★★★★
                   </div>
                   <span className="text-sm sm:text-base font-black text-white font-mono block">
-                    {topUserReview?.rating ? `${topUserReview.rating} / 10` : '8.4 / 10'}
+                    {topUserReview?.rating ? `${topUserReview.rating} / 10` : (realAvgRating ? `${realAvgRating} / 10` : '8.0 / 10')}
                   </span>
                 </div>
               </div>

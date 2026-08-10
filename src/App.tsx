@@ -1999,7 +1999,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={handleTabChange}
         onOpenDrawer={() => setIsDrawerOpen(true)}
-        onOpenStats={() => setShowRecapModal(true)}
+        onOpenStats={() => handleNavigateToProfile(currentUser.username, 'stats')}
         onOpenNotifications={() => handleTabChange('activity')}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onUpdateWatchStatus={(m, st) => handleUpdateWatchStatus(m, st)}
@@ -2669,7 +2669,7 @@ export default function App() {
         onOpenProfile={() => {
           handleNavigateToProfile(currentUser.username);
         }}
-        onOpenStats={() => setShowRecapModal(true)}
+        onOpenStats={() => handleNavigateToProfile(currentUser.username, 'stats')}
         onOpenCalendar={() => handleTabChange('calendar')}
         onOpenFavorites={() => handleTabChange('favorites')}
         onOpenNotifications={() => handleTabChange('activity')}

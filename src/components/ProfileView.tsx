@@ -209,24 +209,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     let isMounted = true;
 
     async function loadSocialConnections() {
-      if (!user?.id) return;
+      if (!user?.id && !user?.username) return;
 
       try {
         let fetchedFollowing: Profile[] = [];
         let fetchedFollowers: Profile[] = [];
 
         if (isSupabaseConfigured) {
-          // PARALLEL QUERIES FOR MAX SPEED
+          const userIds = Array.from(new Set([user.id, user.username].filter(Boolean)));
+
+          // PARALLEL QUERIES FOR MAX SPEED ACROSS BOTH ID AND USERNAME
           const [followRowsRes, followerRowsRes] = await Promise.all([
-            supabase.from('follows').select('following_id').eq('follower_id', user.id),
-            supabase.from('follows').select('follower_id').eq('following_id', user.id)
+            supabase.from('follows').select('following_id').in('follower_id', userIds),
+            supabase.from('follows').select('follower_id').in('following_id', userIds)
           ]);
 
-          const followRows = followRowsRes.data;
-          const followerRows = followerRowsRes.data;
+          const followRows = followRowsRes.data || [];
+          const followerRows = followerRowsRes.data || [];
 
-          const targetFollowingIds = followRows ? followRows.map((r: any) => r.following_id) : [];
-          const targetFollowerIds = followerRows ? followerRows.map((r: any) => r.follower_id) : [];
+          const targetFollowingIds = Array.from(new Set(followRows.map((r: any) => r.following_id)));
+          const targetFollowerIds = Array.from(new Set(followerRows.map((r: any) => r.follower_id)));
 
           const [pListFollowingRes, pListFollowerRes] = await Promise.all([
             targetFollowingIds.length > 0

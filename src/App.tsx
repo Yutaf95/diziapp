@@ -415,37 +415,13 @@ export default function App() {
     async function loadExternalProfile() {
       try {
         if (isSupabaseConfigured) {
-          // Robust 3-tier lookup: username -> id -> full_name
-          let pData = null;
-          
-          // 1. By Username
-          const { data: byUsername } = await supabase
+          // Fast single OR lookup: username, id, or full_name
+          const { data: pData } = await supabase
             .from('profiles')
             .select('*')
-            .ilike('username', viewingUsername)
+            .or(`username.ilike.${viewingUsername},id.eq.${viewingUsername},full_name.ilike.${viewingUsername}`)
+            .limit(1)
             .maybeSingle();
-
-          pData = byUsername;
-
-          // 2. By ID (if UUID or exact ID match)
-          if (!pData) {
-            const { data: byId } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', viewingUsername)
-              .maybeSingle();
-            pData = byId;
-          }
-
-          // 3. By Full Name
-          if (!pData) {
-            const { data: byFullName } = await supabase
-              .from('profiles')
-              .select('*')
-              .ilike('full_name', viewingUsername)
-              .maybeSingle();
-            pData = byFullName;
-          }
 
           if (pData && isMounted) {
             const extProfile: Profile = {
@@ -466,107 +442,48 @@ export default function App() {
               supabase.from('favorites').select('*').eq('user_id', pData.id)
             ]);
 
-            // PARALLEL ENRICHMENT WITH PROMISE.ALL (FAST & NON-BLOCKING)
-            const mappedWl: WatchStatus[] = extWl && extWl.length > 0 
-              ? await Promise.all(extWl.map(async (w: any) => {
-                  if (w.title && w.poster_path) {
-                    return {
-                      media_id: w.media_id,
-                      media_type: w.media_type,
-                      status: w.status,
-                      title: w.title,
-                      poster_path: w.poster_path,
-                      vote_average: w.vote_average || 8.0,
-                      updated_at: w.updated_at,
-                      created_at: w.created_at
-                    };
-                  }
-                  try {
-                    const details = await getDetails(w.media_id, w.media_type);
-                    return {
-                      media_id: w.media_id,
-                      media_type: w.media_type,
-                      status: w.status,
-                      title: details?.title || details?.name || w.title || 'Yapım',
-                      poster_path: details?.poster_path || w.poster_path || '',
-                      vote_average: details?.vote_average || w.vote_average || 8.0,
-                      updated_at: w.updated_at,
-                      created_at: w.created_at
-                    };
-                  } catch {
-                    return {
-                      media_id: w.media_id,
-                      media_type: w.media_type,
-                      status: w.status,
-                      title: w.title || 'Yapım',
-                      poster_path: w.poster_path || '',
-                      vote_average: w.vote_average || 8.0,
-                      updated_at: w.updated_at,
-                      created_at: w.created_at
-                    };
-                  }
-                }))
-              : [];
+            // FAST INSTANT MAPPING WITHOUT BLOCKING ON 35+ TMDB HTTP CALLS
+            const mappedWl: WatchStatus[] = (extWl || []).map((w: any) => ({
+              media_id: w.media_id,
+              media_type: w.media_type,
+              status: w.status,
+              title: w.title || w.media_title || 'Yapım',
+              poster_path: w.poster_path || w.media_poster || '',
+              vote_average: w.vote_average || 8.0,
+              updated_at: w.updated_at,
+              created_at: w.created_at
+            }));
 
-            // Map favorites in parallel
-            const mappedFavorites: WatchStatus[] = extFav && extFav.length > 0
-              ? await Promise.all(extFav.map(async (f: any) => {
-                  const watchMatch = mappedWl.find(w => w.media_id === f.media_id && w.media_type === f.media_type);
-                  if (watchMatch) return watchMatch;
-                  try {
-                    const details = await getDetails(f.media_id, f.media_type);
-                    return {
-                      media_id: f.media_id,
-                      media_type: f.media_type,
-                      status: 'watched',
-                      title: details?.title || details?.name || 'Yapım',
-                      poster_path: details?.poster_path || '',
-                      vote_average: details?.vote_average || 8.5
-                    };
-                  } catch {
-                    return {
-                      media_id: f.media_id,
-                      media_type: f.media_type,
-                      status: 'watched',
-                      title: 'Yapım',
-                      poster_path: '',
-                      vote_average: 8.5
-                    };
-                  }
-                }))
-              : [];
+            // Map favorites instantly
+            const mappedFavorites: WatchStatus[] = (extFav || []).map((f: any) => {
+              const watchMatch = mappedWl.find(w => w.media_id === f.media_id && w.media_type === f.media_type);
+              return {
+                media_id: f.media_id,
+                media_type: f.media_type,
+                status: 'watched',
+                title: f.title || watchMatch?.title || 'Yapım',
+                poster_path: f.poster_path || watchMatch?.poster_path || '',
+                vote_average: f.vote_average || watchMatch?.vote_average || 8.5
+              };
+            });
 
-            // Map reviews in parallel
-            const mappedReviews: RatingReview[] = extRev && extRev.length > 0
-              ? await Promise.all(extRev.map(async (r: any) => {
-                  const watchMatch = mappedWl.find(w => w.media_id === r.media_id && w.media_type === r.media_type);
-                  let title = r.media_title || watchMatch?.title;
-                  let poster = r.media_poster || watchMatch?.poster_path;
-                  if (!title || !poster) {
-                    try {
-                      const details = await getDetails(r.media_id, r.media_type);
-                      title = title || details?.title || details?.name || 'Yapım';
-                      poster = poster || details?.poster_path || '';
-                    } catch {}
-                  }
-                  return {
-                    id: r.id,
-                    user_id: r.user_id,
-                    media_id: r.media_id,
-                    media_type: r.media_type,
-                    media_title: title || 'Yapım',
-                    media_poster: poster || '',
-                    rating: r.rating,
-                    review_text: r.review_text,
-                    contains_spoiler: r.contains_spoiler,
-                    created_at: r.created_at,
-                    profile: extProfile
-                  };
-                }))
-              : [];
-
-            const norm = viewingUsername.toLowerCase();
-            const isYutafProfile = norm === 'yutaf' || norm === 'yufus_m' || norm === 'yufusmutaf';
+            // Map reviews instantly
+            const mappedReviews: RatingReview[] = (extRev || []).map((r: any) => {
+              const watchMatch = mappedWl.find(w => w.media_id === r.media_id && w.media_type === r.media_type);
+              return {
+                id: r.id,
+                user_id: r.user_id,
+                media_id: r.media_id,
+                media_type: r.media_type,
+                media_title: r.media_title || r.title || watchMatch?.title || 'Yapım',
+                media_poster: r.media_poster || r.poster_path || watchMatch?.poster_path || '',
+                rating: r.rating,
+                review_text: r.review_text,
+                contains_spoiler: r.contains_spoiler,
+                created_at: r.created_at,
+                profile: extProfile
+              };
+            });
 
             if (isMounted) {
               setExternalProfileData({

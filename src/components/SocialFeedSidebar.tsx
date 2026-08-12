@@ -10,6 +10,7 @@ interface SocialFeedSidebarProps {
   currentUser?: Profile;
   onNavigateToProfile?: (username: string) => void;
   onAddActivity?: (content: string) => void;
+  isLoading?: boolean;
 }
 
 export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
@@ -17,7 +18,8 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
   onSelectMediaById,
   currentUser,
   onNavigateToProfile,
-  onAddActivity
+  onAddActivity,
+  isLoading
 }) => {
   const [likedActivities, setLikedActivities] = useState<Record<string, boolean>>({});
   const [quickPostText, setQuickPostText] = useState('');
@@ -87,6 +89,25 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
               return true;
             })
             .slice(0, 6);
+
+          if (isLoading && validActivities.length === 0) {
+            return (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-[#14171D] border border-[#232833] rounded-2xl p-4 space-y-3 animate-pulse">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-800" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-3 bg-slate-800 rounded w-24" />
+                        <div className="h-2 bg-slate-800/60 rounded w-16" />
+                      </div>
+                    </div>
+                    <div className="h-14 bg-slate-900 rounded-xl" />
+                  </div>
+                ))}
+              </div>
+            );
+          }
 
           if (validActivities.length === 0) {
             return (

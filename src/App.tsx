@@ -332,14 +332,29 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'watching' | 'plan_to_watch' | 'watched'>('all');
 
   // Dynamic Profile Navigation & Follow State
-  const [currentUser, setCurrentUser] = useState<Profile>({
-    id: '',
-    username: 'kullanici',
-    full_name: 'Kullanıcı',
-    avatar_url: DEFAULT_AVATAR_URL,
-    banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
-    featured_media_title: '',
-    bio: ''
+  const [currentUser, setCurrentUser] = useState<Profile>(() => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cine_current_user');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.username && parsed.username !== 'kullanici') {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return {
+      id: '',
+      username: 'kullanici',
+      full_name: 'Kullanıcı',
+      avatar_url: DEFAULT_AVATAR_URL,
+      banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
+      featured_media_title: '',
+      bio: ''
+    };
   });
 
   useEffect(() => {
@@ -2553,6 +2568,7 @@ export default function App() {
                 currentUser={currentUser}
                 onNavigateToProfile={handleNavigateToProfile}
                 onAddActivity={handlePostStatusUpdate}
+                isLoading={isDataLoading}
               />
             </div>
 

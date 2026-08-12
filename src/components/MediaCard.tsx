@@ -12,7 +12,7 @@ interface MediaCardProps {
   showQuickActions?: boolean;
 }
 
-export const MediaCard: React.FC<MediaCardProps> = ({
+export const MediaCard: React.FC<MediaCardProps> = React.memo(({
   media,
   userWatchStatus,
   onSelect,
@@ -121,4 +121,4 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
     </motion.div>
   );
-};
+});

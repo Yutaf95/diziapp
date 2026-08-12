@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Header } from './components/Header';
 import { LeftSidebar } from './components/LeftSidebar';
@@ -434,6 +434,9 @@ export default function App() {
     return currentUser.username;
   });
 
+  // In-Memory Cache for External User Profiles (Instant 0ms re-visits)
+  const externalProfileCacheRef = useRef<Map<string, any>>(new Map());
+
   // External Profile Data State & Fetcher
   const [externalProfileData, setExternalProfileData] = useState<{
     profile: Profile;
@@ -447,24 +450,49 @@ export default function App() {
   useEffect(() => {
     const isOwn = !viewingUsername || viewingUsername === currentUser.username || viewingUsername === 'me' || viewingUsername === currentUser.id;
     
-    // RESET STALE DATA IMMEDIATELY TO PREVENT SHOWING OLD PROFILE FOR 4-5 SECONDS
-    setExternalProfileData(null);
-
     if (isOwn) {
+      setExternalProfileData(null);
       return;
     }
+
+    const cacheKey = viewingUsername.toLowerCase();
+    if (externalProfileCacheRef.current.has(cacheKey)) {
+      setExternalProfileData(externalProfileCacheRef.current.get(cacheKey));
+      return;
+    }
+
+    // Reset state for new profile fetch
+    setExternalProfileData(null);
 
     let isMounted = true;
     async function loadExternalProfile() {
       try {
         if (isSupabaseConfigured) {
-          // Fast single OR lookup: username, id, or full_name
-          const { data: pData } = await supabase
-            .from('profiles')
-            .select('*')
-            .or(`username.ilike.${viewingUsername},id.eq.${viewingUsername},full_name.ilike.${viewingUsername}`)
-            .limit(1)
-            .maybeSingle();
+          const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(viewingUsername);
+          let pData: any = null;
+
+          // 1. FAST B-Tree Index lookup by ID if UUID
+          if (isUUID) {
+            const { data } = await supabase.from('profiles').select('*').eq('id', viewingUsername).maybeSingle();
+            pData = data;
+          }
+
+          // 2. FAST Unique Index lookup by username
+          if (!pData) {
+            const { data } = await supabase.from('profiles').select('*').eq('username', viewingUsername).maybeSingle();
+            pData = data;
+          }
+
+          // 3. Fallback OR lookup if case variant or full_name search
+          if (!pData) {
+            const { data } = await supabase
+              .from('profiles')
+              .select('*')
+              .or(`username.ilike.${viewingUsername},full_name.ilike.${viewingUsername}`)
+              .limit(1)
+              .maybeSingle();
+            pData = data;
+          }
 
           if (pData && isMounted) {
             const extProfile: Profile = {
@@ -528,15 +556,22 @@ export default function App() {
               };
             });
 
+            const resultData = {
+              profile: extProfile,
+              watchList: mappedWl,
+              episodeProgress: extEp || [],
+              reviews: mappedReviews,
+              favorites: mappedFavorites,
+              collections: []
+            };
+
+            // Store in cache
+            externalProfileCacheRef.current.set(cacheKey, resultData);
+            if (pData.username) externalProfileCacheRef.current.set(pData.username.toLowerCase(), resultData);
+            if (pData.id) externalProfileCacheRef.current.set(pData.id.toLowerCase(), resultData);
+
             if (isMounted) {
-              setExternalProfileData({
-                profile: extProfile,
-                watchList: mappedWl,
-                episodeProgress: extEp || [],
-                reviews: mappedReviews,
-                favorites: mappedFavorites,
-                collections: []
-              });
+              setExternalProfileData(resultData);
             }
           } else if (isMounted) {
             setExternalProfileData(null);
@@ -553,6 +588,7 @@ export default function App() {
     }
 
     loadExternalProfile();
+    return () => { isMounted = false; };
   }, [viewingUsername, currentUser.username, currentUser.id]);
 
   const [followingUserIds, setFollowingUserIds] = useState<string[]>([]);

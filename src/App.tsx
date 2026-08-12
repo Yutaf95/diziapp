@@ -1996,7 +1996,7 @@ export default function App() {
 
       {/* 2. Main Layout Container: Full-Width for Profile vs 3-Column Grid for Dashboard */}
       {activeTab === 'profile' ? (
-        <main className="flex-1 w-full pb-20 md:pb-8">
+        <main className="flex-1 w-full pb-32 md:pb-24">
           <AnimatePresence mode="wait">
             <motion.div
               key={`profile-${viewingUsername}`}
@@ -2068,7 +2068,7 @@ export default function App() {
           </AnimatePresence>
         </main>
       ) : (
-        <main className="flex-1 w-full px-4 md:px-8 lg:px-12 py-6 sm:py-8 pb-20 md:pb-8">
+        <main className="flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-12 py-6 sm:py-8 pb-32 md:pb-24">
           
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             
@@ -2598,8 +2598,8 @@ export default function App() {
 
             </div>
 
-            {/* Sağ Sidebar (390px - 420px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
-            <div className="hidden lg:block w-[390px] xl:w-[420px] shrink-0 space-y-4 sticky top-24 h-fit">
+            {/* Sağ Sidebar (360px - 390px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
+            <div className="hidden lg:block w-[360px] xl:w-[390px] shrink-0 space-y-4 sticky top-24 h-fit pr-2">
               <SocialFeedSidebar
                 activities={followedActivities}
                 onSelectMediaById={handleSelectMediaById}

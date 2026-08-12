@@ -170,6 +170,9 @@ export default function App() {
             bio: profileData.bio || '',
             email: profileData.email || session.user.email || ''
           };
+          try {
+            localStorage.setItem('cine_current_user', JSON.stringify(profileObj));
+          } catch (e) {}
           setCurrentUser(profileObj);
 
           if (typeof window !== 'undefined' && window.location.pathname.startsWith('/user/')) {
@@ -342,14 +345,39 @@ export default function App() {
             return parsed;
           }
         }
+
+        // Synchronously check Supabase session token in localStorage for instant 0ms profile load
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+            const tokenStr = localStorage.getItem(key);
+            if (tokenStr) {
+              const tokenObj = JSON.parse(tokenStr);
+              const userObj = tokenObj?.user || tokenObj?.currentSession?.user;
+              if (userObj?.email) {
+                const name = userObj.email.split('@')[0];
+                return {
+                  id: userObj.id || '',
+                  username: name,
+                  full_name: name,
+                  avatar_url: userObj.user_metadata?.avatar_url || DEFAULT_AVATAR_URL,
+                  banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
+                  featured_media_title: '',
+                  bio: '',
+                  email: userObj.email
+                };
+              }
+            }
+          }
+        }
       } catch (e) {
         console.error(e);
       }
     }
     return {
       id: '',
-      username: 'kullanici',
-      full_name: 'Kullanıcı',
+      username: '',
+      full_name: '',
       avatar_url: DEFAULT_AVATAR_URL,
       banner_url: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1400&q=80',
       featured_media_title: '',
@@ -358,10 +386,12 @@ export default function App() {
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem('cine_current_user', JSON.stringify(currentUser));
-    } catch (e) {
-      console.error(e);
+    if (currentUser.username && currentUser.username !== 'kullanici') {
+      try {
+        localStorage.setItem('cine_current_user', JSON.stringify(currentUser));
+      } catch (e) {
+        console.error(e);
+      }
     }
   }, [currentUser]);
 

@@ -2012,8 +2012,34 @@ export default function App() {
   // Alias for watchlist grid (sorted, full)
   const filteredGridMedia = sortFranchiseAlphabetical(rawFilteredGridMedia);
 
-  if (isSupabaseConfigured && !session && !authLoading) {
-    return <AuthView onAuthSuccess={() => {}} />;
+  const [isPasswordResetMode, setIsPasswordResetMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      return hash.includes('type=recovery') || window.location.pathname === '/reset-password';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    try {
+      const { data } = supabase.auth.onAuthStateChange((event: string) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordResetMode(true);
+        }
+      });
+      return () => data.subscription?.unsubscribe();
+    } catch (e) {}
+  }, []);
+
+  if (isSupabaseConfigured && (!session || isPasswordResetMode) && !authLoading) {
+    return (
+      <AuthView
+        onAuthSuccess={() => { setIsPasswordResetMode(false); }}
+        initialMode={isPasswordResetMode ? 'update_password' : 'login'}
+      />
+    );
   }
 
   return (

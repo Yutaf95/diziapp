@@ -193,11 +193,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
     if (!filterWatchingOnly) return true;
     if (watchingList.length === 0) return true;
-    const watchingIds = watchingList.map(w => w.media_id);
-    const watchingTitles = watchingList.map(w => (w.title || '').toLowerCase());
-    const isIdMatch = watchingIds.includes(ep.showId);
-    const isTitleMatch = watchingTitles.some(t => t && (t.includes(ep.showName.toLowerCase()) || ep.showName.toLowerCase().includes(t)));
-    return isIdMatch || isTitleMatch;
+
+    const watchingIds = new Set(watchingList.map(w => w.media_id));
+    return watchingIds.has(ep.showId);
   });
 
   const year = currentDate.getFullYear();

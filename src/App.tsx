@@ -591,7 +591,13 @@ export default function App() {
     return () => { isMounted = false; };
   }, [viewingUsername, currentUser.username, currentUser.id]);
 
-  const [followingUserIds, setFollowingUserIds] = useState<string[]>([]);
+  const [followingUserIds, setFollowingUserIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('cine_following_user_ids');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
 
   useEffect(() => {
     try {
@@ -759,7 +765,13 @@ export default function App() {
     } catch {}
   }, [episodeProgress]);
 
-  const [reviews, setReviews] = useState<RatingReview[]>([]);
+  const [reviews, setReviews] = useState<RatingReview[]>(() => {
+    try {
+      const saved = localStorage.getItem('diziapp_reviews');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
 
   useEffect(() => {
     try {
@@ -767,7 +779,19 @@ export default function App() {
     } catch (e) {}
   }, [reviews]);
 
-  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
+  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('diziapp_activity_feed');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('diziapp_activity_feed', JSON.stringify(activityFeed));
+    } catch (e) {}
+  }, [activityFeed]);
 
   // Custom Collections State (saved in localStorage)
   const [collections, setCollections] = useState<CustomCollection[]>(() => {

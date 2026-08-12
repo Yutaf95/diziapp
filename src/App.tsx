@@ -208,6 +208,8 @@ export default function App() {
             title: w.title || 'Yapım',
             poster_path: w.poster_path || '',
             vote_average: w.vote_average || 0,
+            genre_ids: w.genre_ids || (Array.isArray(w.genres) ? w.genres.map((g: any) => g.id) : undefined),
+            genres: w.genres || undefined,
             updated_at: w.updated_at
           }));
 

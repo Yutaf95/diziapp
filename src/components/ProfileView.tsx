@@ -354,12 +354,49 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       if (itemGenres.length === 0) {
         const titleLower = (item.title || '').toLowerCase();
-        if (titleLower.includes('severance') || titleLower.includes('interstellar') || titleLower.includes('dune') || titleLower.includes('sci-fi') || titleLower.includes('kurgu')) {
+        
+        // Animasyon & Anime
+        if (titleLower.includes('bleach') || titleLower.includes('futurama') || titleLower.includes('one piece') || titleLower.includes('lucky') || titleLower.includes('minion') || titleLower.includes('rick') || titleLower.includes('simpson') || titleLower.includes('arcane') || titleLower.includes('naruto') || titleLower.includes('titan') || titleLower.includes('dragon ball') || titleLower.includes('anime') || titleLower.includes('animasyon')) {
+          itemGenres.push('Animasyon');
+        }
+        
+        // Bilim Kurgu
+        if (titleLower.includes('severance') || titleLower.includes('interstellar') || titleLower.includes('dune') || titleLower.includes('backrooms') || titleLower.includes('sci-fi') || titleLower.includes('star') || titleLower.includes('matrix') || titleLower.includes('kurgu') || titleLower.includes('black mirror')) {
           itemGenres.push('Bilim Kurgu');
-        } else if (titleLower.includes('dragon') || titleLower.includes('bear') || titleLower.includes('breaking') || titleLower.includes('shogun') || titleLower.includes('drama')) {
+        }
+        
+        // Komedi
+        if (titleLower.includes('ted lasso') || titleLower.includes('gervais') || titleLower.includes('alley cats') || titleLower.includes('office') || titleLower.includes('friends') || titleLower.includes('brooklyn') || titleLower.includes('komedi') || titleLower.includes('comedy') || titleLower.includes('himym')) {
+          itemGenres.push('Komedi');
+        }
+
+        // Aksiyon & Macera
+        if (titleLower.includes('lanterns') || titleLower.includes('furious') || titleLower.includes('fury') || titleLower.includes('batman') || titleLower.includes('marvel') || titleLower.includes('avengers') || titleLower.includes('spider') || titleLower.includes('action') || titleLower.includes('aksiyon') || titleLower.includes('fast') || titleLower.includes('macera')) {
+          itemGenres.push('Aksiyon & Macera');
+        }
+
+        // Suç & Gizem
+        if (titleLower.includes('breaking bad') || titleLower.includes('better call saul') || titleLower.includes('dexter') || titleLower.includes('sherlock') || titleLower.includes('mindhunter') || titleLower.includes('suç') || titleLower.includes('crime') || titleLower.includes('gizem') || titleLower.includes('mystery')) {
+          itemGenres.push('Suç');
+        }
+
+        // Korku & Gerilim
+        if (titleLower.includes('alien') || titleLower.includes('conjuring') || titleLower.includes('saw') || titleLower.includes('halloween') || titleLower.includes('korku') || titleLower.includes('horror') || titleLower.includes('gerilim') || titleLower.includes('thriller')) {
+          itemGenres.push('Korku');
+        }
+
+        // Dram / Drama
+        if (titleLower.includes('dragon') || titleLower.includes('bear') || titleLower.includes('shogun') || titleLower.includes('crown') || titleLower.includes('succession') || titleLower.includes('drama') || titleLower.includes('dram')) {
           itemGenres.push('Drama');
-        } else {
-          itemGenres.push('Drama');
+        }
+
+        // Fallback default based on media_type
+        if (itemGenres.length === 0) {
+          if (item.media_type === 'tv') {
+            itemGenres.push('Aksiyon & Macera');
+          } else {
+            itemGenres.push('Bilim Kurgu');
+          }
         }
       }
 

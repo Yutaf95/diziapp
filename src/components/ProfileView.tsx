@@ -482,10 +482,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const activeGenreDistribution = genreTab === 'tv' ? tvGenreDistribution : movieGenreDistribution;
   const topGenre = activeGenreDistribution.length > 0 ? activeGenreDistribution[0] : { genre: 'Bilim Kurgu', percent: 25 };
 
-  // Watch Time calculation
-  const totalMinutes = (moviesWatchedCount * 122) + (watchedEpsCount * 48);
+  // Dynamic Watch Time calculation (Letterboxd Style)
+  const totalMinutes = React.useMemo(() => {
+    let mins = 0;
+
+    // 1. Calculate watched movies runtime
+    filteredMovies.forEach(movie => {
+      mins += (movie.runtime && movie.runtime > 0) ? movie.runtime : 118;
+    });
+
+    // 2. Calculate watched TV episodes runtime
+    const watchedEps = episodeProgress ? episodeProgress.filter(e => e.is_watched) : [];
+    watchedEps.forEach(ep => {
+      mins += (ep.runtime && ep.runtime > 0) ? ep.runtime : 45;
+    });
+
+    return mins;
+  }, [filteredMovies, episodeProgress]);
+
   const totalDays = Math.floor(totalMinutes / 1440);
   const totalHours = Math.floor(totalMinutes / 60);
+  const remainingHoursInDays = Math.floor((totalMinutes % 1440) / 60);
   const remainingMins = totalMinutes % 60;
 
   // Recent Watched Activity (Top 5 sorted by log/update date descending)
@@ -1206,8 +1223,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <Clock className="w-5 h-5" />
                 </div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Toplam İzleme Süresi</div>
-                <div className="text-xl sm:text-2xl font-black text-white">{totalDays} Gün</div>
-                <div className="text-[11px] text-slate-400 font-mono">({totalHours} Saat {remainingMins} Dk)</div>
+                <div className="text-xl sm:text-2xl font-black text-white">
+                  {totalDays > 0 ? `${totalDays} Gün ${remainingHoursInDays} Saat` : `${totalHours} Saat`}
+                </div>
+                <div className="text-[11px] text-slate-400 font-mono">
+                  ({totalHours} Saat / {totalMinutes.toLocaleString('tr-TR')} Dk)
+                </div>
               </div>
 
               <div className="bg-[#181e23] border border-[#2c3440] rounded-xl p-5 text-center space-y-2 shadow-lg">

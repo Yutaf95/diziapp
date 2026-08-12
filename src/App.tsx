@@ -1334,7 +1334,7 @@ export default function App() {
   };
 
   // Toggle Episode Watched Progress
-  const handleToggleEpisode = async (showId: number, seasonNum: number, epNum: number) => {
+  const handleToggleEpisode = async (showId: number, seasonNum: number, epNum: number, runtime?: number) => {
     let isMarkingAsWatched = false;
 
     setEpisodeProgress(prev => {
@@ -1360,7 +1360,7 @@ export default function App() {
         if (existing) {
           return prev.map(e => 
             e.show_id === showId && e.season_number === seasonNum && e.episode_number === epNum
-              ? { ...e, is_watched: true, watched_at: new Date().toISOString() }
+              ? { ...e, is_watched: true, runtime: runtime || e.runtime || 45, watched_at: new Date().toISOString() }
               : e
           );
         } else {
@@ -1372,6 +1372,7 @@ export default function App() {
               season_number: seasonNum,
               episode_number: epNum,
               is_watched: true,
+              runtime: runtime || 45,
               watched_at: new Date().toISOString()
             }
           ];

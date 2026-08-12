@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Sparkles, Flame } from 'lucide-react';
 import { TMDBMedia, WatchStatusType, WatchStatus, MediaType } from '../types';
 import { getTrending } from '../lib/tmdb';
+import { getSmartRecommendations } from '../lib/gemini';
 import { MediaCard } from './MediaCard';
 
 interface RecommendationsSectionProps {
@@ -183,25 +184,30 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    async function loadRealTMDBRecommendations() {
+
+    async function loadRealRecommendations() {
+      // 1. Fetch Gemini AI / Smart Personalized Recommendations for "İzlediklerinize Göre"
+      if (watchList.length > 0) {
+        try {
+          const aiRecs = await getSmartRecommendations(watchList);
+          if (aiRecs && aiRecs.length > 0 && isMounted) {
+            setBasedOnWatchedList(aiRecs);
+          }
+        } catch (e) {}
+      }
+
+      // 2. Fetch Popular Recommendations
       try {
         const trend = await getTrending('all');
         if (trend?.results && trend.results.length > 0 && isMounted) {
           setPopularList(trend.results);
         }
       } catch (e) {}
-
-      try {
-        const trendTv = await getTrending('tv');
-        if (trendTv?.results && trendTv.results.length > 0 && isMounted) {
-          setBasedOnWatchedList(trendTv.results);
-        }
-      } catch (e) {}
     }
 
-    loadRealTMDBRecommendations();
+    loadRealRecommendations();
     return () => { isMounted = false; };
-  }, []);
+  }, [watchList.length]);
 
   // Filter 1: 3 random Popular items not in user's library (shuffled each render)
   const popularFiltered = useMemo(() =>

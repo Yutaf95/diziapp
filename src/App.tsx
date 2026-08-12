@@ -2011,17 +2011,7 @@ export default function App() {
                   viewingUsername === currentUser.id ||
                   (session?.user?.id && viewingUsername === session.user.id);
                 
-                if (!isOwnProfile && !externalProfileData) {
-                  return (
-                    <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-3.5">
-                      <div className="p-4 rounded-2xl bg-[#14181c] border border-[#2c3440] shadow-xl flex flex-col items-center gap-3">
-                        <Loader2 className="w-8 h-8 text-[#00e054] animate-spin" />
-                        <p className="text-xs font-bold text-slate-300 tracking-wide">Profil Yükleniyor...</p>
-                      </div>
-                    </div>
-                  );
-                }
-
+                const isExternalLoading = !isOwnProfile && !externalProfileData;
                 const profileData = isOwnProfile 
                   ? {
                       profile: currentUser,
@@ -2031,7 +2021,21 @@ export default function App() {
                       favorites,
                       collections
                     }
-                  : externalProfileData!;
+                  : (externalProfileData || {
+                      profile: {
+                        id: viewingUsername || '',
+                        username: viewingUsername || 'kullanici',
+                        full_name: viewingUsername || 'Kullanıcı',
+                        avatar_url: DEFAULT_AVATAR_URL,
+                        banner_url: '',
+                        bio: ''
+                      },
+                      watchList: [],
+                      episodeProgress: [],
+                      reviews: [],
+                      favorites: [],
+                      collections: []
+                    });
 
                 return (
                   <React.Suspense fallback={<PageLoader />}>
@@ -2054,6 +2058,7 @@ export default function App() {
                       onToggleFollowUser={handleToggleFollowUser}
                       onUpdateProfile={handleUpdateProfile}
                       initialSubTab={profileSubTab}
+                      isLoading={isExternalLoading}
                     />
                   </React.Suspense>
                 );

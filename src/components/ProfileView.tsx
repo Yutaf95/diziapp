@@ -31,6 +31,7 @@ interface ProfileViewProps {
   onToggleFollowUser?: (userId: string) => void;
   onUpdateProfile?: (updated: Partial<Profile>) => void;
   initialSubTab?: 'profil' | 'movies' | 'tv' | 'reviews' | 'stats';
+  isLoading?: boolean;
 }
 
 const MOCK_PINNED_REVIEWS: RatingReview[] = [];
@@ -107,8 +108,47 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   followingUserIds = [],
   onToggleFollowUser,
   onUpdateProfile,
-  initialSubTab = 'profil'
+  initialSubTab = 'profil',
+  isLoading = false
 }) => {
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen bg-[#0B0C0E] text-slate-100 space-y-6 pb-12">
+        {/* Banner Skeleton */}
+        <div className="relative w-full h-48 sm:h-64 md:h-72 bg-[#14171D] animate-pulse border-b border-[#232833]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative h-full flex items-end pb-4 sm:pb-6">
+            <div className="flex items-end gap-4 sm:gap-6">
+              <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 rounded-full bg-slate-800 border-4 border-[#0B0C0E] animate-pulse shrink-0" />
+              <div className="space-y-2 mb-2">
+                <div className="h-6 sm:h-8 w-40 sm:w-56 bg-slate-800 rounded-lg animate-pulse" />
+                <div className="h-4 w-28 bg-slate-800/60 rounded-md animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+          {/* Stats Bar Skeleton */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-20 bg-[#14171D] border border-[#232833] rounded-2xl p-4 animate-pulse" />
+            ))}
+          </div>
+
+          {/* Cards Grid Skeleton */}
+          <div className="space-y-3">
+            <div className="h-6 w-48 bg-slate-800 rounded animate-pulse" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => (
+                <div key={i} className="aspect-[2/3] bg-[#14171D] border border-[#232833] rounded-xl animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const isOwnProfile = Boolean(
     (currentUserId && user.id === currentUserId) ||
     (currentUserProfile && user.username === currentUserProfile.username) ||

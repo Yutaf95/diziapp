@@ -50,8 +50,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     let isMounted = true;
 
     async function fetchLiveSchedule() {
+      const tvWatching = watchingList.filter(
+        item => item.media_type === 'tv' &&
+        (item.status === 'watching' || item.status === 'plan_to_watch')
+      );
+
+      if (tvWatching.length === 0) {
+        setLiveEpisodes([]);
+        setLoadingLive(false);
+        return;
+      }
+
       setLoadingLive(true);
-      const tvWatching = watchingList.filter(item => item.media_type === 'tv' || item.status === 'watching');
       const todayStr = new Date().toISOString().split('T')[0];
       
       const fetchedList: UpcomingEpisode[] = [];

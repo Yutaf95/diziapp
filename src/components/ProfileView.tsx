@@ -106,6 +106,25 @@ const sanitizeUsername = (username?: string): string => {
   return 'kullanici';
 };
 
+const getCachedSocialProfiles = (): Record<string, Profile> => {
+  try {
+    const saved = localStorage.getItem('cine_social_profiles_cache');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return {};
+};
+
+const saveCachedSocialProfiles = (profiles: Profile[]) => {
+  try {
+    const existing = getCachedSocialProfiles();
+    profiles.forEach(p => {
+      if (p.id) existing[p.id] = p;
+      if (p.username && p.username !== 'kullanici') existing[p.username.toLowerCase()] = p;
+    });
+    localStorage.setItem('cine_social_profiles_cache', JSON.stringify(existing));
+  } catch (e) {}
+};
+
 export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
   watchList,
@@ -130,7 +149,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   if (isLoading) {
     return (
       <div className="w-full min-h-screen bg-[#0B0C0E] text-slate-100 space-y-6 pb-12">
-        {/* Banner Skeleton */}
         <div className="relative w-full h-48 sm:h-64 md:h-72 bg-[#14171D] animate-pulse border-b border-[#232833]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative h-full flex items-end pb-4 sm:pb-6">
             <div className="flex items-end gap-4 sm:gap-6">
@@ -142,17 +160,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Content Skeleton */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
-          {/* Stats Bar Skeleton */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-20 bg-[#14171D] border border-[#232833] rounded-2xl p-4 animate-pulse" />
             ))}
           </div>
-
-          {/* Cards Grid Skeleton */}
           <div className="space-y-3">
             <div className="h-6 w-48 bg-slate-800 rounded animate-pulse" />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
@@ -183,8 +196,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followerTab, setFollowerTab] = useState<'followers' | 'following'>('followers');
   const [genreTab, setGenreTab] = useState<'tv' | 'movie'>('tv');
+  const [isSocialLoading, setIsSocialLoading] = useState<boolean>(true);
 
-  // Edit profile form state
   const [formUsername, setFormUsername] = useState(user.username);
   const [formFullName, setFormFullName] = useState(user.full_name || '');
   const [formBio, setFormBio] = useState(user.bio || '');
@@ -240,7 +253,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Followers / Following Lists (Loaded live from Supabase with instant local fallback)
   const [followers, setFollowers] = useState<Profile[]>(() => {
     if (!isOwnProfile && isFollowing && currentUserProfile) {
       return [currentUserProfile];
@@ -250,13 +262,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const [following, setFollowing] = useState<Profile[]>(() => {
     if (isOwnProfile && followingUserIds && followingUserIds.length > 0) {
-      return followingUserIds.map(id => ({
-        id,
-        username: sanitizeUsername(id),
-        full_name: sanitizeDisplayName(id),
-        avatar_url: DEFAULT_AVATAR_URL,
-        bio: ''
-      }));
+      const cache = getCachedSocialProfiles();
+      return followingUserIds.map(id => {
+        const cached = cache[id] || cache[id.toLowerCase()];
+        if (cached) return cached;
+        return {
+          id,
+          username: sanitizeUsername(id),
+          full_name: sanitizeDisplayName(id),
+          avatar_url: DEFAULT_AVATAR_URL,
+          bio: ''
+        };
+      });
     }
     return [];
   });
@@ -265,7 +282,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     let isMounted = true;
 
     async function loadSocialConnections() {
-      if (!user?.id && !user?.username) return;
+      if (!user?.id && !user?.username) {
+        setIsSocialLoading(false);
+        return;
+      }
+      setIsSocialLoading(true);
 
       try {
         let fetchedFollowing: Profile[] = [];
@@ -274,7 +295,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         if (isSupabaseConfigured) {
           const userIds = Array.from(new Set([user.id, user.username].filter(Boolean)));
 
-          // PARALLEL QUERIES FOR MAX SPEED ACROSS BOTH ID AND USERNAME
           const [followRowsRes, followerRowsRes] = await Promise.all([
             supabase.from('follows').select('following_id').in('follower_id', userIds),
             supabase.from('follows').select('follower_id').in('following_id', userIds)
@@ -310,6 +330,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   bio: p.bio || ''
                 };
               }
+              const cache = getCachedSocialProfiles();
+              const cached = cache[rawId] || cache[rawId.toLowerCase()];
+              if (cached) return cached;
+
               return {
                 id: rawId,
                 username: sanitizeUsername(rawId),
@@ -325,7 +349,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           }
         }
 
-        // Merge local state (followingUserIds and isFollowing) to guarantee immediate UI reactivity
         if (isOwnProfile && followingUserIds && followingUserIds.length > 0) {
           for (const fId of followingUserIds) {
             if (!fetchedFollowing.some(p => p.id === fId || p.username === fId)) {
@@ -349,9 +372,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         if (isMounted) {
           setFollowing(fetchedFollowing);
           setFollowers(fetchedFollowers);
+          saveCachedSocialProfiles([...fetchedFollowing, ...fetchedFollowers]);
+          setIsSocialLoading(false);
         }
       } catch (err) {
         console.error('Error fetching social connections:', err);
+        if (isMounted) setIsSocialLoading(false);
       }
     }
 
@@ -359,7 +385,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return () => { isMounted = false; };
   }, [user?.id, user?.username, isOwnProfile, isFollowing, followingUserIds, currentUserProfile]);
 
-  // Helper to dynamically resolve title and poster from watchList if missing on review
   const getReviewMediaInfo = (rev: RatingReview) => {
     const watchItem = watchList.find(w => Number(w.media_id) === Number(rev.media_id));
     const title = rev.media_title || watchItem?.title || (rev.media_type === 'tv' ? 'Dizi' : 'Film');
@@ -1508,7 +1533,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             {/* Content List */}
             <div className="overflow-y-auto space-y-3 pr-1 flex-1 custom-scrollbar">
-              {(followerTab === 'following' ? following : followers).length === 0 ? (
+              {isSocialLoading && (followerTab === 'following' ? following : followers).some(p => p.username === 'kullanici' || p.full_name === 'Kullanıcı') ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#14181c] border border-[#2c3440] animate-pulse">
+                      <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-slate-800 shrink-0" />
+                        <div className="space-y-1.5 min-w-0">
+                          <div className="h-4 w-32 bg-slate-800 rounded-md" />
+                          <div className="h-3 w-20 bg-slate-800/60 rounded-md" />
+                        </div>
+                      </div>
+                      <div className="h-8 w-24 bg-slate-800/80 rounded-xl shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              ) : (followerTab === 'following' ? following : followers).length === 0 ? (
                 <div className="py-12 text-center space-y-2">
                   <Users className="w-10 h-10 text-slate-600 mx-auto" />
                   <p className="text-sm font-bold text-slate-300">

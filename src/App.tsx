@@ -14,16 +14,13 @@ import { EmptyState } from './components/EmptyState';
 import { MobileSidebarDrawer } from './components/MobileSidebarDrawer';
 import { RecommendationsSection } from './components/RecommendationsSection';
 
-import { lazyWithRetry } from './lib/lazyWithRetry';
-
-// Dynamic imports with lazyWithRetry for initial bundle optimization & deployment safety
-const MediaDetailModal = lazyWithRetry(() => import('./components/MediaDetailModal').then(m => ({ default: m.MediaDetailModal })));
-const CalendarView = lazyWithRetry(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
-const ActivityFeedView = lazyWithRetry(() => import('./components/ActivityFeedView').then(m => ({ default: m.ActivityFeedView })));
-const ProfileView = lazyWithRetry(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
-const CollectionsView = lazyWithRetry(() => import('./components/CollectionsView').then(m => ({ default: m.CollectionsView })));
-const MonthlyRecapModal = lazyWithRetry(() => import('./components/MonthlyRecapModal').then(m => ({ default: m.MonthlyRecapModal })));
-const SettingsModal = lazyWithRetry(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
+import { MediaDetailModal } from './components/MediaDetailModal';
+import { CalendarView } from './components/CalendarView';
+import { ActivityFeedView } from './components/ActivityFeedView';
+import { ProfileView } from './components/ProfileView';
+import { CollectionsView } from './components/CollectionsView';
+import { MonthlyRecapModal } from './components/MonthlyRecapModal';
+import { SettingsModal } from './components/SettingsModal';
 
 // Sleek loading fallback for React.Suspense
 const PageLoader = () => (
@@ -1907,26 +1904,15 @@ export default function App() {
   // Alias for watchlist grid (sorted, full)
   const filteredGridMedia = sortFranchiseAlphabetical(rawFilteredGridMedia);
 
-  if (authLoading || (session && isDataLoading)) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0B0D12] text-white">
-        <div className="relative flex items-center justify-center">
-          <div className="absolute w-16 h-16 rounded-full border-2 border-indigo-500/20 animate-ping" />
-          <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-        </div>
-        <p className="mt-6 text-sm font-semibold tracking-wider text-slate-400 uppercase animate-pulse">
-          Yükleniyor...
-        </p>
-      </div>
-    );
-  }
-
-  if (isSupabaseConfigured && !session) {
+  if (isSupabaseConfigured && !session && !authLoading) {
     return <AuthView onAuthSuccess={() => {}} />;
   }
 
   return (
     <div className="min-h-screen bg-[#0B0C0E] text-slate-100 flex flex-col font-sans selection:bg-[#E63946] selection:text-white overflow-x-hidden max-w-full">
+      {(authLoading || isDataLoading) && (
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-amber-500 to-indigo-500 animate-pulse z-50" />
+      )}
       
       {/* 1. Header Component */}
       <Header

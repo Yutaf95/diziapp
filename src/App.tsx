@@ -52,11 +52,10 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState<boolean>(isSupabaseConfigured);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
 
-  // Global unhandled promise rejection catcher
+  // Global unhandled promise rejection logging
   useEffect(() => {
     const handler = (event: PromiseRejectionEvent) => {
       console.error('Unhandled promise rejection:', event.reason);
-      event.preventDefault(); // Prevent crash
     };
     window.addEventListener('unhandledrejection', handler);
     return () => window.removeEventListener('unhandledrejection', handler);

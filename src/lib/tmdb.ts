@@ -3,7 +3,7 @@ import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, MediaType } from '../types';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
-let tmdbApiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_TMDB_API_KEY) || (typeof process !== 'undefined' && process.env?.TMDB_API_KEY) || '62346a06c8b987069ad26a3fec8054a3';
+let tmdbApiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_TMDB_API_KEY) || (typeof process !== 'undefined' && process.env?.TMDB_API_KEY) || '';
 
 export const setTmdbApiKey = (key: string) => {
   tmdbApiKey = key;

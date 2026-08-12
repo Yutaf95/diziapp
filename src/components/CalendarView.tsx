@@ -39,7 +39,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timeline'>('calendar');
-  const [filterWatchingOnly, setFilterWatchingOnly] = useState(true);
   const [selectedDayEpisodes, setSelectedDayEpisodes] = useState<UpcomingEpisode[] | null>(null);
 
   const [liveEpisodes, setLiveEpisodes] = useState<UpcomingEpisode[]>([]);
@@ -201,10 +200,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     // Filter out past air dates (e.g. 2012, 2021, 2024 - only keep future or today air dates)
     if (ep.airDate && ep.airDate < todayStr) return false;
 
-    if (!filterWatchingOnly) return true;
-    if (watchingList.length === 0) return true;
-
-    const watchingIds = new Set(watchingList.map(w => w.media_id));
+    const watchingIds = new Set(
+      watchingList
+        .filter(w => w.media_type === 'tv' && (w.status === 'watching' || w.status === 'plan_to_watch'))
+        .map(w => w.media_id)
+    );
     return watchingIds.has(ep.showId);
   });
 
@@ -278,25 +278,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Takip ettiğiniz ve popüler dizilerin yeni bölüm ile sezon prömiyer tarihleri
+                İzlediğiniz ve izleyeceğiniz dizilerin yeni bölüm ile sezon prömiyer tarihleri
               </p>
             </div>
           </div>
 
-          {/* View Mode Toggle & Filter */}
+          {/* View Mode Toggle */}
           <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
-            <button
-              onClick={() => setFilterWatchingOnly(!filterWatchingOnly)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
-                filterWatchingOnly
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                  : 'bg-[#0B0C0E] text-slate-300 border-[#2B313E] hover:text-white'
-              }`}
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>{filterWatchingOnly ? 'Sadece İzlediklerim' : 'Tüm Diziler'}</span>
-            </button>
-
             <div className="bg-[#0B0C0E] border border-[#2B313E] p-1 rounded-xl flex items-center gap-1">
               <button
                 onClick={() => setViewMode('calendar')}

@@ -90,6 +90,22 @@ const DEFAULT_MOVIE_GENRE_DISTRIBUTION = [
   { genre: 'Korku & Gerilim', percent: 25, color: 'bg-rose-500' }
 ];
 
+const isUUIDString = (str?: string): boolean => {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+};
+
+const sanitizeDisplayName = (name?: string, fallbackUsername?: string): string => {
+  if (name && !isUUIDString(name) && name.trim() !== '') return name;
+  if (fallbackUsername && !isUUIDString(fallbackUsername) && fallbackUsername.trim() !== '') return fallbackUsername;
+  return 'Kullanıcı';
+};
+
+const sanitizeUsername = (username?: string): string => {
+  if (username && !isUUIDString(username) && username.trim() !== '') return username;
+  return 'kullanici';
+};
+
 export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
   watchList,
@@ -236,8 +252,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     if (isOwnProfile && followingUserIds && followingUserIds.length > 0) {
       return followingUserIds.map(id => ({
         id,
-        username: id,
-        full_name: id,
+        username: sanitizeUsername(id),
+        full_name: sanitizeDisplayName(id),
         avatar_url: DEFAULT_AVATAR_URL,
         bio: ''
       }));
@@ -269,34 +285,43 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           const targetFollowingIds = Array.from(new Set(followRows.map((r: any) => r.following_id)));
           const targetFollowerIds = Array.from(new Set(followerRows.map((r: any) => r.follower_id)));
+          const allTargetIds = Array.from(new Set([...targetFollowingIds, ...targetFollowerIds, ...(followingUserIds || [])]));
 
-          const [pListFollowingRes, pListFollowerRes] = await Promise.all([
-            targetFollowingIds.length > 0
-              ? supabase.from('profiles').select('id, username, full_name, avatar_url, bio').in('id', targetFollowingIds)
-              : Promise.resolve({ data: [] }),
-            targetFollowerIds.length > 0
-              ? supabase.from('profiles').select('id, username, full_name, avatar_url, bio').in('id', targetFollowerIds)
-              : Promise.resolve({ data: [] })
-          ]);
+          if (allTargetIds.length > 0) {
+            const [pByIdRes, pByUsernameRes] = await Promise.all([
+              supabase.from('profiles').select('id, username, full_name, avatar_url, bio').in('id', allTargetIds),
+              supabase.from('profiles').select('id, username, full_name, avatar_url, bio').in('username', allTargetIds)
+            ]);
 
-          if (pListFollowingRes.data) {
-            fetchedFollowing = pListFollowingRes.data.map((p: any) => ({
-              id: p.id,
-              username: p.username,
-              full_name: p.full_name || p.username,
-              avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
-              bio: p.bio || ''
-            }));
-          }
+            const profileMap = new Map<string, any>();
+            (pByIdRes.data || []).concat(pByUsernameRes.data || []).forEach((p: any) => {
+              if (p.id) profileMap.set(p.id, p);
+              if (p.username) profileMap.set(p.username.toLowerCase(), p);
+            });
 
-          if (pListFollowerRes.data) {
-            fetchedFollowers = pListFollowerRes.data.map((p: any) => ({
-              id: p.id,
-              username: p.username,
-              full_name: p.full_name || p.username,
-              avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
-              bio: p.bio || ''
-            }));
+            const mapRawProfile = (rawId: string): Profile => {
+              const p = profileMap.get(rawId) || profileMap.get(rawId.toLowerCase());
+              if (p) {
+                return {
+                  id: p.id || rawId,
+                  username: sanitizeUsername(p.username || rawId),
+                  full_name: sanitizeDisplayName(p.full_name || p.username, rawId),
+                  avatar_url: (!p.avatar_url || p.avatar_url.includes('photo-1535713875002-d1d0cf377fde')) ? DEFAULT_AVATAR_URL : p.avatar_url,
+                  bio: p.bio || ''
+                };
+              }
+              return {
+                id: rawId,
+                username: sanitizeUsername(rawId),
+                full_name: sanitizeDisplayName(rawId),
+                avatar_url: DEFAULT_AVATAR_URL,
+                bio: ''
+              };
+            };
+
+            const followingTargetList = Array.from(new Set([...targetFollowingIds, ...(followingUserIds || [])]));
+            fetchedFollowing = followingTargetList.map(mapRawProfile);
+            fetchedFollowers = targetFollowerIds.map(mapRawProfile);
           }
         }
 
@@ -306,8 +331,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             if (!fetchedFollowing.some(p => p.id === fId || p.username === fId)) {
               fetchedFollowing.push({
                 id: fId,
-                username: fId,
-                full_name: fId,
+                username: sanitizeUsername(fId),
+                full_name: sanitizeDisplayName(fId),
                 avatar_url: DEFAULT_AVATAR_URL,
                 bio: ''
               });
@@ -331,6 +356,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
 
     loadSocialConnections();
+    return () => { isMounted = false; };
   }, [user?.id, user?.username, isOwnProfile, isFollowing, followingUserIds, currentUserProfile]);
 
   // Helper to dynamically resolve title and poster from watchList if missing on review
@@ -1508,10 +1534,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <UserAvatar user={person} size="lg" className="shrink-0 ring-2 ring-white/10" />
                       <div className="min-w-0 space-y-0.5">
                         <div className="text-sm sm:text-base font-extrabold text-white group-hover:text-[#40bcf4] transition truncate">
-                          {person.full_name || person.username}
+                          {sanitizeDisplayName(person.full_name, person.username)}
                         </div>
                         <div className="text-xs text-[#9ab] font-medium font-mono truncate">
-                          @{person.username}
+                          @{sanitizeUsername(person.username)}
                         </div>
                         {person.bio && (
                           <p className="text-xs text-slate-400 truncate max-w-xs font-sans pt-0.5">

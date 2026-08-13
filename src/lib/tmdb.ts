@@ -3,7 +3,9 @@ import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, MediaType } from '../types';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
-let tmdbApiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_TMDB_API_KEY) || (typeof process !== 'undefined' && process.env?.TMDB_API_KEY) || '';
+const DEFAULT_TMDB_KEY = '62346a06c8b987069ad26a3fec8054a3';
+
+let tmdbApiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_TMDB_API_KEY) || (typeof process !== 'undefined' && process.env?.TMDB_API_KEY) || DEFAULT_TMDB_KEY;
 
 export const setTmdbApiKey = (key: string) => {
   tmdbApiKey = key;
@@ -38,8 +40,8 @@ const MOCK_TRENDING_SHOWS: TMDBMedia[] = [
     name: 'Severance',
     title: 'Severance',
     overview: 'Mark, iş ve özel hayat anılarını cerrahi müdahaleyle birbirinden ayıran Lumon Industries şirketinde çalışan bir takıma liderlik etmektedir.',
-    poster_path: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-    backdrop_path: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1200&q=80',
+    poster_path: '/7vUQ2oLpY9Jc0Zk29E572f4x53Y.jpg',
+    backdrop_path: '/u6k5t4N78zU2Qk29E572f4x53Y.jpg',
     media_type: 'tv',
     first_air_date: '2022-02-18',
     vote_average: 8.7,
@@ -56,8 +58,8 @@ const MOCK_TRENDING_SHOWS: TMDBMedia[] = [
     name: 'House of the Dragon',
     title: 'House of the Dragon',
     overview: 'Game of Thrones olaylarından 200 yıl önce geçen dizi, Targaryen Hanedanı\'nın altın çağını ve Ejderhaların Dansı olarak bilinen iç savaşı konu alıyor.',
-    poster_path: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
-    backdrop_path: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1200&q=80',
+    poster_path: '/1E5baAaEse26fej7uHcjvJPteGv.jpg',
+    backdrop_path: '/etj8E2o0u2XF29E572f4x53Y.jpg',
     media_type: 'tv',
     first_air_date: '2022-08-21',
     vote_average: 8.4,
@@ -73,8 +75,8 @@ const MOCK_TRENDING_SHOWS: TMDBMedia[] = [
     name: 'The Bear',
     title: 'The Bear',
     overview: 'Fine-dining dünyasından genç bir şef olan Carmen "Carmy" Berzatto, aile trajedisinden sonra aile restoranını işletmek üzere Chicago\'ya geri döner.',
-    poster_path: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
-    backdrop_path: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+    poster_path: '/21uq1JvF10PZ57f0J7u0jH543.jpg',
+    backdrop_path: '/m76A3s0J7u0jH543.jpg',
     media_type: 'tv',
     first_air_date: '2022-06-23',
     vote_average: 8.6,
@@ -90,8 +92,8 @@ const MOCK_TRENDING_SHOWS: TMDBMedia[] = [
     name: 'Breaking Bad',
     title: 'Breaking Bad',
     overview: 'Kanser olduğunu öğrenen bir kimya öğretmeni, ailesinin geleceğini güvence altına almak için eski bir öğrencisiyle metamfetamin üretip satmaya karar verir.',
-    poster_path: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80',
-    backdrop_path: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
+    poster_path: '/zt2gD52j36KzD3b4XyM2fX1Yy2z.jpg',
+    backdrop_path: '/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg',
     media_type: 'tv',
     first_air_date: '2008-01-20',
     vote_average: 9.3,
@@ -107,8 +109,8 @@ const MOCK_TRENDING_SHOWS: TMDBMedia[] = [
     title: 'Dune: Part Two',
     name: 'Dune: Part Two',
     overview: 'Paul Atreides, ailesini yok eden komplo kurucularından intikam almak için Chani ve Fremenler ile birleşir.',
-    poster_path: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80',
-    backdrop_path: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1200&q=80',
+    poster_path: '/1pdfLvkbY9ohJlCjmjDCZcc9y0f.jpg',
+    backdrop_path: '/xOMo8ScEzJWy1x7ZLyf7UP1M.jpg',
     media_type: 'movie',
     release_date: '2024-02-27',
     vote_average: 8.5,
@@ -121,8 +123,8 @@ const MOCK_TRENDING_SHOWS: TMDBMedia[] = [
     title: 'Oppenheimer',
     name: 'Oppenheimer',
     overview: 'Amerikalı bilim insanı J. Robert Oppenheimer ve atom bombasının geliştirilmesindeki rolünü anlatan biyografik drama.',
-    poster_path: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=600&q=80',
-    backdrop_path: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
+    poster_path: '/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+    backdrop_path: '/fm6K2Y1x7ZLyf7UP1M.jpg',
     media_type: 'movie',
     release_date: '2023-07-19',
     vote_average: 8.1,

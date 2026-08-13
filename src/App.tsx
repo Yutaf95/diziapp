@@ -199,9 +199,10 @@ export default function App() {
           }
         }
 
-        // 2. Watch Status List
-        if (wlRes.status === 'fulfilled' && wlRes.value?.data) {
-          const supabaseItems: WatchStatus[] = wlRes.value.data.map((w: any) => ({
+        // 2. Watch Status List - Smart Merge & Auto-Backup to Supabase
+        if (wlRes.status === 'fulfilled') {
+          const fetchedWl = wlRes.value?.data || [];
+          const supabaseItems: WatchStatus[] = fetchedWl.map((w: any) => ({
             media_id: w.media_id,
             media_type: w.media_type as MediaType,
             status: w.status as WatchStatusType,
@@ -213,24 +214,70 @@ export default function App() {
             updated_at: w.updated_at
           }));
 
-          setWatchList(supabaseItems);
+          // Merge local items with Supabase items (no data loss)
+          setWatchList(prev => {
+            const mergedWlMap = new Map<string, WatchStatus>();
+            prev.forEach(item => mergedWlMap.set(`${item.media_type}_${item.media_id}`, item));
+            supabaseItems.forEach(item => mergedWlMap.set(`${item.media_type}_${item.media_id}`, item));
+            const mergedList = Array.from(mergedWlMap.values());
+
+            // Auto-sync missing local items to Supabase
+            const missingToUpsert = prev.filter(item => !fetchedWl.some((w: any) => w.media_id === item.media_id && w.media_type === item.media_type));
+            if (missingToUpsert.length > 0) {
+              const rows = missingToUpsert.map(item => ({
+                user_id: userId,
+                media_id: item.media_id,
+                media_type: item.media_type,
+                status: item.status,
+                title: item.title,
+                poster_path: item.poster_path,
+                vote_average: item.vote_average
+              }));
+              supabase.from('watch_status').upsert(rows).then(() => {}).catch(() => {});
+            }
+
+            return mergedList;
+          });
         }
 
-        // 3. Episode Progress
-        if (epRes.status === 'fulfilled' && epRes.value?.data) {
-          const epItems: EpisodeProgress[] = epRes.value.data.map((ep: any) => ({
+        // 3. Episode Progress - Smart Merge & Auto-Backup
+        if (epRes.status === 'fulfilled') {
+          const fetchedEp = epRes.value?.data || [];
+          const epItems: EpisodeProgress[] = fetchedEp.map((ep: any) => ({
             user_id: ep.user_id,
             show_id: ep.show_id,
             season_number: ep.season_number,
             episode_number: ep.episode_number,
             is_watched: ep.is_watched
           }));
-          setEpisodeProgress(epItems);
+
+          setEpisodeProgress(prev => {
+            const epMap = new Map<string, EpisodeProgress>();
+            prev.forEach(item => epMap.set(`${item.show_id}_${item.season_number}_${item.episode_number}`, item));
+            epItems.forEach(item => epMap.set(`${item.show_id}_${item.season_number}_${item.episode_number}`, item));
+            const mergedEp = Array.from(epMap.values());
+
+            // Auto-sync missing local episode progress to Supabase
+            const missingEp = prev.filter(item => item.is_watched && !fetchedEp.some((ep: any) => ep.show_id === item.show_id && ep.season_number === item.season_number && ep.episode_number === item.episode_number));
+            if (missingEp.length > 0) {
+              const rows = missingEp.map(item => ({
+                user_id: userId,
+                show_id: item.show_id,
+                season_number: item.season_number,
+                episode_number: item.episode_number,
+                is_watched: true
+              }));
+              supabase.from('episode_progress').upsert(rows).then(() => {}).catch(() => {});
+            }
+
+            return mergedEp;
+          });
         }
 
-        // 4. Ratings & Reviews
-        if (revRes.status === 'fulfilled' && revRes.value?.data) {
-          const fetchedReviews: RatingReview[] = revRes.value.data.map((r: any) => ({
+        // 4. Ratings & Reviews - Smart Merge
+        if (revRes.status === 'fulfilled') {
+          const fetchedRev = revRes.value?.data || [];
+          const fetchedReviews: RatingReview[] = fetchedRev.map((r: any) => ({
             id: r.id,
             user_id: r.user_id,
             username: r.profiles?.username || 'kullanıcı',
@@ -249,10 +296,16 @@ export default function App() {
             likes_count: r.likes_count || r.likes || 0,
             comments_count: r.comments_count || 0
           }));
-          setReviews(fetchedReviews);
+
+          setReviews(prev => {
+            const revMap = new Map<string, RatingReview>();
+            prev.forEach(r => revMap.set(String(r.id || `${r.media_type}_${r.media_id}`), r));
+            fetchedReviews.forEach(r => revMap.set(String(r.id || `${r.media_type}_${r.media_id}`), r));
+            return Array.from(revMap.values());
+          });
         }
 
-        // 5. Activity Feed (Fast Instant Mapping)
+        // 5. Activity Feed
         if (actRes.status === 'fulfilled' && actRes.value?.data) {
           const activities: ActivityFeedItem[] = actRes.value.data.map((a: any) => ({
             id: a.id,
@@ -276,19 +329,33 @@ export default function App() {
             details: a.details || {},
             created_at: a.created_at
           }));
-          setActivityFeed(activities);
+
+          setActivityFeed(prev => {
+            const actMap = new Map<string, ActivityFeedItem>();
+            prev.forEach(a => actMap.set(String(a.id), a));
+            activities.forEach(a => actMap.set(String(a.id), a));
+            return Array.from(actMap.values());
+          });
         }
 
-        // 6. Favorites
-        if (favRes.status === 'fulfilled' && favRes.value?.data) {
-          setFavorites(favRes.value.data.map((f: any) => ({
+        // 6. Favorites - Smart Merge
+        if (favRes.status === 'fulfilled') {
+          const fetchedFav = favRes.value?.data || [];
+          const favItems: WatchStatus[] = fetchedFav.map((f: any) => ({
             media_id: f.media_id,
             media_type: f.media_type as MediaType,
             status: 'watched',
             title: f.title || 'Yapım',
             poster_path: f.poster_path || '',
             vote_average: f.vote_average || 0
-          })));
+          }));
+
+          setFavorites(prev => {
+            const favMap = new Map<string, WatchStatus>();
+            prev.forEach(f => favMap.set(`${f.media_type}_${f.media_id}`, f));
+            favItems.forEach(f => favMap.set(`${f.media_type}_${f.media_id}`, f));
+            return Array.from(favMap.values());
+          });
         }
 
         // 7. Custom Collections
@@ -311,9 +378,11 @@ export default function App() {
           })));
         }
 
-        // 8. Following
-        if (followRes.status === 'fulfilled' && followRes.value?.data) {
-          setFollowingUserIds(followRes.value.data.map((f: any) => f.following_id));
+        // 8. Following - Smart Merge
+        if (followRes.status === 'fulfilled') {
+          const fetchedFollow = followRes.value?.data || [];
+          const followIds = fetchedFollow.map((f: any) => f.following_id);
+          setFollowingUserIds(prev => Array.from(new Set([...prev, ...followIds])));
         }
 
       } catch (err) {

@@ -254,7 +254,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   }, []);
 
   const [followers, setFollowers] = useState<Profile[]>(() => {
-    if (!isOwnProfile && isFollowing && currentUserProfile) {
+    if (!isOwnProfile && isFollowing && currentUserProfile && currentUserProfile.id !== user.id && currentUserProfile.username !== user.username) {
       return [currentUserProfile];
     }
     return [];
@@ -263,17 +263,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [following, setFollowing] = useState<Profile[]>(() => {
     if (isOwnProfile && followingUserIds && followingUserIds.length > 0) {
       const cache = getCachedSocialProfiles();
-      return followingUserIds.map(id => {
-        const cached = cache[id] || cache[id.toLowerCase()];
-        if (cached) return cached;
-        return {
-          id,
-          username: sanitizeUsername(id),
-          full_name: sanitizeDisplayName(id),
-          avatar_url: DEFAULT_AVATAR_URL,
-          bio: ''
-        };
-      });
+      return followingUserIds
+        .filter(id => id !== user.id && id !== user.username)
+        .map(id => {
+          const cached = cache[id] || cache[id.toLowerCase()];
+          if (cached) return cached;
+          return {
+            id,
+            username: sanitizeUsername(id),
+            full_name: sanitizeDisplayName(id),
+            avatar_url: DEFAULT_AVATAR_URL,
+            bio: ''
+          };
+        });
     }
     return [];
   });
@@ -295,6 +297,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         if (isSupabaseConfigured) {
           const userIds = Array.from(new Set([user.id, user.username].filter(Boolean)));
 
+          // Delete any legacy invalid self-follow record in Supabase
+          if (user.id) {
+            supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', user.id).then(() => {}).catch(() => {});
+          }
+
           const [followRowsRes, followerRowsRes] = await Promise.all([
             supabase.from('follows').select('following_id').in('follower_id', userIds),
             supabase.from('follows').select('follower_id').in('following_id', userIds)
@@ -303,9 +310,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           const followRows = followRowsRes.data || [];
           const followerRows = followerRowsRes.data || [];
 
-          const targetFollowingIds = Array.from(new Set(followRows.map((r: any) => r.following_id)));
-          const targetFollowerIds = Array.from(new Set(followerRows.map((r: any) => r.follower_id)));
-          const allTargetIds = Array.from(new Set([...targetFollowingIds, ...targetFollowerIds, ...(followingUserIds || [])]));
+          // Exclude self-references in follow rows
+          const targetFollowingIds = Array.from(new Set(
+            followRows.map((r: any) => r.following_id).filter(id => id !== user.id && id !== user.username)
+          ));
+          const targetFollowerIds = Array.from(new Set(
+            followerRows.map((r: any) => r.follower_id).filter(id => id !== user.id && id !== user.username)
+          ));
+
+          const ownFollows = isOwnProfile ? (followingUserIds || []).filter(id => id !== user.id && id !== user.username) : [];
+          const allTargetIds = Array.from(new Set([...targetFollowingIds, ...targetFollowerIds, ...ownFollows]));
 
           if (allTargetIds.length > 0) {
             const [pByIdRes, pByUsernameRes] = await Promise.all([
@@ -343,7 +357,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               };
             };
 
-            const followingTargetList = Array.from(new Set([...targetFollowingIds, ...(followingUserIds || [])]));
+            const followingTargetList = Array.from(new Set([...targetFollowingIds, ...ownFollows]));
             fetchedFollowing = followingTargetList.map(mapRawProfile);
             fetchedFollowers = targetFollowerIds.map(mapRawProfile);
           }
@@ -351,7 +365,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         if (isOwnProfile && followingUserIds && followingUserIds.length > 0) {
           for (const fId of followingUserIds) {
-            if (!fetchedFollowing.some(p => p.id === fId || p.username === fId)) {
+            if (fId !== user.id && fId !== user.username && !fetchedFollowing.some(p => p.id === fId || p.username === fId)) {
               fetchedFollowing.push({
                 id: fId,
                 username: sanitizeUsername(fId),
@@ -363,16 +377,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           }
         }
 
-        if (!isOwnProfile && isFollowing && currentUserProfile) {
+        if (!isOwnProfile && isFollowing && currentUserProfile && currentUserProfile.id !== user.id && currentUserProfile.username !== user.username) {
           if (!fetchedFollowers.some(p => p.id === currentUserProfile.id || p.username === currentUserProfile.username)) {
             fetchedFollowers.push(currentUserProfile);
           }
         }
 
+        const cleanFollowing = fetchedFollowing.filter(p => p.id !== user.id && p.username !== user.username);
+        const cleanFollowers = fetchedFollowers.filter(p => p.id !== user.id && p.username !== user.username);
+
         if (isMounted) {
-          setFollowing(fetchedFollowing);
-          setFollowers(fetchedFollowers);
-          saveCachedSocialProfiles([...fetchedFollowing, ...fetchedFollowers]);
+          setFollowing(cleanFollowing);
+          setFollowers(cleanFollowers);
+          saveCachedSocialProfiles([...cleanFollowing, ...cleanFollowers]);
           setIsSocialLoading(false);
         }
       } catch (err) {

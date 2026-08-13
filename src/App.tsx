@@ -806,6 +806,9 @@ export default function App() {
   };
 
   const handleToggleFollowUser = async (userId: string) => {
+    if (!userId || userId === currentUser?.id || userId === currentUser?.username) {
+      return; // Cannot follow oneself
+    }
     const isFollowing = followingUserIds.includes(userId);
     setFollowingUserIds(prev => 
       prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]

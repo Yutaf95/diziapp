@@ -128,8 +128,8 @@ export default function App() {
           supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
           supabase.from('watch_status').select('*').eq('user_id', userId),
           supabase.from('episode_progress').select('*').eq('user_id', userId),
-          supabase.from('ratings_reviews').select('*, profiles(username, full_name, avatar_url)').order('created_at', { ascending: false }).limit(30),
-          supabase.from('activity_feed').select('*, profiles(username, full_name, avatar_url)').order('created_at', { ascending: false }).limit(20),
+          supabase.from('ratings_reviews').select('*').order('created_at', { ascending: false }).limit(30),
+          supabase.from('activity_feed').select('*').order('created_at', { ascending: false }).limit(25),
           supabase.from('favorites').select('*').eq('user_id', userId),
           supabase.from('custom_collections').select('*, collection_items(*)').eq('user_id', userId),
           supabase.from('follows').select('following_id').eq('follower_id', userId)
@@ -274,28 +274,59 @@ export default function App() {
           });
         }
 
-        // 4. Ratings & Reviews - Smart Merge
+        // 4. Collect user IDs for fast 1-shot profiles batch lookup (eliminates 15s PostgREST join)
+        const rawRevData = revRes.status === 'fulfilled' ? (revRes.value?.data || []) : [];
+        const rawActData = actRes.status === 'fulfilled' ? (actRes.value?.data || []) : [];
+
+        const userIdsToFetch = new Set<string>();
+        if (currentUser?.id) userIdsToFetch.add(currentUser.id);
+        rawRevData.forEach((r: any) => r.user_id && userIdsToFetch.add(r.user_id));
+        rawActData.forEach((a: any) => a.user_id && userIdsToFetch.add(a.user_id));
+
+        const feedProfileMap = new Map<string, any>();
+        if (currentUser?.id) {
+          feedProfileMap.set(currentUser.id, currentUser);
+        }
+
+        if (userIdsToFetch.size > 0 && isSupabaseConfigured) {
+          try {
+            const { data: profList } = await supabase
+              .from('profiles')
+              .select('id, username, full_name, avatar_url')
+              .in('id', Array.from(userIdsToFetch));
+
+            if (profList) {
+              profList.forEach(p => feedProfileMap.set(p.id, p));
+            }
+          } catch (e) {
+            console.warn('Batch profile lookup warning:', e);
+          }
+        }
+
+        // 5. Ratings & Reviews - Smart Merge with Fast Profiles
         if (revRes.status === 'fulfilled') {
-          const fetchedRev = revRes.value?.data || [];
-          const fetchedReviews: RatingReview[] = fetchedRev.map((r: any) => ({
-            id: r.id,
-            user_id: r.user_id,
-            username: r.profiles?.username || 'kullanıcı',
-            user_fullname: r.profiles?.full_name || 'Kullanıcı',
-            user_avatar: r.profiles?.avatar_url || DEFAULT_AVATAR_URL,
-            media_id: r.media_id,
-            media_type: r.media_type as MediaType,
-            rating: r.rating,
-            review_text: r.review_text,
-            contains_spoiler: r.contains_spoiler,
-            created_at: r.created_at,
-            media_title: r.media_title || r.title,
-            media_poster: r.media_poster || r.poster_path,
-            is_pinned: r.is_pinned || false,
-            likes: r.likes || 0,
-            likes_count: r.likes_count || r.likes || 0,
-            comments_count: r.comments_count || 0
-          }));
+          const fetchedReviews: RatingReview[] = rawRevData.map((r: any) => {
+            const p = feedProfileMap.get(r.user_id) || {};
+            return {
+              id: r.id,
+              user_id: r.user_id,
+              username: p.username || 'kullanıcı',
+              user_fullname: p.full_name || 'Kullanıcı',
+              user_avatar: p.avatar_url || DEFAULT_AVATAR_URL,
+              media_id: r.media_id,
+              media_type: r.media_type as MediaType,
+              rating: r.rating,
+              review_text: r.review_text,
+              contains_spoiler: r.contains_spoiler,
+              created_at: r.created_at,
+              media_title: r.media_title || r.title,
+              media_poster: r.media_poster || r.poster_path,
+              is_pinned: r.is_pinned || false,
+              likes: r.likes || 0,
+              likes_count: r.likes_count || r.likes || 0,
+              comments_count: r.comments_count || 0
+            };
+          });
 
           setReviews(prev => {
             const revMap = new Map<string, RatingReview>();
@@ -305,30 +336,33 @@ export default function App() {
           });
         }
 
-        // 5. Activity Feed
-        if (actRes.status === 'fulfilled' && actRes.value?.data) {
-          const activities: ActivityFeedItem[] = actRes.value.data.map((a: any) => ({
-            id: a.id,
-            user_id: a.user_id,
-            username: a.profiles?.username || 'kullanıcı',
-            user_fullname: a.profiles?.full_name || 'Kullanıcı',
-            user_avatar: a.profiles?.avatar_url || DEFAULT_AVATAR_URL,
-            profile: {
-              id: a.user_id,
-              username: a.profiles?.username || 'kullanıcı',
-              full_name: a.profiles?.full_name || 'Kullanıcı',
-              avatar_url: a.profiles?.avatar_url || DEFAULT_AVATAR_URL
-            },
-            action_type: a.action_type as any,
-            media_id: a.media_id,
-            media_type: a.media_type as MediaType,
-            media_title: a.details?.media_title || a.media_title || 'Yapım',
-            poster_path: a.details?.media_poster || a.poster_path || '',
-            detail_text: a.details?.status || '',
-            contains_spoiler: a.details?.contains_spoiler || false,
-            details: a.details || {},
-            created_at: a.created_at
-          }));
+        // 6. Activity Feed - Smart Merge with Fast Profiles
+        if (actRes.status === 'fulfilled') {
+          const activities: ActivityFeedItem[] = rawActData.map((a: any) => {
+            const p = feedProfileMap.get(a.user_id) || {};
+            return {
+              id: a.id,
+              user_id: a.user_id,
+              username: p.username || 'kullanıcı',
+              user_fullname: p.full_name || 'Kullanıcı',
+              user_avatar: p.avatar_url || DEFAULT_AVATAR_URL,
+              profile: {
+                id: a.user_id,
+                username: p.username || 'kullanıcı',
+                full_name: p.full_name || 'Kullanıcı',
+                avatar_url: p.avatar_url || DEFAULT_AVATAR_URL
+              },
+              action_type: a.action_type as any,
+              media_id: a.media_id,
+              media_type: a.media_type as MediaType,
+              media_title: a.details?.media_title || a.media_title || 'Yapım',
+              poster_path: a.details?.media_poster || a.poster_path || '',
+              detail_text: a.details?.status || '',
+              contains_spoiler: a.details?.contains_spoiler || false,
+              details: a.details || {},
+              created_at: a.created_at
+            };
+          });
 
           setActivityFeed(prev => {
             const actMap = new Map<string, ActivityFeedItem>();

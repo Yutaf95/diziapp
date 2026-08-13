@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Activity, Star, Eye, MessageSquare, ThumbsUp, Send, Sparkles, UserPlus } from 'lucide-react';
-import { ActivityFeedItem, Profile } from '../types';
+import { ActivityFeedItem, Profile, WatchStatus } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix } from '../utils/textUtils';
 
@@ -11,6 +11,7 @@ interface SocialFeedSidebarProps {
   onNavigateToProfile?: (username: string) => void;
   onAddActivity?: (content: string) => void;
   isLoading?: boolean;
+  watchList?: WatchStatus[];
 }
 
 export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
@@ -19,7 +20,8 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
   currentUser,
   onNavigateToProfile,
   onAddActivity,
-  isLoading
+  isLoading,
+  watchList = []
 }) => {
   const [likedActivities, setLikedActivities] = useState<Record<string, boolean>>({});
   const [quickPostText, setQuickPostText] = useState('');
@@ -122,7 +124,15 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
             const displayFullName = item.profile?.full_name || item.user_fullname || (currentUser && item.user_id === currentUser.id ? currentUser.full_name : 'Kullanıcı');
             const displayUsername = item.profile?.username || item.username || (currentUser && item.user_id === currentUser.id ? currentUser.username : 'kullanici');
             const displayAvatar = item.profile?.avatar_url || item.user_avatar || (currentUser && item.user_id === currentUser.id ? currentUser.avatar_url : '');
-            const mediaTitle = item.details?.media_title || item.media_title || 'Yapım';
+            
+            let resolvedTitle = item.details?.media_title || item.media_title;
+            if (!resolvedTitle || resolvedTitle === 'Dizi' || resolvedTitle === 'Yapım' || resolvedTitle === 'Film') {
+              const watchMatch = watchList?.find(w => Number(w.media_id) === Number(item.media_id));
+              if (watchMatch?.title && watchMatch.title !== 'Dizi' && watchMatch.title !== 'Yapım') {
+                resolvedTitle = watchMatch.title;
+              }
+            }
+            const mediaTitle = resolvedTitle || 'Dizi';
             const mediaPoster = item.details?.media_poster || item.poster_path;
             const isLiked = likedActivities[item.id];
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Eye, CheckCircle2, MessageSquare, AlertTriangle, UserPlus, UserCheck, Flame, Heart, Search, X, Users, ArrowRight, Loader2 } from 'lucide-react';
-import { ActivityFeedItem, Profile } from '../types';
+import { ActivityFeedItem, Profile, WatchStatus } from '../types';
 import { EmptyState } from './EmptyState';
 import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix } from '../utils/textUtils';
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
@@ -13,6 +13,7 @@ interface ActivityFeedViewProps {
   onNavigateToProfile?: (username: string) => void;
   followingUserIds?: string[];
   onToggleFollowUser?: (userId: string) => void;
+  watchList?: WatchStatus[];
 }
 
 export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
@@ -20,7 +21,8 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
   onSelectMediaById,
   onNavigateToProfile,
   followingUserIds = [],
-  onToggleFollowUser
+  onToggleFollowUser,
+  watchList = []
 }) => {
   const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, boolean>>({});
   const [likedActivities, setLikedActivities] = useState<Record<string, boolean>>({});
@@ -257,6 +259,16 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
           return validActivities.map((item) => {
           const profile = item.profile || { username: 'Kullanıcı', full_name: 'ttime Üyesi', avatar_url: '' };
           const details = item.details || {};
+
+          let resolvedTitle = details.media_title || item.media_title;
+          if (!resolvedTitle || resolvedTitle === 'Dizi' || resolvedTitle === 'Yapım' || resolvedTitle === 'Film') {
+            const watchMatch = watchList?.find(w => Number(w.media_id) === Number(item.media_id));
+            if (watchMatch?.title && watchMatch.title !== 'Dizi' && watchMatch.title !== 'Yapım') {
+              resolvedTitle = watchMatch.title;
+            }
+          }
+          details.media_title = resolvedTitle || details.media_title || 'Dizi';
+
           const isSpoiler = details.contains_spoiler;
           const isRevealed = revealedSpoilers[item.id];
           const isLiked = likedActivities[item.id];

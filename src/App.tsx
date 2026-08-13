@@ -1521,9 +1521,9 @@ export default function App() {
         return prev;
       });
 
-      const showItem = watchList.find(w => w.media_id === showId);
-      let resolvedShowTitle = showItem?.title || (selectedMedia?.id === showId ? (selectedMedia.name || selectedMedia.title) : undefined);
-      let resolvedShowPoster = showItem?.poster_path || (selectedMedia?.id === showId ? selectedMedia.poster_path : undefined);
+      const showItem = watchList.find(w => Number(w.media_id) === Number(showId));
+      let resolvedShowTitle = showItem?.title || (selectedMedia && Number(selectedMedia.id) === Number(showId) ? (selectedMedia.name || selectedMedia.title) : undefined);
+      let resolvedShowPoster = showItem?.poster_path || (selectedMedia && Number(selectedMedia.id) === Number(showId) ? selectedMedia.poster_path : undefined);
 
       if (!resolvedShowTitle || resolvedShowTitle === 'Dizi' || resolvedShowTitle === 'Yapım') {
         try {
@@ -2450,6 +2450,7 @@ export default function App() {
                     onNavigateToProfile={handleNavigateToProfile}
                     followingUserIds={followingUserIds}
                     onToggleFollowUser={handleToggleFollowUser}
+                    watchList={watchList}
                   />
                 </React.Suspense>
               ) : activeTab === 'collections' ? (
@@ -2762,6 +2763,7 @@ export default function App() {
                 onNavigateToProfile={handleNavigateToProfile}
                 onAddActivity={handlePostStatusUpdate}
                 isLoading={isDataLoading}
+                watchList={watchList}
               />
             </div>
 

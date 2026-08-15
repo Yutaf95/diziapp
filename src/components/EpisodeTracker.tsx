@@ -54,18 +54,25 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     return Math.max(latestWatchedTime, watchListTime);
   };
 
-  // Check if specific episode is watched
-  const isEpWatched = (showId: number, seasonNum: number, epNum: number): boolean => {
+  // Check if specific episode is watched (with type-safe Number comparison)
+  const isEpWatched = (showId: number | string, seasonNum: number | string, epNum: number | string): boolean => {
+    const sId = Number(showId);
+    const sNum = Number(seasonNum);
+    const eNum = Number(epNum);
     return episodeProgress.some(
-      ep => ep.show_id === showId && ep.season_number === seasonNum && ep.episode_number === epNum && ep.is_watched
+      ep => Number(ep.show_id) === sId &&
+            Number(ep.season_number) === sNum &&
+            Number(ep.episode_number) === eNum &&
+            ep.is_watched
     );
   };
 
-  // Helper to check if a show has any unwatched episode available in loaded seasons
+  // Helper to check if a show has any unwatched episode available in loaded main seasons (season > 0)
   const hasUnwatchedEpisodes = (showId: number): boolean => {
     const seasonsList = Object.keys(seasonsData)
       .filter(k => k.startsWith(`${showId}-`))
       .map(k => parseInt(k.split('-')[1], 10))
+      .filter(sNum => sNum > 0)
       .sort((a, b) => a - b);
 
     if (seasonsList.length === 0) return true;

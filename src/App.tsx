@@ -1529,7 +1529,10 @@ export default function App() {
       // Check if ALL episodes in all available seasons are marked as watched
       const isAllWatched = allEpisodes.every(ep =>
         progressToUse.some(
-          p => p.show_id === showId && p.season_number === ep.season_number && p.episode_number === ep.episode_number && p.is_watched
+          p => Number(p.show_id) === Number(showId) &&
+               Number(p.season_number) === Number(ep.season_number) &&
+               Number(p.episode_number) === Number(ep.episode_number) &&
+               p.is_watched
         )
       );
 

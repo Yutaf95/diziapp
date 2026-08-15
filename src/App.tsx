@@ -2147,53 +2147,12 @@ export default function App() {
     } catch (e) {}
   }, []);
 
-  // 1. Show sleek full-screen splash loader while checking initial Supabase auth state
-  if (isSupabaseConfigured && authLoading) {
-    return (
-      <div className="fixed inset-0 z-[9999] bg-[#0B0C0E] flex flex-col items-center justify-center p-4 selection:bg-[#E63946] selection:text-white">
-        <div className="relative flex items-center justify-center mb-5">
-          <div className="absolute w-20 h-20 rounded-2xl bg-[#E63946]/20 animate-ping" />
-          <div className="w-14 h-14 rounded-2xl bg-[#E63946] flex items-center justify-center text-white font-bold shadow-xl shadow-[#E63946]/40 relative z-10">
-            <Tv className="w-7 h-7 stroke-[2.5]" />
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-black tracking-widest text-slate-300 uppercase animate-pulse">
-            Yükleniyor
-          </span>
-          <Loader2 className="w-3.5 h-3.5 text-[#E63946] animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Show AuthView if user is not logged in or in password reset mode
-  if (isSupabaseConfigured && (!session || isPasswordResetMode)) {
+  if (isSupabaseConfigured && (!session || isPasswordResetMode) && !authLoading) {
     return (
       <AuthView
         onAuthSuccess={() => { setIsPasswordResetMode(false); }}
         initialMode={isPasswordResetMode ? 'update_password' : 'login'}
       />
-    );
-  }
-
-  // 3. Show sleek full-screen loader while user data tables are being fetched from Supabase
-  if (isSupabaseConfigured && isDataLoading) {
-    return (
-      <div className="fixed inset-0 z-[9999] bg-[#0B0C0E] flex flex-col items-center justify-center p-4 selection:bg-[#E63946] selection:text-white">
-        <div className="relative flex items-center justify-center mb-5">
-          <div className="absolute w-20 h-20 rounded-2xl bg-[#E63946]/20 animate-ping" />
-          <div className="w-14 h-14 rounded-2xl bg-[#E63946] flex items-center justify-center text-white font-bold shadow-xl shadow-[#E63946]/40 relative z-10">
-            <Tv className="w-7 h-7 stroke-[2.5]" />
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-black tracking-widest text-slate-300 uppercase animate-pulse">
-            Veriler Yükleniyor
-          </span>
-          <Loader2 className="w-3.5 h-3.5 text-[#E63946] animate-spin" />
-        </div>
-      </div>
     );
   }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, Play, Check, ChevronDown, ChevronUp, Sparkles, Tv, Clock, Star, CheckCircle2, X } from 'lucide-react';
+import { CheckSquare, Play, Check, ChevronDown, ChevronUp, Sparkles, Tv, Clock, Star, CheckCircle2, X, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { TMDBMedia, TMDBSeasonDetails, EpisodeProgress, WatchStatus } from '../types';
 import { getDetails, getSeasonDetails, getPosterUrl } from '../lib/tmdb';
 import { EmptyState } from './EmptyState';
@@ -39,6 +39,73 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     targetEpNum: number;
     missingItems: Array<{ season_number: number; episode_number: number }>;
   } | null>(null);
+
+  // Drag and Drop & Touch Reordering State
+  const [customOrder, setCustomOrder] = useState<number[]>(() => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('diziapp_tracker_order');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [touchDragIndex, setTouchDragIndex] = useState<number | null>(null);
+
+  const saveCustomOrder = (newOrder: number[]) => {
+    setCustomOrder(newOrder);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('diziapp_tracker_order', JSON.stringify(newOrder));
+      } catch (e) {}
+    }
+  };
+
+  const reorderItems = (fromIndex: number | null, toIndex: number | null) => {
+    if (fromIndex === null || toIndex === null || fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+    const currentIds = tvWatching.map(item => item.media_id);
+    if (fromIndex >= currentIds.length || toIndex >= currentIds.length) return;
+
+    const updatedIds = [...currentIds];
+    const [movedId] = updatedIds.splice(fromIndex, 1);
+    updatedIds.splice(toIndex, 0, movedId);
+
+    saveCustomOrder(updatedIds);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    setTouchDragIndex(index);
+    setDraggedIndex(index);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchDragIndex === null) return;
+    const touch = e.touches[0];
+    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cardEl = targetEl?.closest('[data-card-index]');
+    if (cardEl) {
+      const targetIdxStr = cardEl.getAttribute('data-card-index');
+      if (targetIdxStr !== null) {
+        const targetIdx = parseInt(targetIdxStr, 10);
+        if (!isNaN(targetIdx) && targetIdx !== dragOverIndex) {
+          setDragOverIndex(targetIdx);
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchDragIndex !== null && dragOverIndex !== null) {
+      reorderItems(touchDragIndex, dragOverIndex);
+    }
+    setTouchDragIndex(null);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   // Helper to compute show's latest interaction timestamp (from episodeProgress or watchList updated_at)
   const getShowLatestInteractionTime = (showId: number, itemUpdatedAt?: string): number => {
@@ -90,19 +157,29 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     return false;
   };
 
-  // Filter TV shows in watching status that have unwatched episodes, and sort by interaction timestamp
-  const tvWatching = watchingList
+  // Filter TV shows in watching status that have unwatched episodes, and sort by custom order or interaction timestamp
+  const tvWatchingUnsorted = watchingList
     .filter(item => item.media_type === 'tv')
     .filter(item => {
       if (loadingSeasons && Object.keys(seasonsData).length === 0) return true;
       return hasUnwatchedEpisodes(item.media_id);
-    })
-    .sort((a, b) => {
-      const timeA = getShowLatestInteractionTime(a.media_id, a.updated_at);
-      const timeB = getShowLatestInteractionTime(b.media_id, b.updated_at);
-      if (timeA !== timeB) return timeB - timeA;
-      return (a.title || '').localeCompare(b.title || '');
     });
+
+  const tvWatching = [...tvWatchingUnsorted].sort((a, b) => {
+    const indexA = customOrder.indexOf(a.media_id);
+    const indexB = customOrder.indexOf(b.media_id);
+
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
+    }
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+
+    const timeA = getShowLatestInteractionTime(a.media_id, a.updated_at);
+    const timeB = getShowLatestInteractionTime(b.media_id, b.updated_at);
+    if (timeA !== timeB) return timeB - timeA;
+    return (a.title || '').localeCompare(b.title || '');
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -247,9 +324,25 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Drag & Drop Hint Banner */}
+      <div className="flex items-center justify-between px-1 text-xs text-slate-400">
+        <span className="flex items-center gap-1.5 font-medium text-slate-300">
+          <GripVertical className="w-4 h-4 text-amber-400" />
+          <span>Dizileri basılı tutup sürükleyerek sıralamayı özelleştirebilirsin</span>
+        </span>
+        {customOrder.length > 0 && (
+          <button
+            onClick={() => saveCustomOrder([])}
+            className="text-[11px] text-slate-400 hover:text-amber-400 underline transition"
+          >
+            Varsayılana Sırala
+          </button>
+        )}
+      </div>
+
       {/* Show List */}
       <div className="space-y-4">
-        {tvWatching.map((item) => {
+        {tvWatching.map((item, index) => {
           const showId = item.media_id;
           const seasonsList = Object.keys(seasonsData)
             .filter(k => k.startsWith(`${showId}-`))
@@ -273,19 +366,75 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
           return (
             <div 
               key={showId}
-              className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition shadow-lg"
+              draggable={true}
+              data-card-index={index}
+              onDragStart={(e) => {
+                setDraggedIndex(index);
+                e.dataTransfer.setData('text/plain', String(index));
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dragOverIndex !== index) setDragOverIndex(index);
+              }}
+              onDragEnd={() => {
+                setDraggedIndex(null);
+                setDragOverIndex(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                reorderItems(draggedIndex, index);
+                setDraggedIndex(null);
+                setDragOverIndex(null);
+              }}
+              className={`bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition-all duration-200 shadow-lg ${
+                draggedIndex === index ? 'opacity-40 border-amber-500/60 ring-2 ring-amber-500/30 scale-[0.99]' : ''
+              } ${
+                dragOverIndex === index && draggedIndex !== index ? 'border-amber-400 ring-2 ring-amber-400/40 scale-[1.01]' : ''
+              }`}
             >
               {/* Main Card Header Row */}
               <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 
-                {/* Poster & Info */}
-                <div className="flex items-center gap-4 flex-1">
+                {/* Drag Grip + Poster & Info */}
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 w-full sm:w-auto">
+                  
+                  {/* Drag Handle & Touch Arrow Controls */}
+                  <div className="flex flex-col items-center gap-1 shrink-0 select-none">
+                    <div 
+                      className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-amber-400 cursor-grab active:cursor-grabbing touch-none transition"
+                      title="Sürükleyip Sırala"
+                      onTouchStart={(e) => handleTouchStart(e, index)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                    >
+                      <GripVertical className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 opacity-70 sm:opacity-0 hover:opacity-100 transition">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); reorderItems(index, index - 1); }}
+                        disabled={index === 0}
+                        className="p-0.5 hover:text-amber-400 text-slate-500 disabled:opacity-20 disabled:hover:text-slate-500 transition"
+                        title="Yukarı Taşı"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); reorderItems(index, index + 1); }}
+                        disabled={index === tvWatching.length - 1}
+                        className="p-0.5 hover:text-amber-400 text-slate-500 disabled:opacity-20 disabled:hover:text-slate-500 transition"
+                        title="Aşağı Taşı"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
                   <img
                     src={item.poster_path ? getPosterUrl(item.poster_path) : 'https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?auto=format&fit=crop&w=600&q=80'}
                     alt={item.title}
                     referrerPolicy="no-referrer"
                     onClick={() => onSelectMedia({ id: showId, title: item.title, name: item.title, media_type: 'tv', overview: '', poster_path: item.poster_path, backdrop_path: null, vote_average: item.vote_average || 0, vote_count: 0, popularity: 0 })}
-                    className="w-16 h-24 sm:w-20 sm:h-28 object-cover rounded-xl shadow-md cursor-pointer hover:opacity-90 transition"
+                    className="w-16 h-24 sm:w-20 sm:h-28 object-cover rounded-xl shadow-md cursor-pointer hover:opacity-90 transition shrink-0"
                   />
                   
                   <div className="flex-1 min-w-0">

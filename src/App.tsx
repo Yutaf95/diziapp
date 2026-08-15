@@ -1502,6 +1502,57 @@ export default function App() {
     }
   };
 
+  // Helper to check if a TV show is 100% completed across all available seasons, and handle status & modal transition based on TMDB status ('Ended'/'Canceled' vs 'Returning Series')
+  const checkAndProcessShowCompletion = async (showId: number, targetProgressList?: EpisodeProgress[]) => {
+    try {
+      const details = await getDetails(showId, 'tv');
+      if (!details) return;
+
+      const totalSeasons = details.number_of_seasons || 1;
+      let allEpisodes: Array<{ season_number: number; episode_number: number }> = [];
+
+      for (let s = 1; s <= totalSeasons; s++) {
+        try {
+          const sData = await getSeasonDetails(showId, s);
+          if (sData && sData.episodes) {
+            sData.episodes.forEach(ep => {
+              allEpisodes.push({ season_number: s, episode_number: ep.episode_number });
+            });
+          }
+        } catch (e) {}
+      }
+
+      if (allEpisodes.length === 0) return;
+
+      const progressToUse = targetProgressList || episodeProgress;
+
+      // Check if ALL episodes in all available seasons are marked as watched
+      const isAllWatched = allEpisodes.every(ep =>
+        progressToUse.some(
+          p => p.show_id === showId && p.season_number === ep.season_number && p.episode_number === ep.episode_number && p.is_watched
+        )
+      );
+
+      if (isAllWatched) {
+        const tmdbStatus = (details.status || '').toLowerCase();
+        const isEndedOrCanceled = tmdbStatus.includes('ended') || tmdbStatus.includes('canceled');
+
+        if (isEndedOrCanceled) {
+          // Show is completely finished/canceled (e.g. Breaking Bad, Friends).
+          // Move show to 'watched' status category!
+          handleUpdateWatchStatus(details, 'watched');
+          // Open detail modal so user can write a review/rating if they wish
+          setSelectedMedia(details);
+        } else {
+          // Show has returning seasons / ongoing status (e.g. High Potential, House of the Dragon).
+          // Keep in 'watching' status (remains in user's library, automatically hidden in tracker until new episodes release).
+        }
+      }
+    } catch (e) {
+      console.error('Failed checking show completion status:', e);
+    }
+  };
+
   // Toggle Episode Watched Progress
   const handleToggleEpisode = async (showId: number, seasonNum: number, epNum: number, runtime?: number) => {
     let isMarkingAsWatched = false;
@@ -1660,6 +1711,15 @@ export default function App() {
         }
       }
     }
+
+    if (isMarkingAsWatched) {
+      setTimeout(() => {
+        setEpisodeProgress(latest => {
+          checkAndProcessShowCompletion(showId, latest);
+          return latest;
+        });
+      }, 300);
+    }
   };
 
   // Batch Mark Multiple Episodes as Watched across seasons
@@ -1787,6 +1847,13 @@ export default function App() {
         console.error('Failed to sync batch episode progress to Supabase:', err);
       }
     }
+
+    setTimeout(() => {
+      setEpisodeProgress(latest => {
+        checkAndProcessShowCompletion(showId, latest);
+        return latest;
+      });
+    }, 300);
   };
 
   // Rate Episode & Mark as Watched

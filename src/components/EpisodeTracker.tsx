@@ -54,22 +54,58 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     return Math.max(latestWatchedTime, watchListTime);
   };
 
-  // Filter TV shows in watching status and sort by most recent watch history / interaction timestamp
-  const tvWatching = [...watchingList.filter(item => item.media_type === 'tv')].sort((a, b) => {
-    const timeA = getShowLatestInteractionTime(a.media_id, a.updated_at);
-    const timeB = getShowLatestInteractionTime(b.media_id, b.updated_at);
-    if (timeA !== timeB) return timeB - timeA;
-    return (a.title || '').localeCompare(b.title || '');
-  });
+  // Check if specific episode is watched
+  const isEpWatched = (showId: number, seasonNum: number, epNum: number): boolean => {
+    return episodeProgress.some(
+      ep => ep.show_id === showId && ep.season_number === seasonNum && ep.episode_number === epNum && ep.is_watched
+    );
+  };
+
+  // Helper to check if a show has any unwatched episode available in loaded seasons
+  const hasUnwatchedEpisodes = (showId: number): boolean => {
+    const seasonsList = Object.keys(seasonsData)
+      .filter(k => k.startsWith(`${showId}-`))
+      .map(k => parseInt(k.split('-')[1], 10))
+      .sort((a, b) => a - b);
+
+    if (seasonsList.length === 0) return true;
+
+    for (const sNum of seasonsList) {
+      const season = seasonsData[`${showId}-${sNum}`];
+      if (season && season.episodes) {
+        for (const ep of season.episodes) {
+          if (!isEpWatched(showId, ep.season_number, ep.episode_number)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  // Filter TV shows in watching status that have unwatched episodes, and sort by interaction timestamp
+  const tvWatching = watchingList
+    .filter(item => item.media_type === 'tv')
+    .filter(item => {
+      if (loadingSeasons && Object.keys(seasonsData).length === 0) return true;
+      return hasUnwatchedEpisodes(item.media_id);
+    })
+    .sort((a, b) => {
+      const timeA = getShowLatestInteractionTime(a.media_id, a.updated_at);
+      const timeB = getShowLatestInteractionTime(b.media_id, b.updated_at);
+      if (timeA !== timeB) return timeB - timeA;
+      return (a.title || '').localeCompare(b.title || '');
+    });
 
   useEffect(() => {
     let isMounted = true;
     async function loadAllSeasons() {
       setLoadingSeasons(true);
       const newSeasons: Record<string, TMDBSeasonDetails> = {};
+      const tvWatchingList = watchingList.filter(item => item.media_type === 'tv');
 
       await Promise.all(
-        tvWatching.map(async (item) => {
+        tvWatchingList.map(async (item) => {
           try {
             const details = await getDetails(item.media_id, 'tv');
             const totalSeasons = details?.number_of_seasons || item.number_of_seasons || 25;
@@ -97,21 +133,16 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
       }
     }
 
-    if (tvWatching.length > 0) {
+    if (watchingList.some(item => item.media_type === 'tv')) {
       loadAllSeasons();
     } else {
       setLoadingSeasons(false);
     }
 
     return () => { isMounted = false; };
-  }, [watchingList]);
+  }, [watchingList, episodeProgress]);
 
-  // Check if specific episode is watched
-  const isEpWatched = (showId: number, seasonNum: number, epNum: number): boolean => {
-    return episodeProgress.some(
-      ep => ep.show_id === showId && ep.season_number === seasonNum && ep.episode_number === epNum && ep.is_watched
-    );
-  };
+
 
   const handleEpisodeClickWithBatch = (showId: number, seasonNum: number, epNum: number) => {
     const isWatched = isEpWatched(showId, seasonNum, epNum);
@@ -152,7 +183,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     }
   };
 
-  // Find next episode to watch across ALL loaded seasons for a show
+  // Find next UNWATCHED episode to watch across ALL loaded seasons for a show
   const getNextEpisodeToWatch = (showId: number) => {
     const seasonsList = Object.keys(seasonsData)
       .filter(k => k.startsWith(`${showId}-`))
@@ -172,13 +203,6 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
       }
     }
 
-    // If all episodes in all seasons are watched, return the last episode of the last season
-    const lastSeasonNum = seasonsList[seasonsList.length - 1];
-    const lastSeason = seasonsData[`${showId}-${lastSeasonNum}`];
-    if (lastSeason && lastSeason.episodes && lastSeason.episodes.length > 0) {
-      return lastSeason.episodes[lastSeason.episodes.length - 1];
-    }
-
     return null;
   };
 
@@ -196,14 +220,19 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   };
 
   if (tvWatching.length === 0) {
+    const hasTvInWatching = watchingList.some(item => item.media_type === 'tv');
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center max-w-xl mx-auto my-12 shadow-xl">
         <div className="w-16 h-16 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
           <Tv className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Takip Ettiğin Dizi Bulunmuyor</h2>
+        <h2 className="text-xl font-bold text-white mb-2">
+          {hasTvInWatching ? 'Tüm Sezonları İzledin! 🎉' : 'Takip Ettiğin Dizi Bulunmuyor'}
+        </h2>
         <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
-          Dizilerini "İzliyorum" listesine ekleyerek bölüm bölüm gelişimini takip edebilir ve izlediğin bölümleri tek tıkla işaretleyebilirsin.
+          {hasTvInWatching
+            ? 'Takip ettiğin dizilerin mevcut tüm sezon ve bölümlerini bitirdin. Yeni bir sezon veya bölüm yayınlandığında dizi otomatik olarak buraya geri gelecektir.'
+            : 'Dizilerini "İzliyorum" listesine ekleyerek bölüm bölüm gelişimini takip edebilir ve izlediğin bölümleri tek tıkla işaretleyebilirsin.'}
         </p>
       </div>
     );
@@ -276,10 +305,10 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
 
                     {/* Next Episode Banner */}
                     {nextEp && (
-                      <div className="mt-3 inline-flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg text-xs text-slate-200 border border-slate-700/60 max-w-full">
+                      <div className="mt-3 flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg text-xs text-slate-200 border border-slate-700/60 max-w-full min-w-0">
                         <Play className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
-                        <span className="font-semibold text-amber-300">Sıradaki:</span>
-                        <span className="truncate">S{nextEp.season_number}E{nextEp.episode_number} - {nextEp.name}</span>
+                        <span className="font-semibold text-amber-300 shrink-0">Sıradaki:</span>
+                        <span className="truncate min-w-0">S{nextEp.season_number}E{nextEp.episode_number} - {nextEp.name}</span>
                       </div>
                     )}
                   </div>
@@ -290,20 +319,22 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                   {nextEp && (
                     <button
                       onClick={() => handleEpisodeClickWithBatch(showId, nextEp.season_number, nextEp.episode_number)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg ${
+                      className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg min-w-0 ${
                         isEpWatched(showId, nextEp.season_number, nextEp.episode_number)
                           ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
                           : 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-amber-500/20'
                       }`}
                     >
-                      <Check className="w-4 h-4 stroke-[3]" />
-                      <span>{isEpWatched(showId, nextEp.season_number, nextEp.episode_number) ? 'İzledim' : 'Sıradakini İzlendi Yap'}</span>
+                      <Check className="w-4 h-4 stroke-[3] shrink-0" />
+                      <span className="truncate">
+                        {isEpWatched(showId, nextEp.season_number, nextEp.episode_number) ? 'İzledim' : 'Sıradakini İzlendi Yap'}
+                      </span>
                     </button>
                   )}
 
                   <button
                     onClick={() => setExpandedShowId(isExpanded ? null : showId)}
-                    className="p-2.5 bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/80 hover:bg-slate-700 transition"
+                    className="p-2.5 bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/80 hover:bg-slate-700 transition shrink-0"
                     title="Tüm Bölümleri Gör"
                   >
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}

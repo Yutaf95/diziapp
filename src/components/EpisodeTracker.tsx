@@ -27,8 +27,24 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   onSelectMedia,
   onNavigateToDiscover
 }) => {
-  const [seasonsData, setSeasonsData] = useState<Record<string, TMDBSeasonDetails>>({});
-  const [loadingSeasons, setLoadingSeasons] = useState<boolean>(true);
+  const [seasonsData, setSeasonsData] = useState<Record<string, TMDBSeasonDetails>>(() => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('diziapp_seasons_cache');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {};
+  });
+  const [loadingSeasons, setLoadingSeasons] = useState<boolean>(() => Object.keys(seasonsData).length === 0);
+
+  useEffect(() => {
+    if (Object.keys(seasonsData).length > 0 && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('diziapp_seasons_cache', JSON.stringify(seasonsData));
+      } catch (e) {}
+    }
+  }, [seasonsData]);
   const [expandedShowId, setExpandedShowId] = useState<number | null>(null);
   const [selectedSeasonByShow, setSelectedSeasonByShow] = useState<Record<number, number>>({});
 
@@ -77,7 +93,11 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     saveCustomOrder(updatedIds);
   };
 
-  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+  const handleCardTouchStart = (e: React.TouchEvent, index: number) => {
+    const targetEl = e.target as HTMLElement;
+    if (targetEl.closest('button') || targetEl.closest('a') || targetEl.closest('input')) {
+      return;
+    }
     setTouchDragIndex(index);
     setDraggedIndex(index);
   };
@@ -184,8 +204,10 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   useEffect(() => {
     let isMounted = true;
     async function loadAllSeasons() {
-      setLoadingSeasons(true);
-      const newSeasons: Record<string, TMDBSeasonDetails> = {};
+      if (Object.keys(seasonsData).length === 0) {
+        setLoadingSeasons(true);
+      }
+      const newSeasons: Record<string, TMDBSeasonDetails> = { ...seasonsData };
       const tvWatchingList = watchingList.filter(item => item.media_type === 'tv');
 
       await Promise.all(
@@ -368,7 +390,15 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
               key={showId}
               draggable={true}
               data-card-index={index}
+              onTouchStart={(e) => handleCardTouchStart(e, index)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
               onDragStart={(e) => {
+                const targetEl = e.target as HTMLElement;
+                if (targetEl.closest('button') || targetEl.closest('a') || targetEl.closest('input')) {
+                  e.preventDefault();
+                  return;
+                }
                 setDraggedIndex(index);
                 e.dataTransfer.setData('text/plain', String(index));
               }}
@@ -386,7 +416,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                 setDraggedIndex(null);
                 setDragOverIndex(null);
               }}
-              className={`bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition-all duration-200 shadow-lg ${
+              className={`bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition-all duration-200 shadow-lg cursor-grab active:cursor-grabbing ${
                 draggedIndex === index ? 'opacity-40 border-amber-500/60 ring-2 ring-amber-500/30 scale-[0.99]' : ''
               } ${
                 dragOverIndex === index && draggedIndex !== index ? 'border-amber-400 ring-2 ring-amber-400/40 scale-[1.01]' : ''
@@ -395,40 +425,8 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
               {/* Main Card Header Row */}
               <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 
-                {/* Drag Grip + Poster & Info */}
-                <div className="flex items-center gap-3 sm:gap-4 flex-1 w-full sm:w-auto">
-                  
-                  {/* Drag Handle & Touch Arrow Controls */}
-                  <div className="flex flex-col items-center gap-1 shrink-0 select-none">
-                    <div 
-                      className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-amber-400 cursor-grab active:cursor-grabbing touch-none transition"
-                      title="Sürükleyip Sırala"
-                      onTouchStart={(e) => handleTouchStart(e, index)}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleTouchEnd}
-                    >
-                      <GripVertical className="w-5 h-5" />
-                    </div>
-                    <div className="flex flex-col gap-0.5 opacity-70 sm:opacity-0 hover:opacity-100 transition">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); reorderItems(index, index - 1); }}
-                        disabled={index === 0}
-                        className="p-0.5 hover:text-amber-400 text-slate-500 disabled:opacity-20 disabled:hover:text-slate-500 transition"
-                        title="Yukarı Taşı"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); reorderItems(index, index + 1); }}
-                        disabled={index === tvWatching.length - 1}
-                        className="p-0.5 hover:text-amber-400 text-slate-500 disabled:opacity-20 disabled:hover:text-slate-500 transition"
-                        title="Aşağı Taşı"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
+                {/* Poster & Info */}
+                <div className="flex items-center gap-4 flex-1">
                   <img
                     src={item.poster_path ? getPosterUrl(item.poster_path) : 'https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?auto=format&fit=crop&w=600&q=80'}
                     alt={item.title}

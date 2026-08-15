@@ -58,7 +58,8 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   const tvWatching = [...watchingList.filter(item => item.media_type === 'tv')].sort((a, b) => {
     const timeA = getShowLatestInteractionTime(a.media_id, a.updated_at);
     const timeB = getShowLatestInteractionTime(b.media_id, b.updated_at);
-    return timeB - timeA;
+    if (timeA !== timeB) return timeB - timeA;
+    return (a.title || '').localeCompare(b.title || '');
   });
 
   useEffect(() => {

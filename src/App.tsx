@@ -62,7 +62,8 @@ export default function App() {
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/user/')) {
       return 'profile';
     }
-    return 'discover';
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    return isMobile ? 'tracker' : 'discover';
   });
 
   // Listen to Supabase auth state change
@@ -777,7 +778,9 @@ export default function App() {
           setActiveTab('profile');
         }
       } else {
-        setActiveTab('discover');
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        const defaultTab = isMobile ? 'tracker' : 'discover';
+        setActiveTab(defaultTab);
         setStatusFilter('all');
       }
     };
@@ -1547,12 +1550,15 @@ export default function App() {
     });
 
     if (isMarkingAsWatched) {
-      // Automatically move show to 'watching' if it was in 'plan_to_watch'
+      // Always update watchList updated_at timestamp and move show to 'watching' if it was in 'plan_to_watch'
       setWatchList(prev => {
         const show = prev.find(w => w.media_id === showId && w.media_type === 'tv');
-        if (show && show.status === 'plan_to_watch') {
+        const nowStr = new Date().toISOString();
+        if (show) {
           return prev.map(w =>
-            w.media_id === showId && w.media_type === 'tv' ? { ...w, status: 'watching' as WatchStatusType } : w
+            w.media_id === showId && w.media_type === 'tv'
+              ? { ...w, updated_at: nowStr, status: w.status === 'plan_to_watch' ? ('watching' as WatchStatusType) : w.status }
+              : w
           );
         }
         return prev;
@@ -1681,7 +1687,7 @@ export default function App() {
           e => e.show_id === showId && e.season_number === item.season_number && e.episode_number === item.episode_number
         );
         if (idx >= 0) {
-          nextState[idx] = { ...nextState[idx], is_watched: true };
+          nextState[idx] = { ...nextState[idx], is_watched: true, watched_at: now };
         } else {
           nextState.push({
             user_id: currentUser.id,
@@ -1696,12 +1702,14 @@ export default function App() {
       return nextState;
     });
 
-    // Automatically move show to 'watching' if it was in 'plan_to_watch'
+    // Always update watchList updated_at timestamp and move show to 'watching' if it was in 'plan_to_watch'
     setWatchList(prev => {
       const show = prev.find(w => w.media_id === showId && w.media_type === 'tv');
-      if (show && show.status === 'plan_to_watch') {
+      if (show) {
         return prev.map(w =>
-          w.media_id === showId && w.media_type === 'tv' ? { ...w, status: 'watching' as WatchStatusType } : w
+          w.media_id === showId && w.media_type === 'tv'
+            ? { ...w, updated_at: now, status: w.status === 'plan_to_watch' ? ('watching' as WatchStatusType) : w.status }
+            : w
         );
       }
       return prev;
@@ -2139,12 +2147,53 @@ export default function App() {
     } catch (e) {}
   }, []);
 
-  if (isSupabaseConfigured && (!session || isPasswordResetMode) && !authLoading) {
+  // 1. Show sleek full-screen splash loader while checking initial Supabase auth state
+  if (isSupabaseConfigured && authLoading) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-[#0B0C0E] flex flex-col items-center justify-center p-4 selection:bg-[#E63946] selection:text-white">
+        <div className="relative flex items-center justify-center mb-5">
+          <div className="absolute w-20 h-20 rounded-2xl bg-[#E63946]/20 animate-ping" />
+          <div className="w-14 h-14 rounded-2xl bg-[#E63946] flex items-center justify-center text-white font-bold shadow-xl shadow-[#E63946]/40 relative z-10">
+            <Tv className="w-7 h-7 stroke-[2.5]" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-black tracking-widest text-slate-300 uppercase animate-pulse">
+            Yükleniyor
+          </span>
+          <Loader2 className="w-3.5 h-3.5 text-[#E63946] animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Show AuthView if user is not logged in or in password reset mode
+  if (isSupabaseConfigured && (!session || isPasswordResetMode)) {
     return (
       <AuthView
         onAuthSuccess={() => { setIsPasswordResetMode(false); }}
         initialMode={isPasswordResetMode ? 'update_password' : 'login'}
       />
+    );
+  }
+
+  // 3. Show sleek full-screen loader while user data tables are being fetched from Supabase
+  if (isSupabaseConfigured && isDataLoading) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-[#0B0C0E] flex flex-col items-center justify-center p-4 selection:bg-[#E63946] selection:text-white">
+        <div className="relative flex items-center justify-center mb-5">
+          <div className="absolute w-20 h-20 rounded-2xl bg-[#E63946]/20 animate-ping" />
+          <div className="w-14 h-14 rounded-2xl bg-[#E63946] flex items-center justify-center text-white font-bold shadow-xl shadow-[#E63946]/40 relative z-10">
+            <Tv className="w-7 h-7 stroke-[2.5]" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-black tracking-widest text-slate-300 uppercase animate-pulse">
+            Veriler Yükleniyor
+          </span>
+          <Loader2 className="w-3.5 h-3.5 text-[#E63946] animate-spin" />
+        </div>
+      </div>
     );
   }
 
@@ -2166,9 +2215,11 @@ export default function App() {
         onNavigateToProfile={handleNavigateToProfile}
         onOpenProfile={() => handleNavigateToProfile(currentUser.username)}
         onGoHome={() => {
-          setActiveTab('discover');
+          const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+          const targetTab = isMobile ? 'tracker' : 'discover';
+          setActiveTab(targetTab);
           setStatusFilter('all');
-          try { window.history.pushState({ tab: 'discover' }, '', '/'); } catch(e){}
+          try { window.history.pushState({ tab: targetTab }, '', '/'); } catch(e){}
         }}
         onLogout={handleLogout}
         notificationCount={isSupabaseConfigured ? 0 : 3}

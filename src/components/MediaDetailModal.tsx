@@ -68,7 +68,6 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
   const reviewSectionRef = useRef<HTMLDivElement>(null);
   const [showAddToCollectionModal, setShowAddToCollectionModal] = useState<boolean>(false);
-  const [showCompleteConfirmModal, setShowCompleteConfirmModal] = useState<boolean>(false);
   const [prevWatchStatus, setPrevWatchStatus] = useState<WatchStatusType>('watching');
 
   const [details, setDetails] = useState<TMDBMedia>(media);
@@ -480,7 +479,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                       if (userWatchStatus === 'watched') {
                         onUpdateWatchStatus(details, null);
                       } else {
-                        setShowCompleteConfirmModal(true);
+                        onUpdateWatchStatus(details, 'watched');
                       }
                     }}
                     className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-1.5 sm:px-2.5 py-1.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
@@ -1235,53 +1234,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Tamamlandı / İzlendi Onay Modalı */}
-      <AnimatePresence>
-        {showCompleteConfirmModal && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#14171D] border border-emerald-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4"
-            >
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              
-              <div className="space-y-1">
-                <h3 className="text-base font-black text-white">
-                  Kategoriyi Değiştir
-                </h3>
-                <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                  {isTv ? 'Diziyi' : 'Yapımı'} "İzledim" kategorisine taşımak istiyor musunuz?
-                </p>
-              </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCompleteConfirmModal(false)}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs border border-white/10 transition cursor-pointer"
-                >
-                  Vazgeç
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    onUpdateWatchStatus(details, 'watched');
-                    setShowCompleteConfirmModal(false);
-                  }}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/25 transition cursor-pointer"
-                >
-                  Evet
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </motion.div>
   );

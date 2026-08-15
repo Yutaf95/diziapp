@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, Play, Check, ChevronDown, ChevronUp, Sparkles, Tv, Clock, Star, CheckCircle2, X, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
+import { CheckSquare, Play, Check, ChevronDown, ChevronUp, Sparkles, Tv, Clock, Star, CheckCircle2, X } from 'lucide-react';
 import { TMDBMedia, TMDBSeasonDetails, EpisodeProgress, WatchStatus } from '../types';
 import { getDetails, getSeasonDetails, getPosterUrl } from '../lib/tmdb';
 import { EmptyState } from './EmptyState';
@@ -56,128 +56,6 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     missingItems: Array<{ season_number: number; episode_number: number }>;
   } | null>(null);
 
-  // Drag and Drop & Touch Reordering State
-  const [customOrder, setCustomOrder] = useState<number[]>(() => {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('diziapp_tracker_order');
-        if (saved) return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return [];
-  });
-
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [touchDragIndex, setTouchDragIndex] = useState<number | null>(null);
-
-  const longPressTimerRef = React.useRef<any>(null);
-  const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null);
-
-  const saveCustomOrder = (newOrder: number[]) => {
-    setCustomOrder(newOrder);
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('diziapp_tracker_order', JSON.stringify(newOrder));
-      } catch (e) {}
-    }
-  };
-
-  const reorderItems = (fromIndex: number | null, toIndex: number | null) => {
-    if (fromIndex === null || toIndex === null || fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
-
-    const currentIds = tvWatching.map(item => item.media_id);
-    if (fromIndex >= currentIds.length || toIndex >= currentIds.length) return;
-
-    const updatedIds = [...currentIds];
-    const [movedId] = updatedIds.splice(fromIndex, 1);
-    updatedIds.splice(toIndex, 0, movedId);
-
-    saveCustomOrder(updatedIds);
-  };
-
-  const handleCardTouchStart = (e: React.TouchEvent, index: number) => {
-    const targetEl = e.target as HTMLElement;
-    if (targetEl.closest('button') || targetEl.closest('a') || targetEl.closest('input')) {
-      return;
-    }
-
-    const touch = e.touches[0];
-    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
-
-    // Set 300ms long-press timer to activate drag mode
-    longPressTimerRef.current = setTimeout(() => {
-      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-        try { navigator.vibrate(40); } catch (err) {}
-      }
-      setTouchDragIndex(index);
-      setDraggedIndex(index);
-    }, 300);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // If long-press mode is not active yet, check if finger moved significantly (normal scroll gesture)
-    if (touchDragIndex === null) {
-      if (touchStartPosRef.current && e.touches[0]) {
-        const deltaX = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
-        // If moved more than 8px before 300ms, cancel long-press so normal page scroll occurs
-        if (deltaX > 8 || deltaY > 8) {
-          if (longPressTimerRef.current) {
-            clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = null;
-          }
-        }
-      }
-      return;
-    }
-
-    // Long press IS ACTIVE -> Drag reorder mode! Prevent default page scroll and reorder cards.
-    if (e.cancelable) {
-      e.preventDefault();
-    }
-    const touch = e.touches[0];
-
-    // Smooth auto-scrolling when dragging near screen edges
-    const viewportHeight = window.innerHeight;
-    if (touch.clientY < 130) {
-      window.scrollBy(0, -12);
-    } else if (touch.clientY > viewportHeight - 130) {
-      window.scrollBy(0, 12);
-    }
-
-    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-    const cardEl = targetEl?.closest('[data-card-index]');
-    if (cardEl) {
-      const targetIdxStr = cardEl.getAttribute('data-card-index');
-      if (targetIdxStr !== null) {
-        const targetIdx = parseInt(targetIdxStr, 10);
-        if (!isNaN(targetIdx) && targetIdx !== dragOverIndex) {
-          setDragOverIndex(targetIdx);
-        }
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-
-    if (touchDragIndex !== null && dragOverIndex !== null) {
-      reorderItems(touchDragIndex, dragOverIndex);
-    }
-    setTouchDragIndex(null);
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-    touchStartPosRef.current = null;
-  };
-
   // Helper to compute show's latest interaction timestamp (from episodeProgress or watchList updated_at)
   const getShowLatestInteractionTime = (showId: number, itemUpdatedAt?: string): number => {
     const watchedEps = episodeProgress.filter(ep => ep.show_id === showId);
@@ -228,29 +106,19 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     return false;
   };
 
-  // Filter TV shows in watching status that have unwatched episodes, and sort by custom order or interaction timestamp
-  const tvWatchingUnsorted = watchingList
+  // Filter TV shows in watching status that have unwatched episodes, and sort by interaction timestamp
+  const tvWatching = watchingList
     .filter(item => item.media_type === 'tv')
     .filter(item => {
       if (loadingSeasons && Object.keys(seasonsData).length === 0) return true;
       return hasUnwatchedEpisodes(item.media_id);
+    })
+    .sort((a, b) => {
+      const timeA = getShowLatestInteractionTime(a.media_id, a.updated_at);
+      const timeB = getShowLatestInteractionTime(b.media_id, b.updated_at);
+      if (timeA !== timeB) return timeB - timeA;
+      return (a.title || '').localeCompare(b.title || '');
     });
-
-  const tvWatching = [...tvWatchingUnsorted].sort((a, b) => {
-    const indexA = customOrder.indexOf(a.media_id);
-    const indexB = customOrder.indexOf(b.media_id);
-
-    if (indexA !== -1 && indexB !== -1) {
-      return indexA - indexB;
-    }
-    if (indexA !== -1) return -1;
-    if (indexB !== -1) return 1;
-
-    const timeA = getShowLatestInteractionTime(a.media_id, a.updated_at);
-    const timeB = getShowLatestInteractionTime(b.media_id, b.updated_at);
-    if (timeA !== timeB) return timeB - timeA;
-    return (a.title || '').localeCompare(b.title || '');
-  });
 
   useEffect(() => {
     let isMounted = true;
@@ -397,25 +265,9 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Drag & Drop Hint Banner */}
-      <div className="flex items-center justify-between px-1 text-xs text-slate-400">
-        <span className="flex items-center gap-1.5 font-medium text-slate-300">
-          <GripVertical className="w-4 h-4 text-amber-400" />
-          <span>Dizileri basılı tutup sürükleyerek sıralamayı özelleştirebilirsin</span>
-        </span>
-        {customOrder.length > 0 && (
-          <button
-            onClick={() => saveCustomOrder([])}
-            className="text-[11px] text-slate-400 hover:text-amber-400 underline transition"
-          >
-            Varsayılana Sırala
-          </button>
-        )}
-      </div>
-
       {/* Show List */}
       <div className="space-y-4">
-        {tvWatching.map((item, index) => {
+        {tvWatching.map((item) => {
           const showId = item.media_id;
           const seasonsList = Object.keys(seasonsData)
             .filter(k => k.startsWith(`${showId}-`))
@@ -439,40 +291,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
           return (
             <div 
               key={showId}
-              draggable={true}
-              data-card-index={index}
-              onTouchStart={(e) => handleCardTouchStart(e, index)}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onDragStart={(e) => {
-                const targetEl = e.target as HTMLElement;
-                if (targetEl.closest('button') || targetEl.closest('a') || targetEl.closest('input')) {
-                  e.preventDefault();
-                  return;
-                }
-                setDraggedIndex(index);
-                e.dataTransfer.setData('text/plain', String(index));
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (dragOverIndex !== index) setDragOverIndex(index);
-              }}
-              onDragEnd={() => {
-                setDraggedIndex(null);
-                setDragOverIndex(null);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                reorderItems(draggedIndex, index);
-                setDraggedIndex(null);
-                setDragOverIndex(null);
-              }}
-              style={{ touchAction: touchDragIndex === index ? 'none' : 'auto' }}
-              className={`bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition-all duration-200 shadow-lg cursor-grab active:cursor-grabbing ${
-                draggedIndex === index ? 'opacity-40 border-amber-500/60 ring-2 ring-amber-500/30 scale-[0.99]' : ''
-              } ${
-                dragOverIndex === index && draggedIndex !== index ? 'border-amber-400 ring-2 ring-amber-400/40 scale-[1.01]' : ''
-              }`}
+              className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition shadow-lg"
             >
               {/* Main Card Header Row */}
               <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

@@ -104,7 +104,19 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (touchDragIndex === null) return;
+    if (e.cancelable) {
+      e.preventDefault();
+    }
     const touch = e.touches[0];
+
+    // Smooth auto-scrolling when dragging near screen edges
+    const viewportHeight = window.innerHeight;
+    if (touch.clientY < 130) {
+      window.scrollBy(0, -12);
+    } else if (touch.clientY > viewportHeight - 130) {
+      window.scrollBy(0, 12);
+    }
+
     const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
     const cardEl = targetEl?.closest('[data-card-index]');
     if (cardEl) {
@@ -416,6 +428,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                 setDraggedIndex(null);
                 setDragOverIndex(null);
               }}
+              style={{ touchAction: touchDragIndex === index ? 'none' : 'auto' }}
               className={`bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition-all duration-200 shadow-lg cursor-grab active:cursor-grabbing ${
                 draggedIndex === index ? 'opacity-40 border-amber-500/60 ring-2 ring-amber-500/30 scale-[0.99]' : ''
               } ${

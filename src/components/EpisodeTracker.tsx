@@ -71,6 +71,9 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [touchDragIndex, setTouchDragIndex] = useState<number | null>(null);
 
+  const longPressTimerRef = React.useRef<any>(null);
+  const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null);
+
   const saveCustomOrder = (newOrder: number[]) => {
     setCustomOrder(newOrder);
     if (typeof localStorage !== 'undefined') {
@@ -98,12 +101,42 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     if (targetEl.closest('button') || targetEl.closest('a') || targetEl.closest('input')) {
       return;
     }
-    setTouchDragIndex(index);
-    setDraggedIndex(index);
+
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+
+    // Set 300ms long-press timer to activate drag mode
+    longPressTimerRef.current = setTimeout(() => {
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        try { navigator.vibrate(40); } catch (err) {}
+      }
+      setTouchDragIndex(index);
+      setDraggedIndex(index);
+    }, 300);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchDragIndex === null) return;
+    // If long-press mode is not active yet, check if finger moved significantly (normal scroll gesture)
+    if (touchDragIndex === null) {
+      if (touchStartPosRef.current && e.touches[0]) {
+        const deltaX = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
+        const deltaY = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
+        // If moved more than 8px before 300ms, cancel long-press so normal page scroll occurs
+        if (deltaX > 8 || deltaY > 8) {
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+        }
+      }
+      return;
+    }
+
+    // Long press IS ACTIVE -> Drag reorder mode! Prevent default page scroll and reorder cards.
     if (e.cancelable) {
       e.preventDefault();
     }
@@ -131,12 +164,18 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   };
 
   const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
     if (touchDragIndex !== null && dragOverIndex !== null) {
       reorderItems(touchDragIndex, dragOverIndex);
     }
     setTouchDragIndex(null);
     setDraggedIndex(null);
     setDragOverIndex(null);
+    touchStartPosRef.current = null;
   };
 
   // Helper to compute show's latest interaction timestamp (from episodeProgress or watchList updated_at)

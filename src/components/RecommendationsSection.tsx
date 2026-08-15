@@ -178,12 +178,14 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
   onUpdateWatchStatus,
   getUserWatchStatus
 }) => {
-  const [popularList, setPopularList] = useState<TMDBMedia[]>(POPULAR_POOL);
-  const [basedOnWatchedList, setBasedOnWatchedList] = useState<TMDBMedia[]>(BASED_ON_WATCHED_POOL);
+  const [popularList, setPopularList] = useState<TMDBMedia[]>([]);
+  const [basedOnWatchedList, setBasedOnWatchedList] = useState<TMDBMedia[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
     async function loadRealTMDBRecommendations() {
+      setLoading(true);
       try {
         const trend = await getTrending('all');
         if (trend?.results && trend.results.length > 0 && isMounted) {
@@ -197,6 +199,10 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
           setBasedOnWatchedList(trendTv.results);
         }
       } catch (e) {}
+
+      if (isMounted) {
+        setLoading(false);
+      }
     }
 
     loadRealTMDBRecommendations();
@@ -228,6 +234,32 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
       })
       .slice(0, 3),
   [basedOnWatchedList, watchList.length, popularFiltered]);
+
+  if (loading) {
+    return (
+      <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-3.5 space-y-3.5 shadow-lg">
+        <div className="flex items-center gap-2 pb-2.5 border-b border-[#232833]">
+          <div className="w-7 h-7 rounded-lg bg-[#0B0C0E] animate-pulse" />
+          <div className="space-y-1">
+            <div className="w-40 h-4 bg-[#0B0C0E] rounded animate-pulse" />
+            <div className="w-56 h-3 bg-[#0B0C0E] rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-3 gap-2 bg-[#0B0C0E]/70 border border-[#232833] rounded-xl p-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="aspect-[2/3] bg-[#0B0C0E] rounded-xl animate-pulse border border-[#232833]" />
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-2 bg-[#0B0C0E]/70 border border-[#232833] rounded-xl p-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="aspect-[2/3] bg-[#0B0C0E] rounded-xl animate-pulse border border-[#232833]" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (popularFiltered.length === 0 && basedOnWatchedFiltered.length === 0) return null;
 

@@ -212,7 +212,7 @@ export default function App() {
             vote_average: w.vote_average || 0,
             genre_ids: w.genre_ids || (Array.isArray(w.genres) ? w.genres.map((g: any) => g.id) : undefined),
             genres: w.genres || undefined,
-            updated_at: w.updated_at
+            updated_at: w.updated_at || w.created_at
           }));
 
           // Merge local items with Supabase items (no data loss)
@@ -249,7 +249,8 @@ export default function App() {
             show_id: ep.show_id,
             season_number: ep.season_number,
             episode_number: ep.episode_number,
-            is_watched: ep.is_watched
+            is_watched: ep.is_watched,
+            watched_at: ep.watched_at || ep.created_at || ep.updated_at
           }));
 
           setEpisodeProgress(prev => {
@@ -1378,14 +1379,16 @@ export default function App() {
     if (status === null) {
       setWatchList(prev => prev.filter(item => !(item.media_id === media.id && item.media_type === type)));
     } else {
+      const nowStr = new Date().toISOString();
       setWatchList(prev => {
-        const exists = prev.some(item => item.media_id === media.id && item.media_type === type);
+        const exists = prev.some(item => Number(item.media_id) === Number(media.id) && item.media_type === type);
         if (exists) {
           return prev.map(item => 
-            item.media_id === media.id && item.media_type === type 
+            Number(item.media_id) === Number(media.id) && item.media_type === type 
               ? { 
                   ...item, 
                   status,
+                  updated_at: nowStr,
                   genre_ids: media.genre_ids || item.genre_ids,
                   genres: media.genres || item.genres
                 } 
@@ -1399,6 +1402,7 @@ export default function App() {
               media_id: media.id,
               media_type: type,
               status,
+              updated_at: nowStr,
               title,
               poster_path: media.poster_path ? (media.poster_path.startsWith('http') ? media.poster_path : `https://image.tmdb.org/t/p/w500${media.poster_path}`) : undefined,
               vote_average: media.vote_average,
@@ -1603,21 +1607,21 @@ export default function App() {
       }
     });
 
-    if (isMarkingAsWatched) {
-      // Always update watchList updated_at timestamp and move show to 'watching' if it was in 'plan_to_watch'
-      setWatchList(prev => {
-        const show = prev.find(w => w.media_id === showId && w.media_type === 'tv');
-        const nowStr = new Date().toISOString();
-        if (show) {
-          return prev.map(w =>
-            w.media_id === showId && w.media_type === 'tv'
-              ? { ...w, updated_at: nowStr, status: w.status === 'plan_to_watch' ? ('watching' as WatchStatusType) : w.status }
-              : w
-          );
-        }
-        return prev;
-      });
+    const nowStr = new Date().toISOString();
+    // Always update watchList updated_at timestamp and move show to 'watching' if it was in 'plan_to_watch'
+    setWatchList(prev => {
+      const show = prev.find(w => Number(w.media_id) === Number(showId) && w.media_type === 'tv');
+      if (show) {
+        return prev.map(w =>
+          Number(w.media_id) === Number(showId) && w.media_type === 'tv'
+            ? { ...w, updated_at: nowStr, status: w.status === 'plan_to_watch' ? ('watching' as WatchStatusType) : w.status }
+            : w
+        );
+      }
+      return prev;
+    });
 
+    if (isMarkingAsWatched) {
       const showItem = watchList.find(w => Number(w.media_id) === Number(showId));
       let resolvedShowTitle = showItem?.title || (selectedMedia && Number(selectedMedia.id) === Number(showId) ? (selectedMedia.name || selectedMedia.title) : undefined);
       let resolvedShowPoster = showItem?.poster_path || (selectedMedia && Number(selectedMedia.id) === Number(showId) ? selectedMedia.poster_path : undefined);
@@ -1767,10 +1771,10 @@ export default function App() {
 
     // Always update watchList updated_at timestamp and move show to 'watching' if it was in 'plan_to_watch'
     setWatchList(prev => {
-      const show = prev.find(w => w.media_id === showId && w.media_type === 'tv');
+      const show = prev.find(w => Number(w.media_id) === Number(showId) && w.media_type === 'tv');
       if (show) {
         return prev.map(w =>
-          w.media_id === showId && w.media_type === 'tv'
+          Number(w.media_id) === Number(showId) && w.media_type === 'tv'
             ? { ...w, updated_at: now, status: w.status === 'plan_to_watch' ? ('watching' as WatchStatusType) : w.status }
             : w
         );
@@ -1887,12 +1891,15 @@ export default function App() {
       }
     });
 
-    // Automatically move show to 'watching' if it was in 'plan_to_watch'
+    // Automatically move show to 'watching' if it was in 'plan_to_watch' and update updated_at
+    const nowStr = new Date().toISOString();
     setWatchList(prev => {
-      const show = prev.find(w => w.media_id === showId && w.media_type === 'tv');
-      if (show && show.status === 'plan_to_watch') {
+      const show = prev.find(w => Number(w.media_id) === Number(showId) && w.media_type === 'tv');
+      if (show) {
         return prev.map(w =>
-          w.media_id === showId && w.media_type === 'tv' ? { ...w, status: 'watching' as WatchStatusType } : w
+          Number(w.media_id) === Number(showId) && w.media_type === 'tv'
+            ? { ...w, updated_at: nowStr, status: w.status === 'plan_to_watch' ? ('watching' as WatchStatusType) : w.status }
+            : w
         );
       }
       return prev;

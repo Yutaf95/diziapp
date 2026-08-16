@@ -56,18 +56,32 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     missingItems: Array<{ season_number: number; episode_number: number }>;
   } | null>(null);
 
+  const [localInteractions, setLocalInteractions] = useState<Record<number, number>>({});
+
+  const recordInteraction = (showId: number) => {
+    setLocalInteractions(prev => ({ ...prev, [Number(showId)]: Date.now() }));
+  };
+
+  const safeParseDate = (d?: string | null): number => {
+    if (!d) return 0;
+    const t = new Date(d).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   // Helper to compute show's latest interaction timestamp (from episodeProgress or watchList updated_at)
   const getShowLatestInteractionTime = (showId: number, itemUpdatedAt?: string): number => {
-    const watchedEps = episodeProgress.filter(ep => ep.show_id === showId);
+    const sId = Number(showId);
+    const watchedEps = episodeProgress.filter(ep => Number(ep.show_id) === sId);
     let latestWatchedTime = 0;
     watchedEps.forEach(ep => {
       if (ep.watched_at) {
-        const t = new Date(ep.watched_at).getTime();
+        const t = safeParseDate(ep.watched_at);
         if (t > latestWatchedTime) latestWatchedTime = t;
       }
     });
-    const watchListTime = itemUpdatedAt ? new Date(itemUpdatedAt).getTime() : 0;
-    return Math.max(latestWatchedTime, watchListTime);
+    const watchListTime = safeParseDate(itemUpdatedAt);
+    const localTime = localInteractions[sId] || 0;
+    return Math.max(latestWatchedTime, watchListTime, localTime);
   };
 
   // Check if specific episode is watched (with type-safe Number comparison)
@@ -170,6 +184,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
 
 
   const handleEpisodeClickWithBatch = (showId: number, seasonNum: number, epNum: number) => {
+    recordInteraction(showId);
     const isWatched = isEpWatched(showId, seasonNum, epNum);
     if (isWatched) {
       onToggleEpisode(showId, seasonNum, epNum);
@@ -358,7 +373,10 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                   )}
 
                   <button
-                    onClick={() => setExpandedShowId(isExpanded ? null : showId)}
+                    onClick={() => {
+                      recordInteraction(showId);
+                      setExpandedShowId(isExpanded ? null : showId);
+                    }}
                     className="p-2.5 bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/80 hover:bg-slate-700 transition shrink-0"
                     title="Tüm Bölümleri Gör"
                   >
@@ -383,7 +401,10 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                         return (
                           <button
                             key={sNum}
-                            onClick={() => setSelectedSeasonByShow(prev => ({ ...prev, [showId]: sNum }))}
+                            onClick={() => {
+                              recordInteraction(showId);
+                              setSelectedSeasonByShow(prev => ({ ...prev, [showId]: sNum }));
+                            }}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
                               isSel
                                 ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/20'

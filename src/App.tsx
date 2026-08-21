@@ -34,6 +34,13 @@ const PageLoader = () => (
     </span>
   </div>
 );
+
+const safeParseDate = (d?: string | null): number => {
+  if (!d) return 0;
+  const t = new Date(d).getTime();
+  return isNaN(t) ? 0 : t;
+};
+
 import { sortFranchiseAlphabetical } from './lib/sorting';
 
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
@@ -215,11 +222,25 @@ export default function App() {
             updated_at: w.updated_at || w.created_at
           }));
 
-          // Merge local items with Supabase items (no data loss)
+          // Merge local items with Supabase items (no data loss, preserve newest updated_at)
           setWatchList(prev => {
             const mergedWlMap = new Map<string, WatchStatus>();
             prev.forEach(item => mergedWlMap.set(`${item.media_type}_${item.media_id}`, item));
-            supabaseItems.forEach(item => mergedWlMap.set(`${item.media_type}_${item.media_id}`, item));
+            supabaseItems.forEach(item => {
+              const key = `${item.media_type}_${item.media_id}`;
+              const existing = mergedWlMap.get(key);
+              if (!existing) {
+                mergedWlMap.set(key, item);
+              } else {
+                const existingTime = safeParseDate(existing.updated_at);
+                const itemTime = safeParseDate(item.updated_at);
+                mergedWlMap.set(key, {
+                  ...existing,
+                  ...item,
+                  updated_at: itemTime >= existingTime ? item.updated_at : existing.updated_at
+                });
+              }
+            });
             const mergedList = Array.from(mergedWlMap.values());
 
             // Auto-sync missing local items to Supabase
@@ -256,7 +277,21 @@ export default function App() {
           setEpisodeProgress(prev => {
             const epMap = new Map<string, EpisodeProgress>();
             prev.forEach(item => epMap.set(`${item.show_id}_${item.season_number}_${item.episode_number}`, item));
-            epItems.forEach(item => epMap.set(`${item.show_id}_${item.season_number}_${item.episode_number}`, item));
+            epItems.forEach(item => {
+              const key = `${item.show_id}_${item.season_number}_${item.episode_number}`;
+              const existing = epMap.get(key);
+              if (!existing) {
+                epMap.set(key, item);
+              } else {
+                const existingTime = safeParseDate(existing.watched_at);
+                const itemTime = safeParseDate(item.watched_at);
+                epMap.set(key, {
+                  ...existing,
+                  ...item,
+                  watched_at: itemTime >= existingTime ? item.watched_at : existing.watched_at
+                });
+              }
+            });
             const mergedEp = Array.from(epMap.values());
 
             // Auto-sync missing local episode progress to Supabase
@@ -1656,15 +1691,16 @@ export default function App() {
       if (session && isSupabaseConfigured) {
         try {
           const userId = session.user.id;
-          const show = watchList.find(w => w.media_id === showId && w.media_type === 'tv');
-          if (show && show.status === 'plan_to_watch') {
-            await supabase
-              .from('watch_status')
-              .update({ status: 'watching' })
-              .eq('user_id', userId)
-              .eq('media_id', showId)
-              .eq('media_type', 'tv');
-          }
+          const show = watchList.find(w => Number(w.media_id) === Number(showId) && w.media_type === 'tv');
+          await supabase
+            .from('watch_status')
+            .update({
+              updated_at: nowStr,
+              ...(show && show.status === 'plan_to_watch' ? { status: 'watching' } : {})
+            })
+            .eq('user_id', userId)
+            .eq('media_id', showId)
+            .eq('media_type', 'tv');
 
           await supabase
             .from('episode_progress')
@@ -1673,7 +1709,8 @@ export default function App() {
               show_id: showId,
               season_number: seasonNum,
               episode_number: epNum,
-              is_watched: true
+              is_watched: true,
+              watched_at: nowStr
             });
 
           await supabase
@@ -1808,16 +1845,17 @@ export default function App() {
       try {
         const userId = session.user.id;
         
-        // 1. Move to watching status if plan_to_watch
-        const show = watchList.find(w => w.media_id === showId && w.media_type === 'tv');
-        if (show && show.status === 'plan_to_watch') {
-          await supabase
-            .from('watch_status')
-            .update({ status: 'watching' })
-            .eq('user_id', userId)
-            .eq('media_id', showId)
-            .eq('media_type', 'tv');
-        }
+        // 1. Update watch_status updated_at and move to watching status if plan_to_watch
+        const show = watchList.find(w => Number(w.media_id) === Number(showId) && w.media_type === 'tv');
+        await supabase
+          .from('watch_status')
+          .update({
+            updated_at: now,
+            ...(show && show.status === 'plan_to_watch' ? { status: 'watching' } : {})
+          })
+          .eq('user_id', userId)
+          .eq('media_id', showId)
+          .eq('media_type', 'tv');
 
         // 2. Batch upsert episodes progress in Supabase
         const upsertData = itemsToMark.map(item => ({
@@ -1825,7 +1863,8 @@ export default function App() {
           show_id: showId,
           season_number: item.season_number,
           episode_number: item.episode_number,
-          is_watched: true
+          is_watched: true,
+          watched_at: now
         }));
         await supabase
           .from('episode_progress')
@@ -1927,6 +1966,14 @@ export default function App() {
     if (session && isSupabaseConfigured) {
       try {
         const userId = session.user.id;
+        const nowStr = new Date().toISOString();
+        await supabase
+          .from('watch_status')
+          .update({ updated_at: nowStr })
+          .eq('user_id', userId)
+          .eq('media_id', showId)
+          .eq('media_type', 'tv');
+
         await supabase
           .from('episode_progress')
           .upsert({
@@ -1934,7 +1981,8 @@ export default function App() {
             show_id: showId,
             season_number: seasonNum,
             episode_number: epNum,
-            is_watched: true
+            is_watched: true,
+            watched_at: nowStr
           });
 
         await supabase
@@ -2000,6 +2048,14 @@ export default function App() {
     if (session && isSupabaseConfigured) {
       try {
         const userId = session.user.id;
+        const nowStr = new Date().toISOString();
+        await supabase
+          .from('watch_status')
+          .update({ updated_at: nowStr })
+          .eq('user_id', userId)
+          .eq('media_id', showId)
+          .eq('media_type', 'tv');
+
         await supabase
           .from('episode_progress')
           .upsert({
@@ -2007,7 +2063,8 @@ export default function App() {
             show_id: showId,
             season_number: seasonNum,
             episode_number: epNum,
-            is_watched: true
+            is_watched: true,
+            watched_at: nowStr
           });
       } catch (err) {
         console.error(err);

@@ -9,6 +9,7 @@ import { Profile, WatchStatus, EpisodeProgress, RatingReview, CustomCollection }
 import { getPosterUrl } from '../lib/tmdb';
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { compressImage } from '../utils/imageCompressor';
 import { MonthlyRecapModal } from './MonthlyRecapModal';
 import { UserAvatar } from './UserAvatar';
 
@@ -211,17 +212,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newAvatarUrl = reader.result as string;
+      try {
+        const newAvatarUrl = await compressImage(file, 400, 400, 0.85);
         if (onUpdateProfile) {
           onUpdateProfile({ avatar_url: newAvatarUrl });
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Avatar compression error:', err);
+      }
     }
   };
 
@@ -229,17 +230,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     bannerFileInputRef.current?.click();
   };
 
-  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newBannerUrl = reader.result as string;
+      try {
+        const newBannerUrl = await compressImage(file, 1200, 600, 0.85);
         if (onUpdateProfile) {
           onUpdateProfile({ banner_url: newBannerUrl });
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Banner compression error:', err);
+      }
     }
   };
 

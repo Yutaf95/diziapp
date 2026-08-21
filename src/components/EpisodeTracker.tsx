@@ -71,7 +71,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   // Helper to compute show's latest interaction timestamp (from episodeProgress or watchList updated_at)
   const getShowLatestInteractionTime = (showId: number, itemUpdatedAt?: string): number => {
     const sId = Number(showId);
-    const watchedEps = episodeProgress.filter(ep => Number(ep.show_id) === sId);
+    const watchedEps = episodeProgress.filter(ep => Number(ep.show_id) === sId && ep.is_watched);
     let latestWatchedTime = 0;
     watchedEps.forEach(ep => {
       if (ep.watched_at) {

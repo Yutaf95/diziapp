@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Search, Check, Image as ImageIcon, Upload, RefreshCw, Film } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { search, getTrending, getBackdropUrl } from '../lib/tmdb';
+import { compressImage } from '../utils/imageCompressor';
 
 interface ProfileBannerModalProps {
   isOpen: boolean;
@@ -141,19 +142,17 @@ export const ProfileBannerModal: React.FC<ProfileBannerModalProps> = ({
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          setUploadPreviewUrl(result);
-          setSelectedBannerUrl(result);
-          setSelectedFeaturedTitle('Özel Yüklenen Görsel');
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const result = await compressImage(file, 1200, 600, 0.85);
+        setUploadPreviewUrl(result);
+        setSelectedBannerUrl(result);
+        setSelectedFeaturedTitle('Özel Yüklenen Görsel');
+      } catch (err) {
+        console.error('Banner upload compression error:', err);
+      }
     }
   };
 

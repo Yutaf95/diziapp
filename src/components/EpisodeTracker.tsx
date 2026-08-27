@@ -374,7 +374,6 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
 
                   <button
                     onClick={() => {
-                      recordInteraction(showId);
                       setExpandedShowId(isExpanded ? null : showId);
                     }}
                     className="p-2.5 bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/80 hover:bg-slate-700 transition shrink-0"
@@ -402,7 +401,6 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                           <button
                             key={sNum}
                             onClick={() => {
-                              recordInteraction(showId);
                               setSelectedSeasonByShow(prev => ({ ...prev, [showId]: sNum }));
                             }}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${

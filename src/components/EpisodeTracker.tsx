@@ -31,7 +31,26 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     if (typeof localStorage !== 'undefined') {
       try {
         const saved = localStorage.getItem('diziapp_seasons_cache');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed: Record<string, TMDBSeasonDetails> = JSON.parse(saved);
+          // Cache'deki yayınlanmamış bölümleri filtrele
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const filtered: Record<string, TMDBSeasonDetails> = {};
+          for (const key of Object.keys(parsed)) {
+            const season = parsed[key];
+            const airedEps = season.episodes?.filter(ep => {
+              if (!ep.air_date) return false;
+              const airDate = new Date(ep.air_date);
+              airDate.setHours(0, 0, 0, 0);
+              return airDate <= today;
+            }) ?? [];
+            if (airedEps.length > 0) {
+              filtered[key] = { ...season, episodes: airedEps };
+            }
+          }
+          return filtered;
+        }
       } catch (e) {}
     }
     return {};
@@ -143,6 +162,9 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
       const newSeasons: Record<string, TMDBSeasonDetails> = { ...seasonsData };
       const tvWatchingList = watchingList.filter(item => item.media_type === 'tv');
 
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       await Promise.all(
         tvWatchingList.map(async (item) => {
           try {
@@ -152,7 +174,20 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
               try {
                 const sData = await getSeasonDetails(item.media_id, s);
                 if (sData && sData.episodes && sData.episodes.length > 0) {
-                  newSeasons[`${item.media_id}-${s}`] = sData;
+                  // Sadece yayınlanmış bölümleri dahil et (air_date bugün veya öncesi)
+                  const airedEpisodes = sData.episodes.filter(ep => {
+                    if (!ep.air_date) return false;
+                    const airDate = new Date(ep.air_date);
+                    airDate.setHours(0, 0, 0, 0);
+                    return airDate <= today;
+                  });
+
+                  if (airedEpisodes.length > 0) {
+                    newSeasons[`${item.media_id}-${s}`] = { ...sData, episodes: airedEpisodes };
+                  } else if (s > 1) {
+                    // Bu sezonun hiç yayınlanmış bölümü yok, durduralım
+                    break;
+                  }
                 } else if (s > 1) {
                   break;
                 }

@@ -148,11 +148,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
         setConfirmPassword('');
         setResendCooldown(60);
         setActiveTab('verify_otp');
-        setSuccessMsg(`${maskEmail(targetEmail)} adresinize 6 haneli doğrulama kodu gönderildi!`);
+        setSuccessMsg(`${maskEmail(targetEmail)} adresinize 8 haneli doğrulama kodu gönderildi!`);
       } else if (activeTab === 'verify_otp') {
+        const targetEmail = (resolvedEmail || email).trim();
+        if (!targetEmail || !targetEmail.includes('@')) {
+          throw new Error('Lütfen geçerli bir e-posta adresi girin.');
+        }
+
         const cleanedOtp = otpCode.trim().replace(/\D/g, '');
-        if (cleanedOtp.length !== 6) {
-          throw new Error('Lütfen e-postanıza gelen 6 haneli doğrulama kodunu eksiksiz girin.');
+        if (cleanedOtp.length < 6 || cleanedOtp.length > 8) {
+          throw new Error('Lütfen e-postanıza gelen 8 haneli doğrulama kodunu eksiksiz girin.');
         }
         if (!password || password.length < 6) {
           throw new Error('Yeni şifreniz en az 6 karakter olmalıdır.');
@@ -161,9 +166,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
           throw new Error('Şifreler birbiriyle eşleşmiyor.');
         }
 
-        // 1. Verify 6-digit OTP token for recovery session
+        // 1. Verify OTP token for recovery session (supports 6 to 8 digit tokens)
         const { error: verifyError } = await supabase.auth.verifyOtp({
-          email: resolvedEmail,
+          email: targetEmail,
           token: cleanedOtp,
           type: 'recovery',
         });
@@ -172,7 +177,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
           if (verifyError.message.includes('Token has expired')) {
             throw new Error('Girdiğiniz kodun süresi dolmuş. Lütfen yeni bir kod isteyin.');
           }
-          throw new Error('Girdiğiniz 6 haneli doğrulama kodu hatalı veya geçersiz.');
+          throw new Error('Girdiğiniz doğrulama kodu hatalı veya geçersiz.');
         }
 
         // 2. Set the new password for the authenticated recovery session
@@ -207,6 +212,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
             window.location.hash = '';
           }
         }, 2000);
+      }
     } catch (err: any) {
       console.error('Auth error:', err);
       const rawMsg = err?.message || err?.error_description || (typeof err === 'string' ? err : '');
@@ -220,15 +226,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
   };
 
   const handleResendOtp = async () => {
-    if (!resolvedEmail || resendCooldown > 0 || loading) return;
+    const targetEmail = (resolvedEmail || email).trim();
+    if (!targetEmail || !targetEmail.includes('@') || resendCooldown > 0 || loading) return;
     setErrorMsg(null);
     setSuccessMsg(null);
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resolvedEmail);
+      const { error } = await supabase.auth.resetPasswordForEmail(targetEmail);
       if (error) throw error;
       setResendCooldown(60);
-      setSuccessMsg(`${maskEmail(resolvedEmail)} adresine yeni bir kod gönderildi.`);
+      setSuccessMsg(`${maskEmail(targetEmail)} adresine yeni bir kod gönderildi.`);
     } catch (err: any) {
       setErrorMsg(err.message || 'Kod tekrar gönderilemedi. Lütfen biraz bekleyin.');
     } finally {
@@ -271,9 +278,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
           </h1>
           <p className="text-xs text-slate-400 max-w-xs mx-auto">
             {activeTab === 'forgot' ? (
-              'Kullanıcı adınızı veya e-posta adresinizi girin, size 6 haneli bir doğrulama kodu gönderelim.'
+              'Kullanıcı adınızı veya e-posta adresinizi girin, size 8 haneli bir doğrulama kodu gönderelim.'
             ) : activeTab === 'verify_otp' ? (
-              resolvedEmail ? `${maskEmail(resolvedEmail)} adresinize gelen 6 haneli kodu ve yeni şifrenizi girin.` : 'E-postanıza gelen kodu ve yeni şifrenizi girin.'
+              resolvedEmail ? `${maskEmail(resolvedEmail)} adresinize gelen 8 haneli kodu ve yeni şifrenizi girin.` : 'E-postanıza gelen 8 haneli kodu ve yeni şifrenizi girin.'
             ) : activeTab === 'update_password' ? (
               'Hesabınız için yeni ve güvenli bir şifre girin.'
             ) : (
@@ -393,21 +400,42 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
 
           {/* Username or Email (Forgot Password Request) */}
           {activeTab === 'forgot' && (
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Kullanıcı Adı veya E-Posta <span className="text-[#E63946]">*</span>
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="kullanici_adi veya ornek@email.com"
-                  required
-                  autoFocus
-                  className="w-full bg-[#0B0C0E] border border-white/10 focus:border-[#E63946] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 outline-none transition"
-                />
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  Kullanıcı Adı veya E-Posta <span className="text-[#E63946]">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="kullanici_adi veya ornek@email.com"
+                    required
+                    autoFocus
+                    className="w-full bg-[#0B0C0E] border border-white/10 focus:border-[#E63946] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              {/* Direct jump to verify_otp if user already got the code */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                    if (email.includes('@')) {
+                      setResolvedEmail(email.trim());
+                    }
+                    setActiveTab('verify_otp');
+                  }}
+                  className="text-[11px] text-amber-400 hover:text-amber-300 hover:underline font-semibold flex items-center gap-1 transition cursor-pointer"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  <span>Zaten kodunuz var mı? Kodu girin →</span>
+                </button>
               </div>
             </div>
           )}
@@ -415,11 +443,48 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
           {/* OTP Verification & New Password Fields */}
           {activeTab === 'verify_otp' && (
             <div className="space-y-4">
-              {/* 6 Digit OTP Input */}
+              {/* Email Address Confirmation or Input */}
+              {resolvedEmail ? (
+                <div className="flex items-center justify-between bg-[#0B0C0E] px-3.5 py-2.5 rounded-xl border border-white/10 text-xs">
+                  <div className="flex items-center gap-2 text-slate-300 truncate">
+                    <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span className="truncate font-medium">{maskEmail(resolvedEmail)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail(resolvedEmail);
+                      setResolvedEmail('');
+                    }}
+                    className="text-[11px] font-bold text-[#E63946] hover:underline shrink-0 ml-2 cursor-pointer"
+                  >
+                    Değiştir
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    E-Posta Adresi <span className="text-[#E63946]">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="ornek@email.com"
+                      required
+                      className="w-full bg-[#0B0C0E] border border-white/10 focus:border-[#E63946] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 outline-none transition"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 8 Digit OTP Input */}
               <div className="space-y-1.5 bg-[#0B0C0E]/70 p-3.5 rounded-2xl border border-white/10">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                   <span className="flex items-center gap-1 text-amber-400">
-                    <ShieldCheck className="w-3.5 h-3.5" /> 6 Haneli Doğrulama Kodu
+                    <ShieldCheck className="w-3.5 h-3.5" /> 8 Haneli Doğrulama Kodu
                   </span>
                   <span className="text-slate-500 font-mono text-[10px]">10 dk geçerli</span>
                 </div>
@@ -427,13 +492,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
                   <input
                     type="text"
                     value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="••••••"
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="••••••••"
                     required
-                    maxLength={6}
+                    maxLength={8}
                     inputMode="numeric"
                     autoFocus
-                    className="w-full bg-[#14171D] border-2 border-[#E63946]/50 focus:border-[#E63946] rounded-xl px-4 py-2.5 text-center text-2xl font-mono tracking-[0.45em] font-black text-white placeholder-slate-600 outline-none transition shadow-inner"
+                    className="w-full bg-[#14171D] border-2 border-[#E63946]/50 focus:border-[#E63946] rounded-xl px-2 py-2.5 text-center text-xl sm:text-2xl font-mono tracking-[0.25em] sm:tracking-[0.35em] font-black text-white placeholder-slate-600 outline-none transition shadow-inner"
                   />
                 </div>
                 <div className="flex items-center justify-between pt-1">
@@ -596,7 +661,33 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
           </button>
 
           {/* Back to Login Link for Forgot & Verify OTP */}
-          {(activeTab === 'forgot' || activeTab === 'verify_otp' || activeTab === 'update_password') && (
+          {activeTab === 'verify_otp' ? (
+            <div className="flex items-center justify-between text-xs pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('forgot');
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
+                className="flex items-center gap-1 font-bold text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Farklı hesap dene</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('login');
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
+                className="font-bold text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                Giriş ekranına dön
+              </button>
+            </div>
+          ) : (activeTab === 'forgot' || activeTab === 'update_password') && (
             <button
               type="button"
               onClick={() => {

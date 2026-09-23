@@ -207,10 +207,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
             window.location.hash = '';
           }
         }, 2000);
-      }
     } catch (err: any) {
       console.error('Auth error:', err);
-      setErrorMsg(err.message || 'Bir hata oluştu. Lütfen tekrar deneyin.');
+      const rawMsg = err?.message || err?.error_description || (typeof err === 'string' ? err : '');
+      const cleanMsg = typeof rawMsg === 'string' && rawMsg.trim() && rawMsg !== '{}'
+        ? rawMsg
+        : 'İşlem sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edip tekrar deneyin.';
+      setErrorMsg(cleanMsg);
     } finally {
       setLoading(false);
     }

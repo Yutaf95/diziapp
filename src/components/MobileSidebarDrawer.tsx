@@ -29,6 +29,7 @@ interface MobileSidebarDrawerProps {
   onOpenFavorites?: () => void;
   onOpenCalendar?: () => void;
   onOpenNotifications?: () => void;
+  unreadNotificationCount?: number;
   onOpenSettings: () => void;
   onLogout: () => void;
 }
@@ -42,6 +43,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   onOpenFavorites,
   onOpenCalendar,
   onOpenNotifications,
+  unreadNotificationCount = 0,
   onOpenSettings,
   onLogout
 }) => {
@@ -177,6 +179,41 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                 <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 px-3 pb-1">
                   Kişisel Menü
                 </div>
+
+                {/* 🔔 Bildirimler */}
+                {onOpenNotifications && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenNotifications();
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-neutral-800 group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 group-hover:border-[#E63946]/30 text-white shrink-0 relative">
+                        <Bell className="w-4 h-4 text-[#E63946]" />
+                        {unreadNotificationCount > 0 && (
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#E63946] rounded-full animate-pulse" />
+                        )}
+                      </div>
+                      <div className="text-left min-w-0">
+                        <div className="text-xs font-bold text-white group-hover:text-[#E63946] transition flex items-center gap-2">
+                          <span>Bildirimler</span>
+                          {unreadNotificationCount > 0 && (
+                            <span className="text-[10px] bg-[#E63946] text-white px-1.5 py-0.2 rounded-full font-bold">
+                              {unreadNotificationCount} yeni
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-neutral-400 truncate">
+                          Yeni sezon ve bölüm uyarıları
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition shrink-0" />
+                  </button>
+                )}
 
                 {/* 📈 İzleme İstatistikleri */}
                 <button

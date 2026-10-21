@@ -37,12 +37,11 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
       const now = new Date();
       const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
       
-      if (diffMinutes < 1) return 'Aramızda';
-      if (diffMinutes < 60) return `${diffMinutes}d önce`;
+      if (diffMinutes < 1) return 'Az önce';
+      if (diffMinutes < 60) return `${diffMinutes} dk önce`;
       const diffHours = Math.floor(diffMinutes / 60);
-      if (diffHours < 24) return `${diffHours}s önce`;
-      const diffDays = Math.floor(diffHours / 24);
-      return `${diffDays}g önce`;
+      if (diffHours < 24) return `${diffHours} sa önce`;
+      return `Dün ${date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
     } catch {
       return 'Yakın zamanda';
     }
@@ -63,8 +62,8 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
           </div>
         </div>
 
-        <span className="text-xs bg-[#E63946] text-white font-black px-2.5 py-1 rounded-full shadow-md tracking-wide">
-          Canlı
+        <span className="text-[11px] bg-[#E63946] text-white font-extrabold px-2.5 py-1 rounded-full shadow-md tracking-wide">
+          Son 48 Saat
         </span>
       </div>
 

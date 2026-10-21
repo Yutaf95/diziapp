@@ -1,24 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Settings, Bell, Shield, User, Smartphone, Moon, Lock, Check } from 'lucide-react';
-import { Profile } from '../types';
+import { Profile, NotificationSettings } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: Profile;
+  notificationSettings?: NotificationSettings;
+  onUpdateNotificationSettings?: (newSettings: Partial<NotificationSettings>) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  user
+  user,
+  notificationSettings,
+  onUpdateNotificationSettings
 }) => {
   const [activeTab, setActiveTab] = useState<'account' | 'notifications' | 'password'>('account');
-  const [notifyNewEpisodes, setNotifyNewEpisodes] = useState(true);
-  const [notifyFriendActivity, setNotifyFriendActivity] = useState(true);
+  const [notifyNewEpisodes, setNotifyNewEpisodes] = useState(notificationSettings?.notifyNewEpisodes ?? true);
+  const [notifyFriendActivity, setNotifyFriendActivity] = useState(notificationSettings?.notifyFriendActivity ?? true);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    if (notificationSettings) {
+      setNotifyNewEpisodes(notificationSettings.notifyNewEpisodes);
+      setNotifyFriendActivity(notificationSettings.notifyFriendActivity);
+    }
+  }, [notificationSettings]);
 
   // Password change states
   const [currentPassword, setCurrentPassword] = useState('');
@@ -31,6 +42,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const handleSave = () => {
+    if (onUpdateNotificationSettings) {
+      onUpdateNotificationSettings({
+        notifyNewEpisodes,
+        notifyFriendActivity
+      });
+    }
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);

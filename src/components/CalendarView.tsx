@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tv, Sparkles, Clock, Star, Play, Info, Flame, Eye, Filter, Loader2, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tv, Sparkles, Clock, Star, Play, Info, Flame, Eye, Filter, Loader2 } from 'lucide-react';
 import { WatchStatus, TMDBMedia, EpisodeProgress } from '../types';
 import { getDetails, getSeasonDetails, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
 import { EmptyState } from './EmptyState';
@@ -525,17 +525,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {onToggleEpisode && (
-                      <button
-                        onClick={() => onToggleEpisode(ep.showId, ep.seasonNumber, ep.episodeNumber)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 text-xs font-bold transition shadow-sm"
-                        title="Bu bölümü izlendi olarak işaretle"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>İzlendi</span>
-                      </button>
-                    )}
-
                     {onSelectMedia && (
                       <button
                         onClick={() => onSelectMedia({

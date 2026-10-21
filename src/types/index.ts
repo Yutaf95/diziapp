@@ -162,3 +162,27 @@ export interface TMDBSeasonDetails {
   air_date: string;
   episodes: TMDBEpisode[];
 }
+
+export type NotificationType = 'new_season' | 'new_episode' | 'friend_activity' | 'system';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  media_id?: number;
+  media_type?: MediaType;
+  media_title?: string;
+  media_poster?: string;
+  season_number?: number;
+  episode_number?: number;
+  episode_name?: string;
+  created_at: string;
+  is_read: boolean;
+  link_url?: string;
+}
+
+export interface NotificationSettings {
+  notifyNewEpisodes: boolean;
+  notifyFriendActivity: boolean;
+}

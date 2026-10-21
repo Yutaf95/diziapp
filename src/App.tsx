@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Header } from './components/Header';
 import { LeftSidebar } from './components/LeftSidebar';
@@ -21,6 +21,8 @@ import { ProfileView } from './components/ProfileView';
 import { CollectionsView } from './components/CollectionsView';
 import { MonthlyRecapModal } from './components/MonthlyRecapModal';
 import { SettingsModal } from './components/SettingsModal';
+import { NotificationCenter } from './components/NotificationCenter';
+import { useNotifications } from './hooks/useNotifications';
 
 // Sleek loading fallback for React.Suspense
 const PageLoader = () => (
@@ -43,7 +45,7 @@ const safeParseDate = (d?: string | null): number => {
 
 import { sortFranchiseAlphabetical } from './lib/sorting';
 
-import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile } from './types';
+import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile, AppNotification } from './types';
 import { getTrending, search, getDetails, getSeasonDetails } from './lib/tmdb';
 import { DEFAULT_AVATAR_URL } from './lib/constants';
 import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp, Pin } from 'lucide-react';
@@ -137,7 +139,7 @@ export default function App() {
           supabase.from('watch_status').select('*').eq('user_id', userId),
           supabase.from('episode_progress').select('*').eq('user_id', userId),
           supabase.from('ratings_reviews').select('*').order('created_at', { ascending: false }).limit(30),
-          supabase.from('activity_feed').select('*').order('created_at', { ascending: false }).limit(25),
+          supabase.from('activity_feed').select('*').gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()).order('created_at', { ascending: false }).limit(50),
           supabase.from('favorites').select('*').eq('user_id', userId),
           supabase.from('custom_collections').select('*, collection_items(*)').eq('user_id', userId),
           supabase.from('follows').select('following_id').eq('follower_id', userId)
@@ -401,11 +403,25 @@ export default function App() {
             };
           });
 
+          const now = Date.now();
+          const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
           setActivityFeed(prev => {
             const actMap = new Map<string, ActivityFeedItem>();
-            prev.forEach(a => actMap.set(String(a.id), a));
-            activities.forEach(a => actMap.set(String(a.id), a));
-            return Array.from(actMap.values());
+            activities.forEach(a => {
+              const t = new Date(a.created_at).getTime();
+              if (!isNaN(t) && (now - t) <= FORTY_EIGHT_HOURS_MS) {
+                actMap.set(String(a.id), a);
+              }
+            });
+            prev.forEach(a => {
+              const t = new Date(a.created_at).getTime();
+              if (!isNaN(t) && (now - t) <= FORTY_EIGHT_HOURS_MS && !actMap.has(String(a.id))) {
+                actMap.set(String(a.id), a);
+              }
+            });
+            return Array.from(actMap.values()).sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
           });
         }
 
@@ -927,10 +943,109 @@ export default function App() {
   const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>(() => {
     try {
       const saved = localStorage.getItem('diziapp_activity_feed');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const now = Date.now();
+          const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+          return parsed.filter(a => {
+            if (!a.created_at) return false;
+            const t = new Date(a.created_at).getTime();
+            return !isNaN(t) && (now - t) <= FORTY_EIGHT_HOURS_MS;
+          });
+        }
+      }
     } catch (e) {}
     return [];
   });
+
+  const [isRefreshingFeed, setIsRefreshingFeed] = useState(false);
+
+  const refreshActivityFeed = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    setIsRefreshingFeed(true);
+    try {
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      const { data: rawActData, error } = await supabase
+        .from('activity_feed')
+        .select('*')
+        .gte('created_at', fortyEightHoursAgo)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!error && rawActData) {
+        const userIdsToFetch = Array.from(new Set(rawActData.map((a: any) => a.user_id).filter(Boolean)));
+        let profileMap = new Map<string, any>();
+        if (userIdsToFetch.length > 0) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, avatar_url')
+            .in('id', userIdsToFetch);
+          if (profs) {
+            profs.forEach((p: any) => profileMap.set(p.id, p));
+          }
+        }
+
+        const freshItems: ActivityFeedItem[] = rawActData.map((a: any) => {
+          const p = profileMap.get(a.user_id) || {};
+          return {
+            id: a.id,
+            user_id: a.user_id,
+            username: p.username || 'kullanıcı',
+            user_fullname: p.full_name || 'Kullanıcı',
+            user_avatar: p.avatar_url || DEFAULT_AVATAR_URL,
+            profile: {
+              id: a.user_id,
+              username: p.username || 'kullanıcı',
+              full_name: p.full_name || 'Kullanıcı',
+              avatar_url: p.avatar_url || DEFAULT_AVATAR_URL
+            },
+            action_type: a.action_type as any,
+            media_id: a.media_id,
+            media_type: a.media_type as MediaType,
+            media_title: a.details?.media_title || a.media_title || 'Yapım',
+            poster_path: a.details?.media_poster || a.poster_path || '',
+            detail_text: a.details?.status || '',
+            contains_spoiler: a.details?.contains_spoiler || false,
+            details: a.details || {},
+            created_at: a.created_at
+          };
+        });
+
+        const now = Date.now();
+        const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+        setActivityFeed(prev => {
+          const actMap = new Map<string, ActivityFeedItem>();
+          freshItems.forEach(item => {
+            const t = new Date(item.created_at).getTime();
+            if (!isNaN(t) && (now - t) <= FORTY_EIGHT_HOURS_MS) {
+              actMap.set(String(item.id), item);
+            }
+          });
+          prev.forEach(item => {
+            const t = new Date(item.created_at).getTime();
+            if (!isNaN(t) && (now - t) <= FORTY_EIGHT_HOURS_MS && !actMap.has(String(item.id))) {
+              actMap.set(String(item.id), item);
+            }
+          });
+          return Array.from(actMap.values()).sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        });
+      }
+    } catch (e) {
+      console.error('Failed refreshing activity feed:', e);
+    } finally {
+      setIsRefreshingFeed(false);
+    }
+  }, []);
+
+  // Auto-refresh activities when switching to activity tab
+  useEffect(() => {
+    if (activeTab === 'activity') {
+      refreshActivityFeed();
+    }
+  }, [activeTab, refreshActivityFeed]);
 
   useEffect(() => {
     try {
@@ -951,6 +1066,38 @@ export default function App() {
   });
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+
+  // Real-time Notification System
+  const {
+    notifications,
+    unreadCount,
+    settings: notificationSettings,
+    isScanning: isScanningNotifications,
+    markAsRead: handleMarkNotificationAsRead,
+    markAllAsRead: handleMarkAllNotificationsAsRead,
+    deleteNotification: handleDeleteNotification,
+    clearAllNotifications: handleClearAllNotifications,
+    updateSettings: handleUpdateNotificationSettings,
+    scanForNewEpisodes: handleScanNotifications
+  } = useNotifications(watchList, episodeProgress);
+
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  const handleSelectNotification = async (notif: AppNotification) => {
+    setIsNotificationsOpen(false);
+    handleMarkNotificationAsRead(notif.id);
+
+    if (notif.media_id) {
+      try {
+        const details = await getDetails(notif.media_id, notif.media_type || 'tv');
+        if (details) {
+          setSelectedMedia(details);
+        }
+      } catch (e) {
+        console.error('Failed to open media from notification:', e);
+      }
+    }
+  };
 
   // Favorites State (saved in localStorage)
   const [favorites, setFavorites] = useState<WatchStatus[]>(() => {
@@ -2212,8 +2359,17 @@ export default function App() {
     }
   });
 
-  // Filter Activity Feed strictly to followed users and own activities
-  const followedActivities = activityFeed.filter(a => {
+  // Filter Activity Feed strictly to last 48 hours
+  const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+  const nowForFeed = Date.now();
+
+  const recent48hActivities = activityFeed.filter(a => {
+    if (!a.created_at) return false;
+    const t = new Date(a.created_at).getTime();
+    return !isNaN(t) && (nowForFeed - t) <= FORTY_EIGHT_HOURS_MS;
+  });
+
+  const followedActivities = recent48hActivities.filter(a => {
     if (a.user_id === currentUser.id) return true;
     if (followingUserIds && followingUserIds.includes(a.user_id)) return true;
     return false;
@@ -2315,7 +2471,7 @@ export default function App() {
           try { window.history.pushState({ tab: targetTab }, '', '/'); } catch(e){}
         }}
         onLogout={handleLogout}
-        notificationCount={isSupabaseConfigured ? 0 : 3}
+        notificationCount={unreadCount}
         mediaFilter={mediaFilter}
         setMediaFilter={handleSetMediaFilter}
         statusFilter={statusFilter}
@@ -2324,7 +2480,7 @@ export default function App() {
         setActiveTab={handleTabChange}
         onOpenDrawer={() => setIsDrawerOpen(true)}
         onOpenStats={() => handleNavigateToProfile(currentUser.username, 'stats')}
-        onOpenNotifications={() => handleTabChange('activity')}
+        onOpenNotifications={() => setIsNotificationsOpen(prev => !prev)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onUpdateWatchStatus={(m, st) => handleUpdateWatchStatus(m, st)}
         getUserWatchStatus={getUserWatchStatus}
@@ -2617,7 +2773,7 @@ export default function App() {
               ) : activeTab === 'calendar' ? (
                 <React.Suspense fallback={<PageLoader />}>
                   <CalendarView
-                    watchingList={watchList.filter(w => w.status === 'watching')}
+                    watchingList={watchList.filter(w => w.status === 'watching' || w.status === 'watched')}
                     episodeProgress={episodeProgress}
                     onToggleEpisode={handleToggleEpisode}
                     onSelectMedia={(m) => setSelectedMedia(m)}
@@ -2627,11 +2783,14 @@ export default function App() {
                 <React.Suspense fallback={<PageLoader />}>
                   <ActivityFeedView
                     activities={followedActivities}
+                    allActivities={recent48hActivities}
                     onSelectMediaById={handleSelectMediaById}
                     onNavigateToProfile={handleNavigateToProfile}
                     followingUserIds={followingUserIds}
                     onToggleFollowUser={handleToggleFollowUser}
                     watchList={watchList}
+                    onRefresh={refreshActivityFeed}
+                    isRefreshing={isRefreshingFeed}
                   />
                 </React.Suspense>
               ) : activeTab === 'collections' ? (
@@ -2938,7 +3097,7 @@ export default function App() {
             {/* Sağ Sidebar (360px - 390px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
             <div className="hidden lg:block w-[360px] xl:w-[390px] shrink-0 space-y-4 sticky top-24 h-fit pr-2">
               <SocialFeedSidebar
-                activities={followedActivities}
+                activities={followedActivities.length > 0 ? followedActivities : recent48hActivities}
                 onSelectMediaById={handleSelectMediaById}
                 currentUser={currentUser}
                 onNavigateToProfile={handleNavigateToProfile}
@@ -3008,7 +3167,8 @@ export default function App() {
         onOpenStats={() => handleNavigateToProfile(currentUser.username, 'stats')}
         onOpenCalendar={() => handleTabChange('calendar')}
         onOpenFavorites={() => handleTabChange('favorites')}
-        onOpenNotifications={() => handleTabChange('activity')}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
+        unreadNotificationCount={unreadCount}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onLogout={handleLogout}
       />
@@ -3020,9 +3180,26 @@ export default function App() {
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}
             user={currentUser}
+            notificationSettings={notificationSettings}
+            onUpdateNotificationSettings={handleUpdateNotificationSettings}
           />
         </React.Suspense>
       )}
+
+      {/* Real-time Notification Center */}
+      <NotificationCenter
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkNotificationAsRead}
+        onMarkAllAsRead={handleMarkAllNotificationsAsRead}
+        onClearAll={handleClearAllNotifications}
+        onDeleteNotification={handleDeleteNotification}
+        onSelectNotification={handleSelectNotification}
+        onScanNow={handleScanNotifications}
+        isScanning={isScanningNotifications}
+      />
 
       {/* Mobile Bottom Navigation Bar (< 768px - Spotify Style) */}
       <MobileBottomNav

@@ -65,14 +65,12 @@ export const Header: React.FC<HeaderProps> = ({
   onUpdateWatchStatus,
   getUserWatchStatus
 }) => {
-  const [showNotifications, setShowNotifications] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showMobileSearchInput, setShowMobileSearchInput] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
-  const notificationRef = useRef<HTMLDivElement>(null);
   const searchScrollRef = useRef<HTMLDivElement>(null);
 
   // Reset search dropdown scroll position when searching new query
@@ -113,12 +111,6 @@ export const Header: React.FC<HeaderProps> = ({
       if (!clickedSearch && !clickedMobileSearch) {
         setIsSearchOpen(false);
         setSearchQuery('');
-      }
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target as Node)
-      ) {
-        setShowNotifications(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -428,9 +420,10 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2 sm:gap-3">
 
             {/* Bildirim zili */}
-            <div ref={notificationRef} className="relative">
+            <div className="relative">
               <button
-                onClick={() => setShowNotifications(!showNotifications)}
+                type="button"
+                onClick={() => onOpenNotifications && onOpenNotifications()}
                 className="relative p-2 text-slate-300 hover:text-white hover:bg-[#0B0C0E] rounded-xl border border-[#232833] transition"
                 title="Bildirimler"
               >
@@ -441,42 +434,6 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 )}
               </button>
-
-              {/* Bildirim Dropdown Menu */}
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-[#14171D] border border-[#2B313E] rounded-2xl shadow-2xl py-3 px-3 z-50 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#232833]">
-                    <span className="font-bold text-sm text-white flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-[#E63946]" /> Bildirimler
-                    </span>
-                    <span className="text-[10px] bg-[#E63946]/20 text-[#E63946] px-2 py-0.5 rounded-full font-bold">
-                      {notificationCount} yeni
-                    </span>
-                  </div>
-                  <div className="space-y-2 text-xs">
-                    {notificationCount > 0 ? (
-                      <>
-                        <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-[#232833] hover:border-[#E63946]/40 transition cursor-pointer">
-                          <p className="font-semibold text-slate-200">🔥 Blue Eye Samurai 2. Sezon duyuruldu!</p>
-                          <span className="text-[10px] text-slate-400 mt-1 block">10 dakika önce</span>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-[#232833] hover:border-[#E63946]/40 transition cursor-pointer">
-                          <p className="font-semibold text-slate-200">💬 Can, Dune: Part Two incelemeni beğendi</p>
-                          <span className="text-[10px] text-slate-400 mt-1 block">1 saat önce</span>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-[#232833] hover:border-[#E63946]/40 transition cursor-pointer">
-                          <p className="font-semibold text-slate-200">📺 Severance S02E03 yayında!</p>
-                          <span className="text-[10px] text-slate-400 mt-1 block">3 saat önce</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center py-4 text-slate-500 font-medium">
-                        Yeni bildiriminiz yok.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Profil simgesi */}
@@ -602,8 +559,9 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center shrink-0">
             <button
               type="button"
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => onOpenNotifications && onOpenNotifications()}
               className="p-1.5 text-slate-300 hover:text-white rounded-full bg-[#181A22] border border-white/10 relative active:scale-95 transition"
+              title="Bildirimler"
             >
               <Bell className="w-4 h-4" />
               {notificationCount > 0 && (

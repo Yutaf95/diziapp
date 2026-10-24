@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { CheckSquare, Play, Check, ChevronDown, ChevronUp, Sparkles, Tv, Clock, Star, CheckCircle2, X } from 'lucide-react';
-import { TMDBMedia, TMDBSeasonDetails, EpisodeProgress, WatchStatus } from '../types';
+import { TMDBMedia, TMDBSeasonDetails, EpisodeProgress, WatchStatus, CustomWatchLink } from '../types';
 import { getDetails, getSeasonDetails, getPosterUrl } from '../lib/tmdb';
 import { EmptyState } from './EmptyState';
+import { getStoredWatchLinks, generateEpisodeUrl } from '../utils/watchLinksStorage';
 
 interface EpisodeTrackerProps {
   watchingList: WatchStatus[];
@@ -66,6 +67,17 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
   }, [seasonsData]);
   const [expandedShowId, setExpandedShowId] = useState<number | null>(null);
   const [selectedSeasonByShow, setSelectedSeasonByShow] = useState<Record<number, number>>({});
+  const [allWatchLinks, setAllWatchLinks] = useState<CustomWatchLink[]>(() => getStoredWatchLinks());
+
+  useEffect(() => {
+    const handleLinksUpdate = () => {
+      setAllWatchLinks(getStoredWatchLinks());
+    };
+    window.addEventListener('diziapp_watch_links_updated', handleLinksUpdate);
+    return () => {
+      window.removeEventListener('diziapp_watch_links_updated', handleLinksUpdate);
+    };
+  }, []);
 
   // Batch Confirm Modal state
   const [batchModal, setBatchModal] = useState<{
@@ -338,6 +350,45 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
           
           const progressPercent = Math.round((watchedInSeason / totalEpsInSeason) * 100);
 
+          const showLinks = allWatchLinks.filter(l => Number(l.media_id) === Number(showId));
+          const smartLink = showLinks.find(l => !!l.url_template);
+          const generalLink = showLinks[0];
+
+          const handleOpenNextEpisode = () => {
+            if (smartLink && nextEp) {
+              const targetUrl = generateEpisodeUrl(smartLink, nextEp.season_number, nextEp.episode_number);
+              let clean = targetUrl.trim();
+              if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+                clean = `https://${clean}`;
+              }
+              window.open(clean, '_blank', 'noopener,noreferrer');
+              return;
+            }
+
+            if (generalLink) {
+              let clean = generalLink.url.trim();
+              if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+                clean = `https://${clean}`;
+              }
+              window.open(clean, '_blank', 'noopener,noreferrer');
+              return;
+            }
+
+            // No link saved yet: open media detail modal so user can add the link
+            onSelectMedia({
+              id: showId,
+              title: item.title,
+              name: item.title,
+              media_type: 'tv',
+              overview: '',
+              poster_path: item.poster_path,
+              backdrop_path: null,
+              vote_average: item.vote_average || 0,
+              vote_count: 0,
+              popularity: 0
+            });
+          };
+
           return (
             <div 
               key={showId}
@@ -380,10 +431,25 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
 
                     {/* Next Episode Banner */}
                     {nextEp && (
-                      <div className="mt-3 flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg text-xs text-slate-200 border border-slate-700/60 max-w-full min-w-0">
-                        <Play className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+                      <div 
+                        onClick={handleOpenNextEpisode}
+                        className="mt-3 flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg text-xs text-slate-200 border border-slate-700/60 hover:border-amber-500/60 max-w-full min-w-0 cursor-pointer transition select-none group"
+                        title={
+                          smartLink
+                            ? `Sıradaki Bölümü Aç: S${nextEp.season_number}E${nextEp.episode_number} (${smartLink.site_name})`
+                            : generalLink
+                            ? `${generalLink.site_name}'ı Aç`
+                            : 'İzleme Linki Ekle ve Bölümü Aç'
+                        }
+                      >
+                        <Play className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                         <span className="font-semibold text-amber-300 shrink-0">Sıradaki:</span>
                         <span className="truncate min-w-0">S{nextEp.season_number}E{nextEp.episode_number} - {nextEp.name}</span>
+                        {smartLink && (
+                          <span className="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded shrink-0 hidden sm:inline-block">
+                            {smartLink.site_name}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -406,6 +472,34 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                       </span>
                     </button>
                   )}
+
+                  {/* Sıradaki Bölümü Aç Butonu */}
+                  <button
+                    onClick={handleOpenNextEpisode}
+                    aria-label={
+                      smartLink && nextEp
+                        ? `Sıradaki Bölümü Aç: S${nextEp.season_number}E${nextEp.episode_number} (${smartLink.site_name})`
+                        : generalLink
+                        ? `${generalLink.site_name}'ı Aç`
+                        : 'İzleme Linki Ekle ve Bölümü Aç'
+                    }
+                    className={`group p-2.5 rounded-xl border shrink-0 flex items-center justify-center gap-1.5 shadow-md cursor-pointer select-none transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E63946] ${
+                      smartLink
+                        ? 'bg-[#E63946] text-white hover:bg-[#D62828] border-[#E63946] shadow-[#E63946]/25 hover:shadow-lg hover:shadow-[#E63946]/40 hover:brightness-110'
+                        : generalLink
+                        ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 border-amber-500 shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/40 hover:brightness-110'
+                        : 'bg-slate-800 text-slate-400 hover:text-white border-slate-700/80 hover:bg-slate-700 hover:border-slate-500'
+                    }`}
+                    title={
+                      smartLink && nextEp
+                        ? `Sıradaki Bölümü Aç: S${nextEp.season_number}E${nextEp.episode_number} (${smartLink.site_name})`
+                        : generalLink
+                        ? `${generalLink.site_name}'ı Aç`
+                        : 'İzleme Linki Ekle ve Bölümü Aç'
+                    }
+                  >
+                    <Play className="w-4 h-4 fill-current stroke-[1.5] transition-transform duration-200 ease-out group-hover:scale-90 group-active:scale-75" />
+                  </button>
 
                   <button
                     onClick={() => {

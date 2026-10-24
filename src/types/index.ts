@@ -186,3 +186,17 @@ export interface NotificationSettings {
   notifyNewEpisodes: boolean;
   notifyFriendActivity: boolean;
 }
+
+export interface CustomWatchLink {
+  id: string;
+  media_id: number;
+  site_name: string;
+  url: string;
+  season_number?: number;
+  episode_number?: number;
+  url_template?: string;
+  pad_season?: boolean;
+  pad_episode?: boolean;
+  created_at: string;
+}
+

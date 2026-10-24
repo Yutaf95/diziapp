@@ -8,6 +8,7 @@ import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingRevie
 import { getDetails, getSeasonDetails, getBackdropUrl, getPosterUrl } from '../lib/tmdb';
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { AddToCollectionModal } from './AddToCollectionModal';
+import { WatchLinksBox } from './WatchLinksBox';
 
 interface MediaDetailModalProps {
   media: TMDBMedia | null;
@@ -540,6 +541,23 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
         {/* 2. BODY CONTENT */}
         <div className="p-4 sm:p-8 space-y-8">
           
+          {/* Buradan İzleyebilirsin - Özel İzleme Linkleri Kutucuğu */}
+          <WatchLinksBox
+            mediaId={details.id}
+            mediaTitle={details.title || details.name || ''}
+            isTv={isTv}
+            currentSeasonNum={selectedSeasonNum}
+            nextEpisode={
+              nextEpNum !== -1
+                ? {
+                    seasonNumber: selectedSeasonNum,
+                    episodeNumber: nextEpNum,
+                    name: seasonDetails?.episodes?.find(e => e.episode_number === nextEpNum)?.name
+                  }
+                : null
+            }
+          />
+
           {/* Özet & Hikaye - Sadece yapım henüz bitirilmediyse gösterilir */}
           {userWatchStatus !== 'watched' && (
             <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 shadow-lg space-y-2">

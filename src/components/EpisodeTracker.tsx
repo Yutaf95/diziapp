@@ -445,11 +445,6 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                         <Play className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                         <span className="font-semibold text-amber-300 shrink-0">Sıradaki:</span>
                         <span className="truncate min-w-0">S{nextEp.season_number}E{nextEp.episode_number} - {nextEp.name}</span>
-                        {smartLink && (
-                          <span className="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded shrink-0 hidden sm:inline-block">
-                            {smartLink.site_name}
-                          </span>
-                        )}
                       </div>
                     )}
                   </div>

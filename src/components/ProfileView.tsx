@@ -11,6 +11,7 @@ import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { compressImage } from '../utils/imageCompressor';
 import { MonthlyRecapModal } from './MonthlyRecapModal';
+import { getShowDates, getMovieFinishDate } from '../utils/dateUtils';
 import { UserAvatar } from './UserAvatar';
 import { TMDB_GENRE_NAMES, GENRE_COLOR_PALETTE, DEFAULT_TV_GENRE_DISTRIBUTION, DEFAULT_MOVIE_GENRE_DISTRIBUTION, calculateGenreDistribution } from '../utils/genreUtils';
 
@@ -425,8 +426,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const remainingHoursInDays = Math.floor((totalMinutes % 1440) / 60);
   const remainingMins = totalMinutes % 60;
 
-  // TV Time style dynamic time breakdown (Months/Days/Hours if >= 30 days, else Days/Hours/Minutes)
-  const timeBreakdown = React.useMemo(() => {
+  // TV Time style dynamic time strings (Months/Days/Hours if >= 30 days, else Days/Hours/Minutes)
+  const { timeShort, timeFull } = React.useMemo(() => {
     const isOverMonth = totalDays >= 30;
 
     if (isOverMonth) {
@@ -434,20 +435,38 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const days = totalDays % 30;
       const hours = Math.floor((totalMinutes % 1440) / 60);
 
+      const partsShort: string[] = [];
+      if (months > 0) partsShort.push(`${months}m`);
+      if (days > 0 || months > 0) partsShort.push(`${days}d`);
+      partsShort.push(`${hours}h`);
+
+      const partsFull: string[] = [];
+      if (months > 0) partsFull.push(`${months} ay`);
+      if (days > 0) partsFull.push(`${days} gün`);
+      if (hours > 0 || (months === 0 && days === 0)) partsFull.push(`${hours} saat`);
+
       return {
-        unit1: { value: months, label: 'Ay' },
-        unit2: { value: days, label: 'Gün' },
-        unit3: { value: hours, label: 'Saat' }
+        timeShort: partsShort.join(' '),
+        timeFull: `${partsFull.join(' ')} izlendi`
       };
     } else {
       const days = totalDays;
       const hours = Math.floor((totalMinutes % 1440) / 60);
       const mins = remainingMins;
 
+      const partsShort: string[] = [];
+      if (days > 0) partsShort.push(`${days}d`);
+      if (hours > 0 || days > 0) partsShort.push(`${hours}h`);
+      partsShort.push(`${mins}m`);
+
+      const partsFull: string[] = [];
+      if (days > 0) partsFull.push(`${days} gün`);
+      if (hours > 0) partsFull.push(`${hours} saat`);
+      if (mins > 0 || (days === 0 && hours === 0)) partsFull.push(`${mins} dk`);
+
       return {
-        unit1: { value: days, label: 'Gün' },
-        unit2: { value: hours, label: 'Saat' },
-        unit3: { value: mins, label: 'Dk' }
+        timeShort: partsShort.join(' '),
+        timeFull: `${partsFull.join(' ')} izlendi`
       };
     }
   }, [totalDays, totalMinutes, remainingMins]);
@@ -461,13 +480,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
         return timeB - timeA;
       });
-    return items.slice(0, 5).map(item => ({
-      id: item.media_id,
-      type: item.media_type,
-      title: item.title || 'Yapım',
-      poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-      date: item.updated_at ? new Date(item.updated_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : 'Son Zamanlarda'
-    }));
+    return items.slice(0, 5).map(item => {
+      let dateLabel = item.updated_at ? new Date(item.updated_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : 'Son Zamanlarda';
+      if (item.media_type === 'tv') {
+        const { startDate, finishDate } = getShowDates(item.media_id, episodeProgress, item.status, item.updated_at, item.created_at);
+        if (item.status === 'watched' && finishDate) {
+          dateLabel = `Bitiş: ${finishDate}`;
+        } else if (startDate) {
+          dateLabel = `Başlama: ${startDate}`;
+        }
+      } else {
+        const finishDate = getMovieFinishDate(item.updated_at, item.created_at);
+        if (finishDate) dateLabel = `İzlendi: ${finishDate}`;
+      }
+
+      return {
+        id: item.media_id,
+        type: item.media_type,
+        title: item.title || 'Yapım',
+        poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
+        date: dateLabel
+      };
+    });
   })();
 
   // Get Top 5 User Favorites from user's actual favorites list
@@ -773,68 +807,51 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="space-y-10 animate-in fade-in duration-300">
             
             {/* TV TIME STYLE STATS WIDGET */}
-            <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+            <div className="bg-gradient-to-r from-[#171b22] via-[#14171d] to-[#111419] border border-[#282f3c] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-2xl relative overflow-hidden ring-1 ring-white/5 space-y-5">
+              
+              {/* Header Bar */}
+              <div className="flex items-center gap-2.5 pb-3.5 border-b border-[#282f3c]/60">
+                <Clock className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm sm:text-base font-black text-white tracking-tight">
                   Toplam İzleme Süresi
                 </h3>
               </div>
 
-              <div className="flex items-center justify-between sm:justify-start sm:gap-14 pt-1">
-                {/* Time Units (Left group) */}
-                <div className="flex items-center gap-6 sm:gap-10">
-                  <div className="text-left space-y-0.5">
-                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
-                      {timeBreakdown.unit1.value.toLocaleString('tr-TR')}
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
-                      {timeBreakdown.unit1.label}
-                    </div>
+              {/* Metrics Grid — Fills the Card Across Desktop & Mobile */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 pt-1">
+                
+                {/* 1. Süre */}
+                <div className="col-span-2 md:col-span-1 space-y-1.5 md:border-r border-[#282f3c]/70 md:pr-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tracking-tight leading-none drop-shadow-sm">
+                    {timeShort}
                   </div>
-
-                  <div className="text-left space-y-0.5">
-                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
-                      {timeBreakdown.unit2.value.toLocaleString('tr-TR')}
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
-                      {timeBreakdown.unit2.label}
-                    </div>
-                  </div>
-
-                  <div className="text-left space-y-0.5">
-                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
-                      {timeBreakdown.unit3.value.toLocaleString('tr-TR')}
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
-                      {timeBreakdown.unit3.label}
-                    </div>
+                  <div className="text-xs sm:text-sm font-semibold text-slate-400">
+                    {timeFull}
                   </div>
                 </div>
 
-                {/* Subtle Vertical Divider */}
-                <div className="hidden sm:block w-px h-10 bg-[#2c3440]" />
-
-                {/* Counts (Right group: Bölüm & Film) */}
-                <div className="flex items-center gap-6 sm:gap-10 text-right sm:text-left">
-                  <div className="space-y-0.5">
-                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
-                      {watchedEpsCount.toLocaleString('tr-TR')}
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
-                      Bölüm
-                    </div>
+                {/* 2. Bölüm Sayısı */}
+                <div className="col-span-1 space-y-1.5 md:border-r border-[#282f3c]/70 md:pr-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tracking-tight leading-none drop-shadow-sm">
+                    {watchedEpsCount.toLocaleString('tr-TR')}
                   </div>
-
-                  <div className="space-y-0.5">
-                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
-                      {moviesWatchedCount.toLocaleString('tr-TR')}
-                    </div>
-                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
-                      Film
-                    </div>
+                  <div className="text-xs sm:text-sm font-semibold text-slate-400">
+                    Bölüm izlendi
                   </div>
                 </div>
+
+                {/* 3. Film Sayısı */}
+                <div className="col-span-1 space-y-1.5">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tracking-tight leading-none drop-shadow-sm">
+                    {moviesWatchedCount.toLocaleString('tr-TR')}
+                  </div>
+                  <div className="text-xs sm:text-sm font-semibold text-slate-400">
+                    Film izlendi
+                  </div>
+                </div>
+
               </div>
+
             </div>
 
             {/* 1. FAVORİLER */}
@@ -1062,28 +1079,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
               {filteredMovies.length > 0 ? (
-                filteredMovies.map(item => (
-                  <div
-                    key={item.media_id}
-                    onClick={() => onSelectMediaById?.(item.media_id, 'movie')}
-                    className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
-                  >
-                    <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
-                      <img
-                        src={item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
-                        alt={item.title || 'Film'}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute bottom-1.5 right-1.5 bg-black/90 text-[#00e054] font-mono text-xs font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5">
-                        <Star className="w-3 h-3 fill-[#00e054] text-[#00e054]" />
-                        {item.vote_average || 8.0}
+                filteredMovies.map(item => {
+                  const finishDate = getMovieFinishDate(item.updated_at, item.created_at);
+                  return (
+                    <div
+                      key={item.media_id}
+                      onClick={() => onSelectMediaById?.(item.media_id, 'movie')}
+                      className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
+                    >
+                      <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
+                        <img
+                          src={item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
+                          alt={item.title || 'Film'}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute bottom-1.5 right-1.5 bg-black/90 text-[#00e054] font-mono text-xs font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5">
+                          <Star className="w-3 h-3 fill-[#00e054] text-[#00e054]" />
+                          {item.rating ? `${item.rating}/10` : (item.vote_average || 8.0)}
+                        </div>
+                      </div>
+                      <div className="space-y-1 min-w-0">
+                        <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
+                        {finishDate && (
+                          <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span className="truncate">İzlendi: {finishDate}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="space-y-0.5 min-w-0">
-                      <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="col-span-5 py-12 text-center text-sm text-[#9ab] font-medium">
                   Kütüphanenizde henüz izlenmiş film bulunmuyor.
@@ -1105,6 +1131,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 filteredTvShows.map(item => {
                   const epsWatched = episodeProgress.filter(ep => Number(ep.show_id) === Number(item.media_id) && ep.is_watched).length;
                   const isCompleted = item.status === 'watched';
+                  const { startDate, finishDate } = getShowDates(item.media_id, episodeProgress, item.status, item.updated_at, item.created_at);
                   return (
                     <div
                       key={item.media_id}
@@ -1132,11 +1159,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           {item.rating ? `${item.rating}/10` : (item.vote_average || 8.5)}
                         </div>
                       </div>
-                      <div className="space-y-0.5 min-w-0">
+                      <div className="space-y-1 min-w-0">
                         <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
                         {epsWatched > 0 && (
-                          <p className="text-[11px] text-[#00e054] font-semibold">{epsWatched} Bölüm İzlendi</p>
+                          <p className="text-[11px] text-[#00e054] font-semibold leading-tight">{epsWatched} Bölüm İzlendi</p>
                         )}
+                        <div className="space-y-0.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
+                          {startDate && (
+                            <div className="flex items-center gap-1 text-emerald-400/90 truncate" title={`Başlama: ${startDate}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                              <span className="truncate">Başlama: {startDate}</span>
+                            </div>
+                          )}
+                          {isCompleted && finishDate && (
+                            <div className="flex items-center gap-1 text-slate-300 truncate" title={`Bitiş: ${finishDate}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                              <span className="truncate">Bitiş: {finishDate}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

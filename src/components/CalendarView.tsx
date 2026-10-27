@@ -234,6 +234,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     return `${y}-${mm}-${dd}`;
   };
 
+  // Helper to format Turkish display dates (e.g. { fullDate: '29 Ekim 2026', numericDate: '29.10.2026' })
+  const formatTurkishAirDate = (dateStr?: string) => {
+    if (!dateStr) return { fullDate: '', numericDate: '' };
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const y = parts[0];
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      const fullDate = `${d} ${monthNames[m - 1] || ''} ${y}`;
+      const numericDate = `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${y}`;
+      return { fullDate, numericDate };
+    }
+    return { fullDate: dateStr, numericDate: dateStr };
+  };
+
   // Calculate days count text
   const getCountdownBadge = (airDateStr: string) => {
     const air = new Date(airDateStr);
@@ -525,10 +540,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                   {/* Right: Date & Action */}
                   <div className="flex md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-[#232833] shrink-0">
-                    <div className="text-left md:text-right">
-                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Yayın Tarihi</span>
-                      <span className="text-sm font-black text-white font-mono">
-                        {ep.airDate}
+                    <div className="text-left md:text-right space-y-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Yayın Tarihi</span>
+                      <span className="text-sm font-black text-white block">
+                        {formatTurkishAirDate(ep.airDate).fullDate}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400 font-mono block">
+                        {formatTurkishAirDate(ep.airDate).numericDate}
                       </span>
                     </div>
 
@@ -583,7 +601,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
               <div className="flex items-center gap-2 text-[#E63946] font-extrabold text-sm">
                 <CalendarIcon className="w-4 h-4" />
-                <span>{selectedDayEpisodes[0].airDate} Yayın Akışı</span>
+                <span>{formatTurkishAirDate(selectedDayEpisodes[0].airDate).fullDate} Yayın Akışı</span>
               </div>
 
               <div className="space-y-3 pt-2">

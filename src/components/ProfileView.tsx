@@ -557,7 +557,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* 2. CONTENT AREA — Avatar Overlaps Banner Bottom Boundary */}
-      <div className="max-w-[1150px] mx-auto px-4 sm:px-6 relative z-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
 
         {/* ── Avatar Overlap + User Info + Stats Row ── */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 -mt-14 sm:-mt-20 pb-6 border-b border-[#2c3440]">
@@ -764,7 +764,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* ── TAB CONTENT (max-width container) ── */}
-      <div className="max-w-[1150px] mx-auto px-4 sm:px-6 pt-6 space-y-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
 
         {/* ========================================== */}
         {/* TAB CONTENT AREAS                          */}

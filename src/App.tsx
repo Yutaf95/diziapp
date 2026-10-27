@@ -2616,8 +2616,8 @@ export default function App() {
           
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             
-            {/* Sol Sidebar (270px - Hidden on mobile) */}
-            <div className="hidden lg:block w-[270px] shrink-0 space-y-5">
+            {/* Sol Sidebar (Hidden on mobile) */}
+            <div className="hidden lg:block w-[15.5rem] shrink-0 space-y-5">
               <LeftSidebar
                 user={currentUser}
                 activeMediaType={mediaFilter}
@@ -3146,8 +3146,8 @@ export default function App() {
 
             </div>
 
-            {/* Sağ Sidebar (360px - 390px): 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
-            <div className="hidden lg:block w-[360px] xl:w-[390px] shrink-0 space-y-4 sticky top-24 h-fit pr-2">
+            {/* Sağ Sidebar: 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
+            <div className="hidden lg:block w-[20.5rem] xl:w-[22.5rem] shrink-0 space-y-4 sticky top-24 h-fit pr-2">
               <SocialFeedSidebar
                 activities={followedActivities.length > 0 ? followedActivities : recent48hActivities}
                 onSelectMediaById={handleSelectMediaById}

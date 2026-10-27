@@ -34,8 +34,16 @@ export function getShowDates(
   timestamps.sort((a, b) => a - b);
 
   let startDate: string | null = null;
+  const createdTime = itemCreatedAt ? new Date(itemCreatedAt).getTime() : NaN;
+
   if (timestamps.length > 0) {
-    startDate = formatTurkishDate(new Date(timestamps[0]).toISOString());
+    const earliestEpTime = timestamps[0];
+    // If show was added/created earlier than earliest recorded episode timestamp, prefer itemCreatedAt as true start date
+    if (!isNaN(createdTime) && createdTime < earliestEpTime) {
+      startDate = formatTurkishDate(itemCreatedAt);
+    } else {
+      startDate = formatTurkishDate(new Date(earliestEpTime).toISOString());
+    }
   } else if (itemCreatedAt) {
     startDate = formatTurkishDate(itemCreatedAt);
   }

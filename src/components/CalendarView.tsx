@@ -50,8 +50,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
     async function fetchLiveSchedule() {
       const tvWatching = watchingList.filter(
-        item => item.media_type === 'tv' &&
-        (item.status === 'watching' || item.status === 'plan_to_watch' || item.status === 'watched')
+        item => item.media_type === 'tv' && item.status === 'watching'
       );
 
       if (tvWatching.length === 0) {
@@ -191,7 +190,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
       const watchingIds = new Set(
         watchingList
-          .filter(w => w.media_type === 'tv' && (w.status === 'watching' || w.status === 'plan_to_watch' || w.status === 'watched'))
+          .filter(w => w.media_type === 'tv' && w.status === 'watching')
           .map(w => w.media_id)
       );
       return watchingIds.has(ep.showId);
@@ -254,7 +253,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       
       {/* Top Bar Header */}
       <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-5 shadow-lg space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#232833]">
+        <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${viewMode === 'calendar' ? 'pb-4 border-b border-[#232833]' : ''}`}>
           
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-[#E63946]/10 text-[#E63946] border border-[#E63946]/20">
@@ -266,9 +265,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 <span className="text-xs font-bold bg-[#E63946]/20 text-[#E63946] px-2 py-0.5 rounded-full border border-[#E63946]/30">
                   Canlı Takip
                 </span>
+                {loadingLive && (
+                  <Loader2 className="w-4 h-4 text-[#E63946] animate-spin inline-block" />
+                )}
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                İzlediğiniz ve izleyeceğiniz dizilerin yeni bölüm ile sezon prömiyer tarihleri
+                Şu anda izlediğiniz dizilerin yeni bölüm ve sezon prömiyer tarihleri
               </p>
             </div>
           </div>
@@ -302,34 +304,36 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
 
         {/* Month Navigation Controls */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrevMonth}
-              className="p-2 rounded-xl bg-[#0B0C0E] hover:bg-[#232833] text-slate-300 hover:text-white border border-[#232833] transition"
-              title="Önceki Ay"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleNextMonth}
-              className="p-2 rounded-xl bg-[#0B0C0E] hover:bg-[#232833] text-slate-300 hover:text-white border border-[#232833] transition"
-              title="Sonraki Ay"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <span className="text-base sm:text-lg font-black text-white pl-2">
-              {monthNames[month]} {year}
-            </span>
-          </div>
+        {viewMode === 'calendar' && (
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevMonth}
+                className="p-2 rounded-xl bg-[#0B0C0E] hover:bg-[#232833] text-slate-300 hover:text-white border border-[#232833] transition"
+                title="Önceki Ay"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleNextMonth}
+                className="p-2 rounded-xl bg-[#0B0C0E] hover:bg-[#232833] text-slate-300 hover:text-white border border-[#232833] transition"
+                title="Sonraki Ay"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <span className="text-base sm:text-lg font-black text-white pl-2">
+                {monthNames[month]} {year}
+              </span>
+            </div>
 
-          <button
-            onClick={handleToday}
-            className="text-xs font-bold text-[#E63946] bg-[#E63946]/10 hover:bg-[#E63946]/20 px-3 py-1.5 rounded-xl border border-[#E63946]/30 transition"
-          >
-            Bugüne Git
-          </button>
-        </div>
+            <button
+              onClick={handleToday}
+              className="text-xs font-bold text-[#E63946] bg-[#E63946]/10 hover:bg-[#E63946]/20 px-3 py-1.5 rounded-xl border border-[#E63946]/30 transition"
+            >
+              Bugüne Git
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Content View */}
@@ -455,93 +459,108 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       ) : (
         /* Timeline View */
         <div className="space-y-4">
-          {filteredEpisodes.map((ep) => {
-            const badge = getCountdownBadge(ep.airDate);
+          {loadingLive ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-[#14171D] border border-[#232833] rounded-2xl text-center">
+              <Loader2 className="w-8 h-8 text-[#E63946] animate-spin mb-3" />
+              <p className="text-slate-300 font-bold text-sm">Yayın takvimi yükleniyor...</p>
+            </div>
+          ) : filteredEpisodes.length === 0 ? (
+            <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-8 text-center space-y-3">
+              <Tv className="w-10 h-10 text-slate-500 mx-auto" />
+              <h3 className="text-base font-bold text-white">Yaklaşan Bölüm Bulunmuyor</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Şu an güncel olarak izlediğiniz diziler için planlanmış yeni bir bölüm tarihi bulunmuyor.
+              </p>
+            </div>
+          ) : (
+            filteredEpisodes.map((ep) => {
+              const badge = getCountdownBadge(ep.airDate);
 
-            return (
-              <motion.div
-                key={ep.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-[#14171D] border border-[#232833] hover:border-[#E63946]/50 rounded-2xl p-4 sm:p-5 shadow-lg transition duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 group"
-              >
-                {/* Left: Show Info */}
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="relative w-16 h-24 sm:w-20 sm:h-28 rounded-xl overflow-hidden border border-[#2B313E] shrink-0 shadow-md group-hover:scale-105 transition-transform">
-                    <img
-                      src={ep.posterPath}
-                      alt={ep.showName}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-1 left-1 bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] font-bold text-amber-400 flex items-center gap-0.5">
-                      <Star className="w-2.5 h-2.5 fill-amber-400" />
-                      {ep.voteAverage}
+              return (
+                <motion.div
+                  key={ep.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-[#14171D] border border-[#232833] hover:border-[#E63946]/50 rounded-2xl p-4 sm:p-5 shadow-lg transition duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 group"
+                >
+                  {/* Left: Show Info */}
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="relative w-16 h-24 sm:w-20 sm:h-28 rounded-xl overflow-hidden border border-[#2B313E] shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                      <img
+                        src={ep.posterPath}
+                        alt={ep.showName}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-1 left-1 bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] font-bold text-amber-400 flex items-center gap-0.5">
+                        <Star className="w-2.5 h-2.5 fill-amber-400" />
+                        {ep.voteAverage}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide border ${ep.networkColor}`}>
+                          {ep.network}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${badge.color}`}>
+                          {badge.text}
+                        </span>
+                      </div>
+
+                      <h3 className="text-base sm:text-lg font-black text-white truncate group-hover:text-[#E63946] transition">
+                        {ep.showName}
+                      </h3>
+
+                      <p className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                        <span>Sezon {ep.seasonNumber}, Bölüm {ep.episodeNumber}</span>
+                        <span className="text-slate-500">•</span>
+                        <span className="text-slate-300">{ep.episodeName}</span>
+                      </p>
+
+                      <p className="text-xs text-slate-400 line-clamp-2 max-w-xl">
+                        {ep.overview}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide border ${ep.networkColor}`}>
-                        {ep.network}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${badge.color}`}>
-                        {badge.text}
+                  {/* Right: Date & Action */}
+                  <div className="flex md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-[#232833] shrink-0">
+                    <div className="text-left md:text-right">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Yayın Tarihi</span>
+                      <span className="text-sm font-black text-white font-mono">
+                        {ep.airDate}
                       </span>
                     </div>
 
-                    <h3 className="text-base sm:text-lg font-black text-white truncate group-hover:text-[#E63946] transition">
-                      {ep.showName}
-                    </h3>
-
-                    <p className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                      <span>Sezon {ep.seasonNumber}, Bölüm {ep.episodeNumber}</span>
-                      <span className="text-slate-500">•</span>
-                      <span className="text-slate-300">{ep.episodeName}</span>
-                    </p>
-
-                    <p className="text-xs text-slate-400 line-clamp-2 max-w-xl">
-                      {ep.overview}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      {onSelectMedia && (
+                        <button
+                          onClick={() => onSelectMedia({
+                            id: ep.showId,
+                            name: ep.showName,
+                            title: ep.showName,
+                            poster_path: ep.posterPath,
+                            backdrop_path: ep.backdropPath,
+                            media_type: 'tv',
+                            overview: ep.overview,
+                            vote_average: ep.voteAverage,
+                            vote_count: 1000,
+                            popularity: 100,
+                            first_air_date: ep.airDate
+                          })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B0C0E] hover:bg-[#232833] border border-[#2B313E] text-slate-200 text-xs font-bold transition"
+                        >
+                          <Info className="w-3.5 h-3.5 text-[#E63946]" />
+                          <span>Dizi Sayfası</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Right: Date & Action */}
-                <div className="flex md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-[#232833] shrink-0">
-                  <div className="text-left md:text-right">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Yayın Tarihi</span>
-                    <span className="text-sm font-black text-white font-mono">
-                      {ep.airDate}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {onSelectMedia && (
-                      <button
-                        onClick={() => onSelectMedia({
-                          id: ep.showId,
-                          name: ep.showName,
-                          title: ep.showName,
-                          poster_path: ep.posterPath,
-                          backdrop_path: ep.backdropPath,
-                          media_type: 'tv',
-                          overview: ep.overview,
-                          vote_average: ep.voteAverage,
-                          vote_count: 1000,
-                          popularity: 100,
-                          first_air_date: ep.airDate
-                        })}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B0C0E] hover:bg-[#232833] border border-[#2B313E] text-slate-200 text-xs font-bold transition"
-                      >
-                        <Info className="w-3.5 h-3.5 text-[#E63946]" />
-                        <span>Dizi Sayfası</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-              </motion.div>
-            );
-          })}
+                </motion.div>
+              );
+            })
+          )}
         </div>
       )}
 

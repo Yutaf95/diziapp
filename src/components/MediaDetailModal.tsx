@@ -448,7 +448,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     </span>
                   )}
 
-                  {startDate && (
+                  {startDate && startDate !== finishDate && (
                     <span className="flex items-center gap-1 bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-md border border-emerald-500/30 text-[11px]">
                       <Calendar className="w-3 h-3 shrink-0" /> Başlama: {startDate}
                     </span>
@@ -456,7 +456,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
                   {finishDate && (
                     <span className="flex items-center gap-1 bg-sky-500/15 text-sky-400 px-2.5 py-0.5 rounded-md border border-sky-500/30 text-[11px]">
-                      <CheckCircle2 className="w-3 h-3 shrink-0" /> {isTv ? 'Bitiş:' : 'İzlendi:'} {finishDate}
+                      <CheckCircle2 className="w-3 h-3 shrink-0" /> {isTv ? (startDate === finishDate ? 'İzlendi:' : 'Bitiş:') : 'İzlendi:'} {finishDate}
                     </span>
                   )}
                 </div>
@@ -559,7 +559,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               {/* İzleme Tarihleri Satırı (Başlama / Bitiş / İzlendi) */}
               {(startDate || finishDate) && (
                 <div className="pt-2 border-t border-[#232833] flex items-center justify-between gap-3 text-[11px] font-semibold px-1 flex-wrap">
-                  {startDate && (
+                  {startDate && startDate !== finishDate && (
                     <div className="flex items-center gap-1.5 text-emerald-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                       <span>Başlama: <span className="text-white font-extrabold">{startDate}</span></span>
@@ -568,7 +568,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   {finishDate && (
                     <div className="flex items-center gap-1.5 text-sky-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-                      <span>{isTv ? 'Bitiş:' : 'İzlendi:'} <span className="text-white font-extrabold">{finishDate}</span></span>
+                      <span>{isTv ? (startDate === finishDate ? 'İzlendi:' : 'Bitiş:') : 'İzlendi:'} <span className="text-white font-extrabold">{finishDate}</span></span>
                     </div>
                   )}
                 </div>

@@ -1965,7 +1965,11 @@ export default function App() {
           e => e.show_id === showId && e.season_number === item.season_number && e.episode_number === item.episode_number
         );
         if (idx >= 0) {
-          nextState[idx] = { ...nextState[idx], is_watched: true, watched_at: now };
+          const existing = nextState[idx];
+          const preservedWatchedAt = (existing.is_watched && existing.watched_at)
+            ? existing.watched_at
+            : now;
+          nextState[idx] = { ...existing, is_watched: true, watched_at: preservedWatchedAt };
         } else {
           nextState.push({
             user_id: currentUser.id,
@@ -2046,15 +2050,21 @@ export default function App() {
           .eq('media_id', showId)
           .eq('media_type', 'tv');
 
-        // 2. Batch upsert episodes progress in Supabase
-        const upsertData = itemsToMark.map(item => ({
-          user_id: userId,
-          show_id: showId,
-          season_number: item.season_number,
-          episode_number: item.episode_number,
-          is_watched: true,
-          watched_at: now
-        }));
+        // 2. Batch upsert episodes progress in Supabase (preserving existing watch dates)
+        const currentProgress = episodeProgress;
+        const upsertData = itemsToMark.map(item => {
+          const existing = currentProgress.find(
+            e => e.show_id === showId && e.season_number === item.season_number && e.episode_number === item.episode_number && e.is_watched
+          );
+          return {
+            user_id: userId,
+            show_id: showId,
+            season_number: item.season_number,
+            episode_number: item.episode_number,
+            is_watched: true,
+            watched_at: (existing && existing.watched_at) ? existing.watched_at : now
+          };
+        });
         await supabase
           .from('episode_progress')
           .upsert(upsertData);
@@ -2815,7 +2825,7 @@ export default function App() {
               ) : activeTab === 'calendar' ? (
                 <React.Suspense fallback={<PageLoader />}>
                   <CalendarView
-                    watchingList={watchList.filter(w => w.status === 'watching' || w.status === 'watched' || w.status === 'plan_to_watch')}
+                    watchingList={watchList.filter(w => w.media_type === 'tv' && w.status === 'watching')}
                     episodeProgress={episodeProgress}
                     onToggleEpisode={handleToggleEpisode}
                     onSelectMedia={(m) => setSelectedMedia(m)}

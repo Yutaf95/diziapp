@@ -1,4 +1,5 @@
 import { CustomWatchLink } from '../types';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const STORAGE_KEY = 'diziapp_watch_links';
 
@@ -9,6 +10,17 @@ export interface DetectedPattern {
   padSeason: boolean;
   padEpisode: boolean;
 }
+
+// Helper to safely get the current logged in user ID
+const getCurrentUserId = async (): Promise<string | null> => {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user?.id || null;
+  } catch {
+    return null;
+  }
+};
 
 // Clean and extract a readable brand / site name from domain URL
 export const extractCleanSiteName = (url: string): string => {
@@ -136,7 +148,6 @@ export const analyzeEpisodeUrl = (
     const sPadStr = sNumStr.padStart(2, '0');
     const ePadStr = eNumStr.padStart(2, '0');
 
-    // Test with padded or raw numbers in path
     const targetS = url.includes(sPadStr) ? sPadStr : (url.includes(sNumStr) ? sNumStr : null);
     const targetE = url.includes(ePadStr) ? ePadStr : (url.includes(eNumStr) ? eNumStr : null);
 
@@ -144,7 +155,6 @@ export const analyzeEpisodeUrl = (
       const sIndex = url.lastIndexOf(targetS);
       const eIndex = url.lastIndexOf(targetE);
       if (sIndex !== -1 && eIndex !== -1 && sIndex !== eIndex) {
-        // Replace safely by position
         let template = url;
         if (sIndex < eIndex) {
           template = template.slice(0, eIndex) + '{episode}' + template.slice(eIndex + targetE.length);
@@ -212,7 +222,82 @@ export const getLinksForMedia = (mediaId: number): CustomWatchLink[] => {
   return all.filter(l => Number(l.media_id) === Number(mediaId));
 };
 
-// Add a new watch link
+// Synchronize watch links with Supabase across all devices
+export const syncWatchLinksWithSupabase = async (userId: string): Promise<void> => {
+  if (!isSupabaseConfigured || !userId) return;
+  try {
+    const { data, error } = await supabase
+      .from('watch_links')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) {
+      // If table doesn't exist yet, gracefully skip without breaking the app
+      return;
+    }
+
+    const localLinks = getStoredWatchLinks();
+    const remoteLinks: CustomWatchLink[] = (data || []).map((row: any) => ({
+      id: row.id,
+      user_id: row.user_id,
+      media_id: row.media_id,
+      site_name: row.site_name,
+      url: row.url,
+      season_number: row.season_number,
+      episode_number: row.episode_number,
+      url_template: row.url_template,
+      pad_season: row.pad_season,
+      pad_episode: row.pad_episode,
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    }));
+
+    // Intelligent 2-way Merge:
+    const mergedMap = new Map<string, CustomWatchLink>();
+    remoteLinks.forEach(rl => mergedMap.set(rl.id, rl));
+
+    const localOnlyLinks: CustomWatchLink[] = [];
+    localLinks.forEach(ll => {
+      if (!mergedMap.has(ll.id)) {
+        mergedMap.set(ll.id, { ...ll, user_id: userId });
+        localOnlyLinks.push({ ...ll, user_id: userId });
+      }
+    });
+
+    const mergedArray = Array.from(mergedMap.values());
+    saveStoredWatchLinks(mergedArray);
+
+    // If there were local links not yet in Supabase, upload them now
+    if (localOnlyLinks.length > 0) {
+      const rowsToUpsert = localOnlyLinks.map(l => ({
+        id: l.id,
+        user_id: userId,
+        media_id: l.media_id,
+        site_name: l.site_name,
+        url: l.url,
+        season_number: l.season_number ?? null,
+        episode_number: l.episode_number ?? null,
+        url_template: l.url_template ?? null,
+        pad_season: l.pad_season ?? false,
+        pad_episode: l.pad_episode ?? false,
+        created_at: l.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+      await supabase.from('watch_links').upsert(rowsToUpsert);
+    }
+  } catch (e) {
+    console.warn('Supabase watch_links sync skipped or table not created yet:', e);
+  }
+};
+
+// Auto-trigger sync on load in browser
+if (typeof window !== 'undefined') {
+  getCurrentUserId().then(uid => {
+    if (uid) syncWatchLinksWithSupabase(uid);
+  });
+}
+
+// Add a new watch link (Dual-layer: LocalStorage + Supabase)
 export const addWatchLink = (
   linkData: Omit<CustomWatchLink, 'id' | 'created_at'>
 ): CustomWatchLink => {
@@ -248,6 +333,7 @@ export const addWatchLink = (
     }
   }
 
+  const now = new Date().toISOString();
   const newLink: CustomWatchLink = {
     ...linkData,
     id: `wl_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -258,15 +344,39 @@ export const addWatchLink = (
     pad_episode: padEpisode,
     season_number: seasonNumber,
     episode_number: episodeNumber,
-    created_at: new Date().toISOString(),
+    created_at: now,
+    updated_at: now
   };
 
   const updated = [newLink, ...all];
   saveStoredWatchLinks(updated);
+
+  // Background Supabase Sync
+  getCurrentUserId().then(userId => {
+    if (userId && isSupabaseConfigured) {
+      supabase.from('watch_links').upsert({
+        id: newLink.id,
+        user_id: userId,
+        media_id: newLink.media_id,
+        site_name: newLink.site_name,
+        url: newLink.url,
+        season_number: newLink.season_number ?? null,
+        episode_number: newLink.episode_number ?? null,
+        url_template: newLink.url_template ?? null,
+        pad_season: newLink.pad_season ?? false,
+        pad_episode: newLink.pad_episode ?? false,
+        created_at: newLink.created_at,
+        updated_at: now
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase watch_links upsert error (table may not exist):', error.message);
+      }).catch(() => {});
+    }
+  });
+
   return newLink;
 };
 
-// Update an existing watch link
+// Update an existing watch link (Dual-layer: LocalStorage + Supabase)
 export const updateWatchLink = (
   id: string,
   updates: Partial<Omit<CustomWatchLink, 'id' | 'created_at'>>
@@ -299,6 +409,7 @@ export const updateWatchLink = (
     }
   }
 
+  const now = new Date().toISOString();
   all[index] = {
     ...all[index],
     ...updates,
@@ -307,14 +418,38 @@ export const updateWatchLink = (
     url_template: urlTemplate,
     pad_season: padSeason,
     pad_episode: padEpisode,
+    updated_at: now
   };
 
   saveStoredWatchLinks(all);
+
+  // Background Supabase Sync
+  getCurrentUserId().then(userId => {
+    if (userId && isSupabaseConfigured) {
+      supabase.from('watch_links').update({
+        site_name: siteName,
+        url: cleanUrl,
+        season_number: all[index].season_number,
+        episode_number: all[index].episode_number,
+        url_template: urlTemplate,
+        pad_season: padSeason ?? false,
+        pad_episode: padEpisode ?? false,
+        updated_at: now
+      }).eq('id', id).catch(() => {});
+    }
+  });
 };
 
-// Delete a watch link
+// Delete a watch link (Dual-layer: LocalStorage + Supabase)
 export const deleteWatchLink = (id: string): void => {
   const all = getStoredWatchLinks();
   const filtered = all.filter(l => l.id !== id);
   saveStoredWatchLinks(filtered);
+
+  // Background Supabase Sync
+  getCurrentUserId().then(userId => {
+    if (userId && isSupabaseConfigured) {
+      supabase.from('watch_links').delete().eq('id', id).catch(() => {});
+    }
+  });
 };

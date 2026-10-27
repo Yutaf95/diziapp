@@ -52,6 +52,7 @@ import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Se
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
 import { CURRENT_USER, MOCK_USER_PROFILES } from './data/mockData';
+import { syncWatchLinksWithSupabase } from './utils/watchLinksStorage';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -144,6 +145,9 @@ export default function App() {
           supabase.from('custom_collections').select('*, collection_items(*)').eq('user_id', userId),
           supabase.from('follows').select('following_id').eq('follower_id', userId)
         ]);
+
+        // Background Dual-Layer Sync for Custom Watch Links
+        syncWatchLinksWithSupabase(userId).catch(() => {});
 
         // 1. Profile
         let profileData = profileRes.status === 'fulfilled' ? profileRes.value?.data : null;
@@ -1818,6 +1822,27 @@ export default function App() {
         } catch (e) {}
       }
 
+      // Ensure show exists in watchList
+      setWatchList(prev => {
+        const exists = prev.some(w => Number(w.media_id) === Number(showId) && w.media_type === 'tv');
+        if (!exists) {
+          return [
+            ...prev,
+            {
+              user_id: currentUser.id,
+              media_id: Number(showId),
+              media_type: 'tv' as MediaType,
+              status: 'watching' as WatchStatusType,
+              title: resolvedShowTitle || 'Dizi',
+              poster_path: resolvedShowPoster,
+              updated_at: nowStr,
+              created_at: nowStr
+            }
+          ];
+        }
+        return prev;
+      });
+
       const newActivity: ActivityFeedItem = {
         id: `act_${Date.now()}`,
         user_id: currentUser.id,
@@ -1841,13 +1866,15 @@ export default function App() {
           const show = watchList.find(w => Number(w.media_id) === Number(showId) && w.media_type === 'tv');
           await supabase
             .from('watch_status')
-            .update({
-              updated_at: nowStr,
-              ...(show && show.status === 'plan_to_watch' ? { status: 'watching' } : {})
-            })
-            .eq('user_id', userId)
-            .eq('media_id', showId)
-            .eq('media_type', 'tv');
+            .upsert({
+              user_id: userId,
+              media_id: Number(showId),
+              media_type: 'tv',
+              status: (show && show.status === 'watched') ? 'watched' : 'watching',
+              title: resolvedShowTitle || show?.title || 'Dizi',
+              poster_path: resolvedShowPoster || show?.poster_path,
+              updated_at: nowStr
+            }, { onConflict: 'user_id,media_id,media_type' });
 
           await supabase
             .from('episode_progress')
@@ -1962,8 +1989,23 @@ export default function App() {
             ? { ...w, updated_at: now, status: w.status === 'plan_to_watch' ? ('watching' as WatchStatusType) : w.status }
             : w
         );
+      } else {
+        const resolvedTitle = selectedMedia && Number(selectedMedia.id) === Number(showId) ? (selectedMedia.name || selectedMedia.title) : 'Dizi';
+        const resolvedPoster = selectedMedia && Number(selectedMedia.id) === Number(showId) ? selectedMedia.poster_path : undefined;
+        return [
+          ...prev,
+          {
+            user_id: currentUser.id,
+            media_id: Number(showId),
+            media_type: 'tv' as MediaType,
+            status: 'watching' as WatchStatusType,
+            title: resolvedTitle,
+            poster_path: resolvedPoster,
+            updated_at: now,
+            created_at: now
+          }
+        ];
       }
-      return prev;
     });
 
     if (!skipActivity) {

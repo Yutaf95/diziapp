@@ -189,6 +189,7 @@ export interface NotificationSettings {
 
 export interface CustomWatchLink {
   id: string;
+  user_id?: string;
   media_id: number;
   site_name: string;
   url: string;
@@ -198,5 +199,6 @@ export interface CustomWatchLink {
   pad_season?: boolean;
   pad_episode?: boolean;
   created_at: string;
+  updated_at?: string;
 }
 

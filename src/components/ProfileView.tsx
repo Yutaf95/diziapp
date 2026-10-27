@@ -12,6 +12,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { compressImage } from '../utils/imageCompressor';
 import { MonthlyRecapModal } from './MonthlyRecapModal';
 import { UserAvatar } from './UserAvatar';
+import { TMDB_GENRE_NAMES, GENRE_COLOR_PALETTE, DEFAULT_TV_GENRE_DISTRIBUTION, DEFAULT_MOVIE_GENRE_DISTRIBUTION, calculateGenreDistribution } from '../utils/genreUtils';
 
 interface ProfileViewProps {
   user: Profile;
@@ -36,60 +37,6 @@ interface ProfileViewProps {
 }
 
 const MOCK_PINNED_REVIEWS: RatingReview[] = [];
-
-const TMDB_GENRE_NAMES: Record<number, string> = {
-  28: 'Aksiyon',
-  12: 'Macera',
-  16: 'Animasyon',
-  35: 'Komedi',
-  80: 'Suç',
-  99: 'Belgesel',
-  18: 'Drama',
-  10751: 'Aile',
-  14: 'Fantastik',
-  36: 'Tarih',
-  27: 'Korku',
-  10402: 'Müzik',
-  9648: 'Gizem',
-  10749: 'Romantik',
-  878: 'Bilim Kurgu',
-  10770: 'TV Filmi',
-  53: 'Gerilim',
-  10752: 'Savaş',
-  37: 'Vahşi Batı',
-  10759: 'Aksiyon & Macera',
-  10762: 'Çocuk',
-  10763: 'Haber',
-  10764: 'Reality',
-  10765: 'Bilim Kurgu & Fantastik',
-  10766: 'Pembe Dizi',
-  10767: 'Talk Show',
-  10768: 'Savaş & Politika'
-};
-
-const GENRE_COLOR_PALETTE = [
-  'bg-[#00e054]',
-  'bg-blue-500',
-  'bg-amber-500',
-  'bg-purple-500',
-  'bg-rose-500',
-  'bg-cyan-500',
-  'bg-emerald-500'
-];
-
-const DEFAULT_TV_GENRE_DISTRIBUTION = [
-  { genre: 'Bilim Kurgu & Macera', percent: 25, color: 'bg-[#00e054]' },
-  { genre: 'Drama & Gizem', percent: 25, color: 'bg-blue-500' },
-  { genre: 'Aksiyon & Gerilim', percent: 25, color: 'bg-amber-500' },
-  { genre: 'Animasyon & Komedi', percent: 25, color: 'bg-purple-500' }
-];
-
-const DEFAULT_MOVIE_GENRE_DISTRIBUTION = [
-  { genre: 'Aksiyon & Macera', percent: 25, color: 'bg-amber-500' },
-  { genre: 'Bilim Kurgu & Fantezi', percent: 25, color: 'bg-[#00e054]' },
-  { genre: 'Drama & Suç', percent: 25, color: 'bg-blue-500' },
-  { genre: 'Korku & Gerilim', percent: 25, color: 'bg-rose-500' }
-];
 
 const isUUIDString = (str?: string): boolean => {
   if (!str) return false;
@@ -414,131 +361,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   // Real Counts & Filtered Lists (Excluding 'plan_to_watch', sorted by log/update date descending - newest first)
-  const filteredMovies = [...watchList]
-    .filter(w => w.media_type === 'movie' && w.status === 'watched')
-    .sort((a, b) => {
-      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
-      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
-      return timeB - timeA;
-    });
+  const filteredMovies = React.useMemo(() => {
+    return [...watchList]
+      .filter(w => w.media_type === 'movie' && w.status === 'watched')
+      .sort((a, b) => {
+        const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
+        const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
+        return timeB - timeA;
+      });
+  }, [watchList]);
 
-  const filteredTvShows = [...watchList]
-    .filter(w => w.media_type === 'tv' && w.status === 'watched')
-    .sort((a, b) => {
-      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
-      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
-      return timeB - timeA;
-    });
+  // Shows that have watched episodes in episodeProgress
+  const watchedShowIdSet = React.useMemo(() => {
+    return new Set(episodeProgress.filter(ep => ep.is_watched).map(ep => Number(ep.show_id)));
+  }, [episodeProgress]);
+
+  // Filtered TV shows: includes shows marked 'watching' or 'watched', or having watched episodes
+  const filteredTvShows = React.useMemo(() => {
+    return [...watchList]
+      .filter(w => w.media_type === 'tv' && (w.status === 'watched' || w.status === 'watching' || watchedShowIdSet.has(Number(w.media_id))))
+      .sort((a, b) => {
+        const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
+        const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
+        return timeB - timeA;
+      });
+  }, [watchList, watchedShowIdSet]);
 
   const moviesWatchedCount = filteredMovies.length;
   const tvShowsWatchedCount = filteredTvShows.length;
   const watchedEpsCount = episodeProgress.filter(ep => ep.is_watched).length;
-
-  // Helper to dynamically calculate genre distribution for watched items
-  const calculateGenreDistribution = (
-    watchedList: WatchStatus[],
-    defaultFallback: { genre: string; percent: number; color: string }[]
-  ) => {
-    if (!watchedList || watchedList.length === 0) {
-      return defaultFallback;
-    }
-
-    const counts: Record<string, number> = {};
-    let totalOccurrences = 0;
-
-    watchedList.forEach(item => {
-      const itemGenres: string[] = [];
-
-      if (item.genres && item.genres.length > 0) {
-        item.genres.forEach(g => {
-          if (g.name) itemGenres.push(g.name);
-        });
-      } else if (item.genre_ids && item.genre_ids.length > 0) {
-        item.genre_ids.forEach(id => {
-          if (TMDB_GENRE_NAMES[id]) itemGenres.push(TMDB_GENRE_NAMES[id]);
-        });
-      } else if ((item as any).genre) {
-        itemGenres.push((item as any).genre);
-      }
-
-      if (itemGenres.length === 0) {
-        const titleLower = (item.title || '').toLowerCase();
-        
-        // Animasyon & Anime
-        if (titleLower.includes('bleach') || titleLower.includes('futurama') || titleLower.includes('one piece') || titleLower.includes('lucky') || titleLower.includes('minion') || titleLower.includes('rick') || titleLower.includes('simpson') || titleLower.includes('arcane') || titleLower.includes('naruto') || titleLower.includes('titan') || titleLower.includes('dragon ball') || titleLower.includes('anime') || titleLower.includes('animasyon')) {
-          itemGenres.push('Animasyon');
-        }
-        
-        // Bilim Kurgu
-        if (titleLower.includes('severance') || titleLower.includes('interstellar') || titleLower.includes('dune') || titleLower.includes('backrooms') || titleLower.includes('sci-fi') || titleLower.includes('star') || titleLower.includes('matrix') || titleLower.includes('kurgu') || titleLower.includes('black mirror')) {
-          itemGenres.push('Bilim Kurgu');
-        }
-        
-        // Komedi
-        if (titleLower.includes('ted lasso') || titleLower.includes('gervais') || titleLower.includes('alley cats') || titleLower.includes('office') || titleLower.includes('friends') || titleLower.includes('brooklyn') || titleLower.includes('komedi') || titleLower.includes('comedy') || titleLower.includes('himym')) {
-          itemGenres.push('Komedi');
-        }
-
-        // Aksiyon & Macera
-        if (titleLower.includes('lanterns') || titleLower.includes('furious') || titleLower.includes('fury') || titleLower.includes('batman') || titleLower.includes('marvel') || titleLower.includes('avengers') || titleLower.includes('spider') || titleLower.includes('action') || titleLower.includes('aksiyon') || titleLower.includes('fast') || titleLower.includes('macera')) {
-          itemGenres.push('Aksiyon & Macera');
-        }
-
-        // Suç & Gizem
-        if (titleLower.includes('breaking bad') || titleLower.includes('better call saul') || titleLower.includes('dexter') || titleLower.includes('sherlock') || titleLower.includes('mindhunter') || titleLower.includes('suç') || titleLower.includes('crime') || titleLower.includes('gizem') || titleLower.includes('mystery')) {
-          itemGenres.push('Suç');
-        }
-
-        // Korku & Gerilim
-        if (titleLower.includes('alien') || titleLower.includes('conjuring') || titleLower.includes('saw') || titleLower.includes('halloween') || titleLower.includes('korku') || titleLower.includes('horror') || titleLower.includes('gerilim') || titleLower.includes('thriller')) {
-          itemGenres.push('Korku');
-        }
-
-        // Dram / Drama
-        if (titleLower.includes('dragon') || titleLower.includes('bear') || titleLower.includes('shogun') || titleLower.includes('crown') || titleLower.includes('succession') || titleLower.includes('drama') || titleLower.includes('dram')) {
-          itemGenres.push('Drama');
-        }
-
-        // Fallback default based on media_type
-        if (itemGenres.length === 0) {
-          if (item.media_type === 'tv') {
-            itemGenres.push('Aksiyon & Macera');
-          } else {
-            itemGenres.push('Bilim Kurgu');
-          }
-        }
-      }
-
-      itemGenres.forEach(gName => {
-        counts[gName] = (counts[gName] || 0) + 1;
-        totalOccurrences++;
-      });
-    });
-
-    if (totalOccurrences === 0) {
-      return defaultFallback;
-    }
-
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    const topGenres = sorted.slice(0, 4);
-    const topSum = topGenres.reduce((sum, [, c]) => sum + c, 0);
-
-    let remainingPercent = 100;
-    return topGenres.map(([genreName, count], idx) => {
-      let percent: number;
-      if (idx === topGenres.length - 1) {
-        percent = remainingPercent;
-      } else {
-        percent = Math.round((count / topSum) * 100);
-        remainingPercent -= percent;
-      }
-      return {
-        genre: genreName,
-        percent: Math.max(percent, 1),
-        color: GENRE_COLOR_PALETTE[idx % GENRE_COLOR_PALETTE.length]
-      };
-    });
-  };
 
   const tvGenreDistribution = React.useMemo(() => {
     return calculateGenreDistribution(filteredTvShows, DEFAULT_TV_GENRE_DISTRIBUTION);
@@ -574,6 +425,33 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const remainingHoursInDays = Math.floor((totalMinutes % 1440) / 60);
   const remainingMins = totalMinutes % 60;
 
+  // TV Time style dynamic time breakdown (Months/Days/Hours if >= 30 days, else Days/Hours/Minutes)
+  const timeBreakdown = React.useMemo(() => {
+    const isOverMonth = totalDays >= 30;
+
+    if (isOverMonth) {
+      const months = Math.floor(totalDays / 30);
+      const days = totalDays % 30;
+      const hours = Math.floor((totalMinutes % 1440) / 60);
+
+      return {
+        unit1: { value: months, label: 'Ay' },
+        unit2: { value: days, label: 'Gün' },
+        unit3: { value: hours, label: 'Saat' }
+      };
+    } else {
+      const days = totalDays;
+      const hours = Math.floor((totalMinutes % 1440) / 60);
+      const mins = remainingMins;
+
+      return {
+        unit1: { value: days, label: 'Gün' },
+        unit2: { value: hours, label: 'Saat' },
+        unit3: { value: mins, label: 'Dk' }
+      };
+    }
+  }, [totalDays, totalMinutes, remainingMins]);
+
   // Recent Watched Activity (Top 5 sorted by log/update date descending)
   const recentWatchedActivity = (() => {
     const items = [...watchList]
@@ -606,9 +484,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   })();
 
   // Previous month title for Wrapped banner (e.g. "Temmuz Ayı Aylık Özetin")
-  const previousMonthName = (() => {
+  const currentMonthName = (() => {
     const d = new Date();
-    d.setMonth(d.getMonth() - 1);
     const monthStr = d.toLocaleDateString('tr-TR', { month: 'long' });
     return monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
   })();
@@ -893,8 +770,73 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* TAB 1: PROFIL (MAIN LANDING VIEW) */}
         {activeSubTab === 'profil' && (
-          <div className="space-y-12 animate-in fade-in duration-300">
+          <div className="space-y-10 animate-in fade-in duration-300">
             
+            {/* TV TIME STYLE STATS WIDGET */}
+            <div className="bg-[#181e23] border border-[#2c3440] rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                  Toplam İzleme Süresi
+                </h3>
+              </div>
+
+              <div className="flex items-center justify-between sm:justify-start sm:gap-14 pt-1">
+                {/* Time Units (Left group) */}
+                <div className="flex items-center gap-6 sm:gap-10">
+                  <div className="text-left space-y-0.5">
+                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
+                      {timeBreakdown.unit1.value.toLocaleString('tr-TR')}
+                    </div>
+                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
+                      {timeBreakdown.unit1.label}
+                    </div>
+                  </div>
+
+                  <div className="text-left space-y-0.5">
+                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
+                      {timeBreakdown.unit2.value.toLocaleString('tr-TR')}
+                    </div>
+                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
+                      {timeBreakdown.unit2.label}
+                    </div>
+                  </div>
+
+                  <div className="text-left space-y-0.5">
+                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
+                      {timeBreakdown.unit3.value.toLocaleString('tr-TR')}
+                    </div>
+                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
+                      {timeBreakdown.unit3.label}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subtle Vertical Divider */}
+                <div className="hidden sm:block w-px h-10 bg-[#2c3440]" />
+
+                {/* Counts (Right group: Bölüm & Film) */}
+                <div className="flex items-center gap-6 sm:gap-10 text-right sm:text-left">
+                  <div className="space-y-0.5">
+                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
+                      {watchedEpsCount.toLocaleString('tr-TR')}
+                    </div>
+                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
+                      Bölüm
+                    </div>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <div className="text-2xl sm:text-3xl font-black text-white font-mono leading-none tracking-tight">
+                      {moviesWatchedCount.toLocaleString('tr-TR')}
+                    </div>
+                    <div className="text-xs sm:text-sm font-semibold text-slate-400 capitalize">
+                      Film
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* 1. FAVORİLER */}
             <div className="space-y-5">
               {/* Bölüm Başlığı Deseni */}
@@ -1155,36 +1097,53 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {activeSubTab === 'tv' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="border-b border-[#2c3440]/60 pb-3 flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">İzlenen Diziler ({filteredTvShows.length})</h2>
+              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">Takip Edilen Diziler ({filteredTvShows.length})</h2>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
               {filteredTvShows.length > 0 ? (
-                filteredTvShows.map(item => (
-                  <div
-                    key={item.media_id}
-                    onClick={() => onSelectMediaById?.(item.media_id, 'tv')}
-                    className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
-                  >
-                    <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
-                      <img
-                        src={item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
-                        alt={item.title || 'Dizi'}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute bottom-1.5 right-1.5 bg-black/90 text-[#00e054] font-mono text-xs font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5">
-                        <Star className="w-3 h-3 fill-[#00e054] text-[#00e054]" />
-                        {item.vote_average || 8.5}
+                filteredTvShows.map(item => {
+                  const epsWatched = episodeProgress.filter(ep => Number(ep.show_id) === Number(item.media_id) && ep.is_watched).length;
+                  const isCompleted = item.status === 'watched';
+                  return (
+                    <div
+                      key={item.media_id}
+                      onClick={() => onSelectMediaById?.(item.media_id, 'tv')}
+                      className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
+                    >
+                      <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
+                        <img
+                          src={item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
+                          alt={item.title || 'Dizi'}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        {/* Status Badge */}
+                        <div className="absolute top-1.5 left-1.5">
+                          <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded shadow-md backdrop-blur-md border ${
+                            isCompleted 
+                              ? 'bg-blue-500/80 text-white border-blue-400/40' 
+                              : 'bg-emerald-500/80 text-slate-950 border-emerald-400/40'
+                          }`}>
+                            {isCompleted ? 'Tamamlandı' : 'İzleniyor'}
+                          </span>
+                        </div>
+                        <div className="absolute bottom-1.5 right-1.5 bg-black/90 text-[#00e054] font-mono text-xs font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5">
+                          <Star className="w-3 h-3 fill-[#00e054] text-[#00e054]" />
+                          {item.rating ? `${item.rating}/10` : (item.vote_average || 8.5)}
+                        </div>
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                        <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
+                        {epsWatched > 0 && (
+                          <p className="text-[11px] text-[#00e054] font-semibold">{epsWatched} Bölüm İzlendi</p>
+                        )}
                       </div>
                     </div>
-                    <div className="space-y-0.5 min-w-0">
-                      <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="col-span-5 py-12 text-center text-sm text-[#9ab] font-medium">
-                  Kütüphanenizde henüz izlenmiş dizi bulunmuyor.
+                  Kütüphanenizde henüz takip edilen dizi bulunmuyor.
                 </div>
               )}
             </div>
@@ -1269,7 +1228,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <Sparkles className="w-7 h-7 fill-current" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-xl font-black text-white tracking-tight">✨ {previousMonthName} Ayı Aylık Özetin</h3>
+                    <h3 className="text-base sm:text-xl font-black text-white tracking-tight">✨ {currentMonthName} Ayı İzleme Özeti (Wrapped)</h3>
                     <p className="text-xs text-slate-300 font-medium mt-0.5">Bu ayki tüm izleme dakikaların, favori türlerin ve zirve yapımların animasyonlu hikaye formatında hazır!</p>
                   </div>
                 </div>

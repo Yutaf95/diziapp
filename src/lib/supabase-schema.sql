@@ -266,3 +266,29 @@ CREATE POLICY "Users manage own collection items" ON public.collection_items FOR
     WHERE id = collection_id AND user_id = auth.uid()
   )
 );
+
+-- ====================================================================
+-- 11. WATCH LINKS TABLE (Cross-Device Streaming Links & Smart Templates)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.watch_links (
+  id TEXT PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  media_id INT NOT NULL,
+  site_name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  season_number INT,
+  episode_number INT,
+  url_template TEXT,
+  pad_season BOOLEAN DEFAULT FALSE,
+  pad_episode BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_watch_links_user ON public.watch_links(user_id);
+CREATE INDEX IF NOT EXISTS idx_watch_links_media ON public.watch_links(media_id);
+
+ALTER TABLE public.watch_links ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users manage own watch links" ON public.watch_links
+  FOR ALL USING (auth.uid() = user_id);

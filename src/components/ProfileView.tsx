@@ -11,7 +11,6 @@ import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { compressImage } from '../utils/imageCompressor';
 import { MonthlyRecapModal } from './MonthlyRecapModal';
-import { getShowDates, getMovieFinishDate } from '../utils/dateUtils';
 import { UserAvatar } from './UserAvatar';
 import { TMDB_GENRE_NAMES, GENRE_COLOR_PALETTE, DEFAULT_TV_GENRE_DISTRIBUTION, DEFAULT_MOVIE_GENRE_DISTRIBUTION, calculateGenreDistribution } from '../utils/genreUtils';
 
@@ -436,9 +435,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const hours = Math.floor((totalMinutes % 1440) / 60);
 
       const parts: string[] = [];
-      if (months > 0) parts.push(`${months} ay`);
-      if (days > 0) parts.push(`${days} gün`);
-      if (hours > 0 || (months === 0 && days === 0)) parts.push(`${hours} saat`);
+      if (months > 0) parts.push(`${months} Ay`);
+      if (days > 0) parts.push(`${days} Gün`);
+      if (hours > 0 || (months === 0 && days === 0)) parts.push(`${hours} Saat`);
 
       return parts.join(' ');
     } else {
@@ -447,9 +446,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const mins = remainingMins;
 
       const parts: string[] = [];
-      if (days > 0) parts.push(`${days} gün`);
-      if (hours > 0) parts.push(`${hours} saat`);
-      if (mins > 0 || (days === 0 && hours === 0)) parts.push(`${mins} dk`);
+      if (days > 0) parts.push(`${days} Gün`);
+      if (hours > 0) parts.push(`${hours} Saat`);
+      if (mins > 0 || (days === 0 && hours === 0)) parts.push(`${mins} Dk`);
 
       return parts.join(' ');
     }
@@ -464,28 +463,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
         return timeB - timeA;
       });
-    return items.slice(0, 5).map(item => {
-      let dateLabel = item.updated_at ? new Date(item.updated_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : 'Son Zamanlarda';
-      if (item.media_type === 'tv') {
-        const { startDate, finishDate } = getShowDates(item.media_id, episodeProgress, item.status, item.updated_at, item.created_at);
-        if (item.status === 'watched' && finishDate) {
-          dateLabel = `Bitiş: ${finishDate}`;
-        } else if (startDate) {
-          dateLabel = `Başlama: ${startDate}`;
-        }
-      } else {
-        const finishDate = getMovieFinishDate(item.updated_at, item.created_at);
-        if (finishDate) dateLabel = `İzlendi: ${finishDate}`;
-      }
-
-      return {
-        id: item.media_id,
-        type: item.media_type,
-        title: item.title || 'Yapım',
-        poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
-        date: dateLabel
-      };
-    });
+    return items.slice(0, 5).map(item => ({
+      id: item.media_id,
+      type: item.media_type,
+      title: item.title || 'Yapım',
+      poster: item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
+      date: item.updated_at ? new Date(item.updated_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : 'Son Zamanlarda'
+    }));
   })();
 
   // Get Top 5 User Favorites from user's actual favorites list
@@ -802,18 +786,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
 
               {/* Metrics Grid — Fills the Card Across Desktop & Mobile */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 pt-1">
+              <div className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr] gap-6 sm:gap-8 pt-1">
                 
                 {/* 1. Süre */}
-                <div className="col-span-2 md:col-span-1 space-y-1.5 md:border-r border-[#282f3c]/70 md:pr-6">
-                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-sm">
+                <div className="col-span-2 md:col-span-1 space-y-2 md:border-r border-[#282f3c]/70 md:pr-6">
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-none drop-shadow-sm whitespace-nowrap">
                     {watchTimeString}
+                  </div>
+                  <div className="text-xs sm:text-sm font-semibold text-transparent select-none" aria-hidden="true">
+                    &nbsp;
                   </div>
                 </div>
 
                 {/* 2. Bölüm Sayısı */}
-                <div className="col-span-1 space-y-1.5 md:border-r border-[#282f3c]/70 md:pr-6">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tracking-tight leading-none drop-shadow-sm">
+                <div className="col-span-1 space-y-2 md:border-r border-[#282f3c]/70 md:pr-6">
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-none drop-shadow-sm whitespace-nowrap">
                     {watchedEpsCount.toLocaleString('tr-TR')}
                   </div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-400">
@@ -822,8 +809,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
 
                 {/* 3. Film Sayısı */}
-                <div className="col-span-1 space-y-1.5">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tracking-tight leading-none drop-shadow-sm">
+                <div className="col-span-1 space-y-2">
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-none drop-shadow-sm whitespace-nowrap">
                     {moviesWatchedCount.toLocaleString('tr-TR')}
                   </div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-400">
@@ -1060,37 +1047,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
               {filteredMovies.length > 0 ? (
-                filteredMovies.map(item => {
-                  const finishDate = getMovieFinishDate(item.updated_at, item.created_at);
-                  return (
-                    <div
-                      key={item.media_id}
-                      onClick={() => onSelectMediaById?.(item.media_id, 'movie')}
-                      className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
-                    >
-                      <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
-                        <img
-                          src={item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
-                          alt={item.title || 'Film'}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute bottom-1.5 right-1.5 bg-black/90 text-[#00e054] font-mono text-xs font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5">
-                          <Star className="w-3 h-3 fill-[#00e054] text-[#00e054]" />
-                          {item.rating ? `${item.rating}/10` : (item.vote_average || 8.0)}
-                        </div>
-                      </div>
-                      <div className="space-y-1 min-w-0">
-                        <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
-                        {finishDate && (
-                          <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="truncate">İzlendi: {finishDate}</span>
-                          </div>
-                        )}
+                filteredMovies.map(item => (
+                  <div
+                    key={item.media_id}
+                    onClick={() => onSelectMediaById?.(item.media_id, 'movie')}
+                    className="group cursor-pointer min-w-0 space-y-2 transition-transform duration-300 hover:-translate-y-1"
+                  >
+                    <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-black/40 shadow-md">
+                      <img
+                        src={item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://image.tmdb.org/t/p/w500${item.poster_path}`) : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80'}
+                        alt={item.title || 'Film'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute bottom-1.5 right-1.5 bg-black/90 text-[#00e054] font-mono text-xs font-black px-1.5 py-0.5 rounded border border-[#00e054]/30 flex items-center gap-0.5">
+                        <Star className="w-3 h-3 fill-[#00e054] text-[#00e054]" />
+                        {item.rating ? `${item.rating}/10` : (item.vote_average || 8.0)}
                       </div>
                     </div>
-                  );
-                })
+                    <div className="space-y-1 min-w-0">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
+                    </div>
+                  </div>
+                ))
               ) : (
                 <div className="col-span-5 py-12 text-center text-sm text-[#9ab] font-medium">
                   Kütüphanenizde henüz izlenmiş film bulunmuyor.
@@ -1112,7 +1090,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 filteredTvShows.map(item => {
                   const epsWatched = episodeProgress.filter(ep => Number(ep.show_id) === Number(item.media_id) && ep.is_watched).length;
                   const isCompleted = item.status === 'watched';
-                  const { startDate, finishDate } = getShowDates(item.media_id, episodeProgress, item.status, item.updated_at, item.created_at);
                   return (
                     <div
                       key={item.media_id}
@@ -1145,20 +1122,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         {epsWatched > 0 && (
                           <p className="text-[11px] text-[#00e054] font-semibold leading-tight">{epsWatched} Bölüm İzlendi</p>
                         )}
-                        <div className="space-y-0.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
-                          {startDate && (
-                            <div className="flex items-center gap-1 text-emerald-400/90 truncate" title={`Başlama: ${startDate}`}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                              <span className="truncate">Başlama: {startDate}</span>
-                            </div>
-                          )}
-                          {isCompleted && finishDate && (
-                            <div className="flex items-center gap-1 text-slate-300 truncate" title={`Bitiş: ${finishDate}`}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                              <span className="truncate">Bitiş: {finishDate}</span>
-                            </div>
-                          )}
-                        </div>
                       </div>
                     </div>
                   );

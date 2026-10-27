@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Star, Eye, Clock, Check, Tv, Film, MessageSquare, AlertTriangle, Heart, 
-  Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, ChevronDown, Zap, Info, ShieldAlert, Layers, Pencil, Trash2
+  Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, ChevronDown, Zap, Info, ShieldAlert, Layers, Pencil, Trash2, Calendar
 } from 'lucide-react';
-import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem } from '../types';
+import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem, WatchStatus } from '../types';
+import { getShowDates, getMovieFinishDate } from '../utils/dateUtils';
 import { getDetails, getSeasonDetails, getBackdropUrl, getPosterUrl } from '../lib/tmdb';
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { AddToCollectionModal } from './AddToCollectionModal';
@@ -28,6 +29,7 @@ interface MediaDetailModalProps {
   onCreateCollection?: (title: string, description: string, color: string, icon: string) => void;
   isFavorited?: boolean;
   onToggleFavorite?: (media: TMDBMedia) => void;
+  watchList?: WatchStatus[];
 }
 
 const formatMissingEpisodesText = (items: Array<{ season_number: number; episode_number: number }>): string => {
@@ -53,7 +55,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   onToggleItemInCollection,
   onCreateCollection,
   isFavorited = false,
-  onToggleFavorite
+  onToggleFavorite,
+  watchList = []
 }) => {
   if (!media) return null;
 
@@ -125,6 +128,26 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, boolean>>({});
 
   const isTv = media.media_type === 'tv' || !!media.first_air_date;
+
+// Watch Dates Calculation (Start date for TV, finish/watched date for TV & movies)
+  const watchItem = watchList.find(w => Number(w.media_id) === Number(details.id) && (isTv ? w.media_type === 'tv' : w.media_type === 'movie'));
+
+  const { startDate, finishDate } = React.useMemo(() => {
+    if (isTv) {
+      return getShowDates(
+        details.id,
+        episodeProgress,
+        userWatchStatus || undefined,
+        watchItem?.updated_at,
+        watchItem?.created_at
+      );
+    } else {
+      const fDate = (userWatchStatus === 'watched')
+        ? getMovieFinishDate(watchItem?.updated_at, watchItem?.created_at)
+        : null;
+      return { startDate: null, finishDate: fDate };
+    }
+  }, [details.id, isTv, episodeProgress, userWatchStatus, watchItem]);
 
   const [loadingSeason, setLoadingSeason] = useState<boolean>(false);
 
@@ -424,6 +447,18 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                       {details.number_of_seasons} Sezon
                     </span>
                   )}
+
+                  {startDate && (
+                    <span className="flex items-center gap-1 bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-md border border-emerald-500/30 text-[11px]">
+                      <Calendar className="w-3 h-3 shrink-0" /> Başlama: {startDate}
+                    </span>
+                  )}
+
+                  {finishDate && (
+                    <span className="flex items-center gap-1 bg-sky-500/15 text-sky-400 px-2.5 py-0.5 rounded-md border border-sky-500/30 text-[11px]">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" /> {isTv ? 'Bitiş:' : 'İzlendi:'} {finishDate}
+                    </span>
+                  )}
                 </div>
 
                 {/* Başlık */}
@@ -520,6 +555,24 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                 )}
 
               </div>
+
+              {/* İzleme Tarihleri Satırı (Başlama / Bitiş / İzlendi) */}
+              {(startDate || finishDate) && (
+                <div className="pt-2 border-t border-[#232833] flex items-center justify-between gap-3 text-[11px] font-semibold px-1 flex-wrap">
+                  {startDate && (
+                    <div className="flex items-center gap-1.5 text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span>Başlama: <span className="text-white font-extrabold">{startDate}</span></span>
+                    </div>
+                  )}
+                  {finishDate && (
+                    <div className="flex items-center gap-1.5 text-sky-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+                      <span>{isTv ? 'Bitiş:' : 'İzlendi:'} <span className="text-white font-extrabold">{finishDate}</span></span>
+                    </div>
+                  )}
+                </div>
+              )}
 
             </div>
 

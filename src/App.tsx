@@ -2815,7 +2815,7 @@ export default function App() {
               ) : activeTab === 'calendar' ? (
                 <React.Suspense fallback={<PageLoader />}>
                   <CalendarView
-                    watchingList={watchList.filter(w => w.status === 'watching' || w.status === 'watched')}
+                    watchingList={watchList.filter(w => w.status === 'watching' || w.status === 'watched' || w.status === 'plan_to_watch')}
                     episodeProgress={episodeProgress}
                     onToggleEpisode={handleToggleEpisode}
                     onSelectMedia={(m) => setSelectedMedia(m)}
@@ -3178,6 +3178,7 @@ export default function App() {
               onCreateCollection={handleCreateCollection}
               isFavorited={favorites.some(f => f.media_id === selectedMedia.id && f.media_type === (selectedMedia.media_type === 'tv' || !!selectedMedia.first_air_date ? 'tv' : 'movie'))}
               onToggleFavorite={handleToggleFavorite}
+              watchList={watchList}
             />
           </React.Suspense>
         )}

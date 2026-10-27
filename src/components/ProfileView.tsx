@@ -426,8 +426,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const remainingHoursInDays = Math.floor((totalMinutes % 1440) / 60);
   const remainingMins = totalMinutes % 60;
 
-  // TV Time style dynamic time strings (Months/Days/Hours if >= 30 days, else Days/Hours/Minutes)
-  const { timeShort, timeFull } = React.useMemo(() => {
+  // TV Time style dynamic watch time string (Months/Days/Hours if >= 30 days, else Days/Hours/Minutes)
+  const watchTimeString = React.useMemo(() => {
     const isOverMonth = totalDays >= 30;
 
     if (isOverMonth) {
@@ -435,39 +435,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const days = totalDays % 30;
       const hours = Math.floor((totalMinutes % 1440) / 60);
 
-      const partsShort: string[] = [];
-      if (months > 0) partsShort.push(`${months}m`);
-      if (days > 0 || months > 0) partsShort.push(`${days}d`);
-      partsShort.push(`${hours}h`);
+      const parts: string[] = [];
+      if (months > 0) parts.push(`${months} ay`);
+      if (days > 0) parts.push(`${days} gün`);
+      if (hours > 0 || (months === 0 && days === 0)) parts.push(`${hours} saat`);
 
-      const partsFull: string[] = [];
-      if (months > 0) partsFull.push(`${months} ay`);
-      if (days > 0) partsFull.push(`${days} gün`);
-      if (hours > 0 || (months === 0 && days === 0)) partsFull.push(`${hours} saat`);
-
-      return {
-        timeShort: partsShort.join(' '),
-        timeFull: `${partsFull.join(' ')} izlendi`
-      };
+      return parts.join(' ');
     } else {
       const days = totalDays;
       const hours = Math.floor((totalMinutes % 1440) / 60);
       const mins = remainingMins;
 
-      const partsShort: string[] = [];
-      if (days > 0) partsShort.push(`${days}d`);
-      if (hours > 0 || days > 0) partsShort.push(`${hours}h`);
-      partsShort.push(`${mins}m`);
+      const parts: string[] = [];
+      if (days > 0) parts.push(`${days} gün`);
+      if (hours > 0) parts.push(`${hours} saat`);
+      if (mins > 0 || (days === 0 && hours === 0)) parts.push(`${mins} dk`);
 
-      const partsFull: string[] = [];
-      if (days > 0) partsFull.push(`${days} gün`);
-      if (hours > 0) partsFull.push(`${hours} saat`);
-      if (mins > 0 || (days === 0 && hours === 0)) partsFull.push(`${mins} dk`);
-
-      return {
-        timeShort: partsShort.join(' '),
-        timeFull: `${partsFull.join(' ')} izlendi`
-      };
+      return parts.join(' ');
     }
   }, [totalDays, totalMinutes, remainingMins]);
 
@@ -822,11 +806,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 
                 {/* 1. Süre */}
                 <div className="col-span-2 md:col-span-1 space-y-1.5 md:border-r border-[#282f3c]/70 md:pr-6">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-mono tracking-tight leading-none drop-shadow-sm">
-                    {timeShort}
-                  </div>
-                  <div className="text-xs sm:text-sm font-semibold text-slate-400">
-                    {timeFull}
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-sm">
+                    {watchTimeString}
                   </div>
                 </div>
 

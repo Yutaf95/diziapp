@@ -69,8 +69,15 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       if (diffMins < 60) return `${diffMins} dk önce`;
       if (diffHours < 24) return `${diffHours} sa önce`;
       if (diffDays === 1) return 'Dün';
-      if (diffDays < 7) return `${diffDays} gün önce`;
-      return new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+      if (diffDays < 60) return `${diffDays} gün önce`;
+      
+      const dateObj = new Date(dateStr);
+      const isCurrentYear = dateObj.getFullYear() === new Date().getFullYear();
+      return dateObj.toLocaleDateString('tr-TR', { 
+        day: 'numeric', 
+        month: 'short',
+        ...(isCurrentYear ? {} : { year: 'numeric' })
+      });
     } catch {
       return 'Yakın zamanda';
     }

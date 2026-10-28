@@ -4,6 +4,7 @@ import { TMDBMedia, TMDBSeasonDetails, EpisodeProgress, WatchStatus, CustomWatch
 import { getDetails, getSeasonDetails, getPosterUrl } from '../lib/tmdb';
 import { EmptyState } from './EmptyState';
 import { getStoredWatchLinks, generateEpisodeUrl } from '../utils/watchLinksStorage';
+import { isEpisodeAired } from '../utils/dateUtils';
 
 interface EpisodeTrackerProps {
   watchingList: WatchStatus[];
@@ -35,17 +36,10 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
         if (saved) {
           const parsed: Record<string, TMDBSeasonDetails> = JSON.parse(saved);
           // Cache'deki yayınlanmamış bölümleri filtrele
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
           const filtered: Record<string, TMDBSeasonDetails> = {};
           for (const key of Object.keys(parsed)) {
             const season = parsed[key];
-            const airedEps = season.episodes?.filter(ep => {
-              if (!ep.air_date) return false;
-              const airDate = new Date(ep.air_date);
-              airDate.setHours(0, 0, 0, 0);
-              return airDate <= today;
-            }) ?? [];
+            const airedEps = season.episodes?.filter(ep => isEpisodeAired(ep.air_date)) ?? [];
             if (airedEps.length > 0) {
               filtered[key] = { ...season, episodes: airedEps };
             }
@@ -186,13 +180,8 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
               try {
                 const sData = await getSeasonDetails(item.media_id, s);
                 if (sData && sData.episodes && sData.episodes.length > 0) {
-                  // Sadece yayınlanmış bölümleri dahil et (air_date bugün veya öncesi)
-                  const airedEpisodes = sData.episodes.filter(ep => {
-                    if (!ep.air_date) return false;
-                    const airDate = new Date(ep.air_date);
-                    airDate.setHours(0, 0, 0, 0);
-                    return airDate <= today;
-                  });
+                  // Sadece yayınlanmış bölümleri dahil et
+                  const airedEpisodes = sData.episodes.filter(ep => isEpisodeAired(ep.air_date, details?.status));
 
                   if (airedEpisodes.length > 0) {
                     newSeasons[`${item.media_id}-${s}`] = { ...sData, episodes: airedEpisodes };
@@ -235,6 +224,12 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     const isWatched = isEpWatched(showId, seasonNum, epNum);
     if (isWatched) {
       onToggleEpisode(showId, seasonNum, epNum);
+      return;
+    }
+
+    const targetSeasonData = seasonsData[`${showId}-${seasonNum}`];
+    const targetEp = targetSeasonData?.episodes?.find(e => e.episode_number === epNum);
+    if (targetEp && !isEpisodeAired(targetEp.air_date)) {
       return;
     }
 

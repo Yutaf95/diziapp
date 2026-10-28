@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, Film, Tv, Clock, Star, Calendar, Trophy, User, 
   Share2, X, ChevronRight, ChevronLeft, Flame, Award, Heart, CheckCircle2,
-  Play, BarChart2, MessageSquare, Check, Copy
+  Play, BarChart2, MessageSquare, Check, Copy, Lock, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Profile, WatchStatus, EpisodeProgress, RatingReview } from '../types';
@@ -20,6 +20,17 @@ interface MonthlyRecapModalProps {
   onSelectMediaById?: (id: number, mediaType: 'movie' | 'tv') => void;
 }
 
+export interface RecapPeriodOption {
+  id: string;
+  type: 'month' | 'year' | 'all-time';
+  year?: number;
+  month?: number; // 0 = Ocak, 9 = Ekim, 11 = Aralık
+  label: string;
+  badgeLabel?: string;
+  isLocked: boolean;
+  lockReason?: string;
+}
+
 interface SpotlightItem {
   id: number;
   type: 'movie' | 'tv';
@@ -28,6 +39,7 @@ interface SpotlightItem {
   rating: number | null;
   episodesWatched?: number;
   badge: string;
+  categoryLabel: string;
   subtitle: string;
 }
 
@@ -39,6 +51,11 @@ interface TopActorItem {
   description: string;
 }
 
+const TURKISH_MONTH_NAMES = [
+  'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+  'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+];
+
 export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   isOpen,
   onClose,
@@ -49,51 +66,189 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   onSelectMediaById
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
-  const [topSeriesDetails, setTopSeriesDetails] = useState<SpotlightItem | null>(null);
-  const [topRatedDetails, setTopRatedDetails] = useState<SpotlightItem | null>(null);
-  const [topActor, setTopActor] = useState<TopActorItem | null>(null);
+  const [lockedNotice, setLockedNotice] = useState<string | null>(null);
 
-  // Month & Year string
-  const currentMonthName = useMemo(() => {
-    const d = new Date();
-    const str = d.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }, []);
+  const [topSeriesDetails, setTopSeriesDetails] = useState<SpotlightItem | null>(null);
+  const [secondaryDetails, setSecondaryDetails] = useState<SpotlightItem | null>(null);
+  const [topActor, setTopActor] = useState<TopActorItem | null>(null);
 
   const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80';
 
-  // 1. Filter Target User's Live Data
-  const targetUserReviews = useMemo(() => {
-    return reviews.filter(r => 
-      (r.user_id && user.id && r.user_id === user.id) || 
-      (r.username && user.username && r.username.toLowerCase() === user.username.toLowerCase())
-    );
-  }, [reviews, user.id, user.username]);
+  // 1. Generate Available Periods (Monthly, Year, All-Time with strict locks)
+  const availablePeriods = useMemo<RecapPeriodOption[]>(() => {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+    const curDay = now.getDate();
 
-  const watchedEpisodes = useMemo(() => {
-    return episodeProgress.filter(ep => 
-      ep.is_watched && (!ep.user_id || !user.id || ep.user_id === user.id)
-    );
-  }, [episodeProgress, user.id]);
+    const periods: RecapPeriodOption[] = [];
 
+    // Current Month (locked if current day < 28)
+    const isCurrentMonthLocked = curDay < 28;
+    periods.push({
+      id: `${curYear}-${curMonth}`,
+      type: 'month',
+      year: curYear,
+      month: curMonth,
+      label: `${TURKISH_MONTH_NAMES[curMonth]} ${curYear}`,
+      badgeLabel: isCurrentMonthLocked ? '28\'inde Hazır' : 'Aktif Ay',
+      isLocked: isCurrentMonthLocked,
+      lockReason: `${TURKISH_MONTH_NAMES[curMonth]} ayı henüz tamamlanmadı. Bu ayın özeti 28 ${TURKISH_MONTH_NAMES[curMonth]} tarihinde yayınlanacaktır.`
+    });
+
+    // Previous completed months (past 5 completed months)
+    for (let i = 1; i <= 5; i++) {
+      let m = curMonth - i;
+      let y = curYear;
+      if (m < 0) {
+        m += 12;
+        y -= 1;
+      }
+      periods.push({
+        id: `${y}-${m}`,
+        type: 'month',
+        year: y,
+        month: m,
+        label: `${TURKISH_MONTH_NAMES[m]} ${y}`,
+        badgeLabel: 'Tamamlandı',
+        isLocked: false
+      });
+    }
+
+    // Year Recap (Strict 20 Aralık kuralı: only unlocked from Dec 20 onwards)
+    const isYearUnlocked = (curMonth === 11 && curDay >= 20);
+    periods.push({
+      id: `year-${curYear}`,
+      type: 'year',
+      year: curYear,
+      label: `${curYear} Yıl Özeti`,
+      badgeLabel: isYearUnlocked ? 'Yayında' : '20 Aralık\'ta',
+      isLocked: !isYearUnlocked,
+      lockReason: `${curYear} Yıllık Wrapped özeti 20 Aralık'ta yayınlanacaktır.`
+    });
+
+    // All-Time
+    periods.push({
+      id: 'all-time',
+      type: 'all-time',
+      label: 'Tüm Zamanlar',
+      badgeLabel: 'Tüm Geçmiş',
+      isLocked: false
+    });
+
+    return periods;
+  }, []);
+
+  // Default Period: Unlocked current month if day >= 28, else the latest completed previous month
+  const defaultPeriod = useMemo(() => {
+    const curM = availablePeriods[0];
+    if (curM && !curM.isLocked) return curM;
+    return availablePeriods[1] || availablePeriods[availablePeriods.length - 1];
+  }, [availablePeriods]);
+
+  const [selectedPeriod, setSelectedPeriod] = useState<RecapPeriodOption>(defaultPeriod);
+
+  // Sync selectedPeriod with defaultPeriod whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedPeriod(defaultPeriod);
+      setLockedNotice(null);
+    }
+  }, [isOpen, defaultPeriod]);
+
+  // Helper to test if a timestamp matches the selected period
+  const matchesPeriod = (dateStr?: string | null): boolean => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    if (selectedPeriod.type === 'all-time') return true;
+    if (selectedPeriod.type === 'year') {
+      return d.getFullYear() === selectedPeriod.year;
+    }
+    if (selectedPeriod.type === 'month') {
+      return d.getFullYear() === selectedPeriod.year && d.getMonth() === selectedPeriod.month;
+    }
+    return false;
+  };
+
+  // 2. Identify Archival/Bulk Additions (> 6 episodes marked on same day within 15 min)
+  // These are excluded from monthly recap so old imported series (e.g. Mentalist 151 eps) won't pollute current month.
+  const archivalEpisodeKeys = useMemo(() => {
+    if (selectedPeriod.type === 'all-time') {
+      return new Set<string>(); // All-time includes everything!
+    }
+
+    const groups: Record<string, { times: number[]; eps: EpisodeProgress[] }> = {};
+    episodeProgress.forEach(ep => {
+      if (!ep.is_watched) return;
+      const raw = ep.watched_at || (ep as any).created_at || (ep as any).updated_at;
+      if (!raw) return;
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return;
+      const dayKey = `${ep.show_id}_${d.toISOString().slice(0, 10)}`;
+      if (!groups[dayKey]) groups[dayKey] = { times: [], eps: [] };
+      groups[dayKey].times.push(d.getTime());
+      groups[dayKey].eps.push(ep);
+    });
+
+    const archiveSet = new Set<string>();
+    Object.values(groups).forEach(group => {
+      if (group.eps.length > 6) {
+        group.times.sort((a, b) => a - b);
+        const diffMinutes = (group.times[group.times.length - 1] - group.times[0]) / (1000 * 60);
+        // If > 6 episodes were marked within 15 minutes, it's an archive bulk import
+        if (diffMinutes < 15) {
+          group.eps.forEach(ep => {
+            archiveSet.add(`${ep.show_id}_${ep.season_number}_${ep.episode_number}`);
+          });
+        }
+      }
+    });
+
+    return archiveSet;
+  }, [episodeProgress, selectedPeriod.type]);
+
+  // 3. Filter Target User's Data STRICTLY for the Selected Period
   const userWatchList = useMemo(() => {
     return watchList.filter(w => !w.user_id || !user.id || w.user_id === user.id);
   }, [watchList, user.id]);
 
+  const watchedEpisodes = useMemo(() => {
+    return episodeProgress.filter(ep => {
+      if (!ep.is_watched) return false;
+      if (ep.user_id && user.id && ep.user_id !== user.id) return false;
+      const raw = ep.watched_at || (ep as any).created_at || (ep as any).updated_at;
+      if (!matchesPeriod(raw)) return false;
+      const epKey = `${ep.show_id}_${ep.season_number}_${ep.episode_number}`;
+      if (archivalEpisodeKeys.has(epKey)) return false;
+      return true;
+    });
+  }, [episodeProgress, user.id, selectedPeriod, archivalEpisodeKeys]);
+
   const watchedMovies = useMemo(() => {
-    return userWatchList.filter(w => (w.status === 'watched' || w.status === 'watching') && w.media_type === 'movie');
-  }, [userWatchList]);
+    return userWatchList.filter(w => {
+      if (w.media_type !== 'movie') return false;
+      if (w.status !== 'watched' && w.status !== 'watching') return false;
+      const raw = w.updated_at || (w as any).created_at || (w as any).watched_at;
+      return matchesPeriod(raw);
+    });
+  }, [userWatchList, selectedPeriod]);
 
-  const watchedTvShows = useMemo(() => {
-    return userWatchList.filter(w => (w.status === 'watched' || w.status === 'watching') && w.media_type === 'tv');
-  }, [userWatchList]);
+  const targetUserReviews = useMemo(() => {
+    return reviews.filter(r => {
+      const isUser = (r.user_id && user.id && r.user_id === user.id) || 
+        (r.username && user.username && r.username.toLowerCase() === user.username.toLowerCase());
+      if (!isUser) return false;
+      const raw = r.created_at || (r as any).updated_at;
+      return matchesPeriod(raw);
+    });
+  }, [reviews, user.id, user.username, selectedPeriod]);
 
-  // 2. Accurate Counts
+  // 4. Counts & Watch Time for Period
   const movieCount = watchedMovies.length;
   const episodeCount = watchedEpisodes.length;
   const reviewCount = targetUserReviews.length;
 
-  // 3. Dynamic Watch Minutes & Hours calculation (matching ProfileView)
   const totalWatchMinutes = useMemo(() => {
     let mins = 0;
     watchedMovies.forEach(movie => {
@@ -106,10 +261,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   }, [watchedMovies, watchedEpisodes]);
 
   const totalHours = Math.floor(totalWatchMinutes / 60);
-  const remainingMinutes = totalWatchMinutes % 60;
 
-  // 4. Calculate Episodes per TV Series to find Top Watched Series
-  const { topShowId, topShowEpCount } = useMemo(() => {
+  // 5. Ranking TV Shows for This Period
+  const rankedShows = useMemo(() => {
     const showEpCounts: Record<number, number> = {};
     watchedEpisodes.forEach(ep => {
       const sid = Number(ep.show_id);
@@ -118,70 +272,40 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
       }
     });
 
-    const sorted = Object.entries(showEpCounts).sort((a, b) => b[1] - a[1]);
-    if (sorted.length > 0) {
-      return { topShowId: Number(sorted[0][0]), topShowEpCount: sorted[0][1] };
-    }
+    return Object.entries(showEpCounts)
+      .map(([idStr, count]) => ({ id: Number(idStr), count }))
+      .sort((a, b) => b.count - a.count);
+  }, [watchedEpisodes]);
 
-    // Fallback to first watched TV show in watchList if no episode progress records
-    if (watchedTvShows.length > 0) {
-      return { topShowId: Number(watchedTvShows[0].media_id), topShowEpCount: 0 };
-    }
+  const topShow = rankedShows[0] || null;
+  const runnerUpShow = rankedShows[1] || null;
 
-    return { topShowId: null, topShowEpCount: 0 };
-  }, [watchedEpisodes, watchedTvShows]);
+  // 6. Ranking Movies for This Period
+  const topMovie = useMemo(() => {
+    if (watchedMovies.length === 0) return null;
+    const sorted = [...watchedMovies].sort((a, b) => (b.rating || b.vote_average || 0) - (a.rating || a.vote_average || 0));
+    return sorted[0];
+  }, [watchedMovies]);
 
-  // 5. Calculate Top Rated Item / Review
-  const { topRatedMediaId, topRatedMediaType, topPersonalRating, topReviewText } = useMemo(() => {
-    // Check user's written reviews first
-    const ratedReviews = targetUserReviews.filter(r => typeof r.rating === 'number' && r.rating > 0);
-    if (ratedReviews.length > 0) {
-      const best = [...ratedReviews].sort((a, b) => b.rating - a.rating)[0];
-      return {
-        topRatedMediaId: Number(best.media_id),
-        topRatedMediaType: best.media_type,
-        topPersonalRating: best.rating,
-        topReviewText: best.review_text || ''
-      };
-    }
-
-    // Check user's watchList ratings
-    const ratedWatch = userWatchList.filter(w => typeof w.rating === 'number' && w.rating > 0);
-    if (ratedWatch.length > 0) {
-      const best = [...ratedWatch].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
-      return {
-        topRatedMediaId: Number(best.media_id),
-        topRatedMediaType: best.media_type,
-        topPersonalRating: best.rating || 10,
-        topReviewText: ''
-      };
-    }
-
-    // If movies watched, fallback to first watched movie
-    if (watchedMovies.length > 0) {
-      return {
-        topRatedMediaId: Number(watchedMovies[0].media_id),
-        topRatedMediaType: 'movie' as const,
-        topPersonalRating: watchedMovies[0].vote_average || 8.5,
-        topReviewText: ''
-      };
-    }
-
-    return { topRatedMediaId: null, topRatedMediaType: 'movie' as const, topPersonalRating: null, topReviewText: '' };
-  }, [targetUserReviews, userWatchList, watchedMovies]);
-
-  // 6. Dynamic Genre Calculation using shared utility
+  // 7. Dynamic Genre Distribution for Items Watched in This Period
   const genreDistribution = useMemo(() => {
-    const allWatchedItems = [...watchedMovies, ...watchedTvShows];
+    const allWatchedItems = [...watchedMovies];
+    // Add representative TV show items for active shows in this period
+    const activeShowIds = new Set(watchedEpisodes.map(e => Number(e.show_id)));
+    userWatchList.forEach(w => {
+      if (w.media_type === 'tv' && activeShowIds.has(Number(w.media_id))) {
+        allWatchedItems.push(w);
+      }
+    });
     return calculateGenreDistribution(allWatchedItems);
-  }, [watchedMovies, watchedTvShows]);
+  }, [watchedMovies, watchedEpisodes, userWatchList]);
 
   const topGenre = genreDistribution.length > 0 ? genreDistribution[0] : { genre: 'Drama', percent: 35 };
 
-  // 7. Real Average Rating calculation
+  // 8. Real Average Rating strictly for This Period
   const realAvgRating = useMemo(() => {
     const ratings: number[] = [];
-    userWatchList.forEach(w => {
+    watchedMovies.forEach(w => {
       if (typeof w.rating === 'number' && w.rating > 0) ratings.push(w.rating);
     });
     targetUserReviews.forEach(r => {
@@ -196,9 +320,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
       return avg.toFixed(1);
     }
     return null;
-  }, [userWatchList, targetUserReviews, watchedEpisodes]);
+  }, [watchedMovies, targetUserReviews, watchedEpisodes]);
 
-  // 8. Weekly Rhythm calculation with real timestamps
+  // 9. Weekly Rhythm Calculation for This Period
   const daysMap = [
     { short: 'Pzt', full: 'Pazartesi' },
     { short: 'Sal', full: 'Salı' },
@@ -237,7 +361,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
       }
     });
 
-    // Fallback distribution only if no timestamps were recorded
     if (realTracked === 0 && (episodeCount + movieCount) > 0) {
       const total = episodeCount + movieCount;
       counts[0] = Math.round(total * 0.12);
@@ -250,7 +373,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     }
 
     let maxCnt = 0;
-    let pIdx = 4; // Cuma as reasonable default
+    let pIdx = 4; // Cuma
     counts.forEach((cnt, idx) => {
       if (cnt > maxCnt) {
         maxCnt = cnt;
@@ -275,21 +398,24 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     };
   }, [isOpen]);
 
-  // Load Detailed Data for Top Series & Top Lead Actor
+  // 10. Fetch Detailed TMDB Data for Spotlight & Actor Frequency
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchSpotlightData() {
-      // 1. Resolve Top Series
-      if (topShowId) {
-        const localShow = userWatchList.find(w => Number(w.media_id) === topShowId && w.media_type === 'tv');
+    async function fetchSpotlightAndActor() {
+      // Data structures to aggregate actor appearances
+      const actorScoreMap: Record<string, { name: string; photo: string; role: string; score: number }> = {};
+
+      // A) Top TV Series
+      if (topShow) {
+        const localShow = userWatchList.find(w => Number(w.media_id) === topShow.id && w.media_type === 'tv');
         let title = localShow?.title || 'Dizi';
         let poster = localShow?.poster_path 
           ? (localShow.poster_path.startsWith('http') ? localShow.poster_path : `https://image.tmdb.org/t/p/w500${localShow.poster_path}`)
           : defaultPoster;
 
         try {
-          const details = await getDetails(topShowId, 'tv');
+          const details = await getDetails(topShow.id, 'tv');
           if (details && isMounted) {
             title = details.name || details.title || title;
             if (details.poster_path) {
@@ -299,46 +425,42 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
             }
 
             setTopSeriesDetails({
-              id: topShowId,
+              id: topShow.id,
               type: 'tv',
               title,
               poster,
               rating: localShow?.rating || (details.vote_average ? Math.round(details.vote_average * 10) / 10 : null),
-              episodesWatched: topShowEpCount,
-              badge: topShowEpCount > 0 ? `🔥 ${topShowEpCount} Bölüm İzlendi` : 'Takip Ediliyor',
-              subtitle: 'Bu ay ekran başında en çok izlediğin dizi'
+              episodesWatched: topShow.count,
+              badge: `🔥 ${topShow.count} Bölüm İzlendi`,
+              categoryLabel: 'ZİRVEDEKİ DİZİN',
+              subtitle: `${selectedPeriod.label} döneminde ekran başında en çok izlediğin dizi`
             });
 
-            // Extract Lead Actor of this exact top series
-            if (details.cast && details.cast.length > 0) {
-              const lead = details.cast[0];
-              const photoUrl = lead.profile_path
-                ? (lead.profile_path.startsWith('http') ? lead.profile_path : `https://image.tmdb.org/t/p/w500${lead.profile_path}`)
-                : poster;
-
-              setTopActor({
-                name: lead.name,
-                role: `${lead.character ? `${lead.character} • ` : ''}${title}`,
-                photo: photoUrl,
-                appearances: `Zirve Dizinin Başrolü`,
-                description: `"${title}" dizisinde sergilediği performansla bu ay ekranını en çok süsleyen oyuncu.`
+            // Accumulate actor scores for Top Show (lead cast gets +topShow.count)
+            if (details.cast && Array.isArray(details.cast)) {
+              details.cast.slice(0, 4).forEach(actor => {
+                const photo = actor.profile_path
+                  ? (actor.profile_path.startsWith('http') ? actor.profile_path : `https://image.tmdb.org/t/p/w500${actor.profile_path}`)
+                  : poster;
+                if (!actorScoreMap[actor.name]) {
+                  actorScoreMap[actor.name] = { name: actor.name, photo, role: `${actor.character ? `${actor.character} • ` : ''}${title}`, score: 0 };
+                }
+                actorScoreMap[actor.name].score += topShow.count;
               });
-            } else {
-              setTopActor(null);
             }
           }
         } catch (err) {
-          console.warn('Error loading top series details:', err);
           if (isMounted) {
             setTopSeriesDetails({
-              id: topShowId,
+              id: topShow.id,
               type: 'tv',
               title,
               poster,
               rating: localShow?.rating || null,
-              episodesWatched: topShowEpCount,
-              badge: topShowEpCount > 0 ? `🔥 ${topShowEpCount} Bölüm İzlendi` : 'Takip Ediliyor',
-              subtitle: 'Bu ay ekran başında en çok izlediğin dizi'
+              episodesWatched: topShow.count,
+              badge: `🔥 ${topShow.count} Bölüm İzlendi`,
+              categoryLabel: 'ZİRVEDEKİ DİZİN',
+              subtitle: `${selectedPeriod.label} döneminde ekran başında en çok izlediğin dizi`
             });
           }
         }
@@ -346,83 +468,158 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
         setTopSeriesDetails(null);
       }
 
-      // 2. Resolve Top Rated Item (if different from top series or if high rating exists)
-      if (topRatedMediaId && topRatedMediaId !== topShowId) {
-        const localItem = userWatchList.find(w => Number(w.media_id) === topRatedMediaId);
-        let title = localItem?.title || '';
-        let poster = localItem?.poster_path 
-          ? (localItem.poster_path.startsWith('http') ? localItem.poster_path : `https://image.tmdb.org/t/p/w500${localItem.poster_path}`)
+      // B) Secondary Spotlight: Zirve Film VEYA (film yoksa) 2. Dizi
+      if (topMovie) {
+        // We have a movie in this period!
+        let title = topMovie.title || 'Film';
+        let poster = topMovie.poster_path 
+          ? (topMovie.poster_path.startsWith('http') ? topMovie.poster_path : `https://image.tmdb.org/t/p/w500${topMovie.poster_path}`)
           : defaultPoster;
 
         try {
-          const details = await getDetails(topRatedMediaId, topRatedMediaType);
+          const details = await getDetails(topMovie.media_id, 'movie');
           if (details && isMounted) {
-            title = details.title || details.name || title || 'Yapım';
+            title = details.title || details.name || title;
             if (details.poster_path) {
               poster = details.poster_path.startsWith('http') 
                 ? details.poster_path 
                 : `https://image.tmdb.org/t/p/w500${details.poster_path}`;
             }
 
-            setTopRatedDetails({
-              id: topRatedMediaId,
-              type: topRatedMediaType,
+            setSecondaryDetails({
+              id: Number(topMovie.media_id),
+              type: 'movie',
               title,
               poster,
-              rating: topPersonalRating,
-              badge: topPersonalRating ? `★ ${topPersonalRating}/10 Puanın` : 'Favori Yapım',
-              subtitle: topReviewText ? `"${topReviewText.slice(0, 75)}${topReviewText.length > 75 ? '...' : ''}"` : 'En yüksek puan verdiğin içerik'
+              rating: topMovie.rating || (details.vote_average ? Math.round(details.vote_average * 10) / 10 : null),
+              badge: topMovie.rating ? `★ ${topMovie.rating}/10 Puanın` : 'Öne Çıkan Film',
+              categoryLabel: 'ZİRVE FİLMİN',
+              subtitle: `${selectedPeriod.label} döneminde tamamladığın yapım`
             });
 
-            // If no actor found from series, pick from top movie
-            if (!topShowId && details.cast && details.cast.length > 0) {
-              const lead = details.cast[0];
-              const photoUrl = lead.profile_path
-                ? (lead.profile_path.startsWith('http') ? lead.profile_path : `https://image.tmdb.org/t/p/w500${lead.profile_path}`)
-                : poster;
-
-              setTopActor({
-                name: lead.name,
-                role: `${lead.character ? `${lead.character} • ` : ''}${title}`,
-                photo: photoUrl,
-                appearances: `Zirve Filmin Başrolü`,
-                description: `"${title}" yapımındaki performansıyla ayın öne çıkan oyuncusu.`
+            // Movie actors get +3 points each
+            if (details.cast && Array.isArray(details.cast)) {
+              details.cast.slice(0, 4).forEach(actor => {
+                const photo = actor.profile_path
+                  ? (actor.profile_path.startsWith('http') ? actor.profile_path : `https://image.tmdb.org/t/p/w500${actor.profile_path}`)
+                  : poster;
+                if (!actorScoreMap[actor.name]) {
+                  actorScoreMap[actor.name] = { name: actor.name, photo, role: `${actor.character ? `${actor.character} • ` : ''}${title}`, score: 0 };
+                }
+                actorScoreMap[actor.name].score += 3;
               });
             }
           }
         } catch (e) {
           if (isMounted) {
-            setTopRatedDetails({
-              id: topRatedMediaId,
-              type: topRatedMediaType,
-              title: title || 'Yapım',
+            setSecondaryDetails({
+              id: Number(topMovie.media_id),
+              type: 'movie',
+              title,
               poster,
-              rating: topPersonalRating,
-              badge: topPersonalRating ? `★ ${topPersonalRating}/10 Puanın` : 'Favori Yapım',
-              subtitle: 'En yüksek puan verdiğin içerik'
+              rating: topMovie.rating || null,
+              badge: topMovie.rating ? `★ ${topMovie.rating}/10 Puanın` : 'Öne Çıkan Film',
+              categoryLabel: 'ZİRVE FİLMİN',
+              subtitle: `${selectedPeriod.label} döneminde tamamladığın yapım`
+            });
+          }
+        }
+      } else if (runnerUpShow) {
+        // No movie watched, but user watched a second TV series!
+        const localShow = userWatchList.find(w => Number(w.media_id) === runnerUpShow.id && w.media_type === 'tv');
+        let title = localShow?.title || 'Dizi';
+        let poster = localShow?.poster_path 
+          ? (localShow.poster_path.startsWith('http') ? localShow.poster_path : `https://image.tmdb.org/t/p/w500${localShow.poster_path}`)
+          : defaultPoster;
+
+        try {
+          const details = await getDetails(runnerUpShow.id, 'tv');
+          if (details && isMounted) {
+            title = details.name || details.title || title;
+            if (details.poster_path) {
+              poster = details.poster_path.startsWith('http') 
+                ? details.poster_path 
+                : `https://image.tmdb.org/t/p/w500${details.poster_path}`;
+            }
+
+            setSecondaryDetails({
+              id: runnerUpShow.id,
+              type: 'tv',
+              title,
+              poster,
+              rating: localShow?.rating || (details.vote_average ? Math.round(details.vote_average * 10) / 10 : null),
+              episodesWatched: runnerUpShow.count,
+              badge: `🔥 ${runnerUpShow.count} Bölüm İzlendi`,
+              categoryLabel: 'İKİNCİ FAVORİ DİZİN',
+              subtitle: `${selectedPeriod.label} döneminde maratona devam ettiğin diğer yapım`
+            });
+
+            if (details.cast && Array.isArray(details.cast)) {
+              details.cast.slice(0, 3).forEach(actor => {
+                const photo = actor.profile_path
+                  ? (actor.profile_path.startsWith('http') ? actor.profile_path : `https://image.tmdb.org/t/p/w500${actor.profile_path}`)
+                  : poster;
+                if (!actorScoreMap[actor.name]) {
+                  actorScoreMap[actor.name] = { name: actor.name, photo, role: `${actor.character ? `${actor.character} • ` : ''}${title}`, score: 0 };
+                }
+                actorScoreMap[actor.name].score += runnerUpShow.count;
+              });
+            }
+          }
+        } catch (e) {
+          if (isMounted) {
+            setSecondaryDetails({
+              id: runnerUpShow.id,
+              type: 'tv',
+              title,
+              poster,
+              rating: localShow?.rating || null,
+              episodesWatched: runnerUpShow.count,
+              badge: `🔥 ${runnerUpShow.count} Bölüm İzlendi`,
+              categoryLabel: 'İKİNCİ FAVORİ DİZİN',
+              subtitle: `${selectedPeriod.label} döneminde maratona devam ettiğin diğer yapım`
             });
           }
         }
       } else {
-        setTopRatedDetails(null);
+        setSecondaryDetails(null);
+      }
+
+      // C) Resolve Top Actor by Mathematical Frequency
+      if (isMounted) {
+        const sortedActors = Object.values(actorScoreMap).sort((a, b) => b.score - a.score);
+        if (sortedActors.length > 0) {
+          const bestActor = sortedActors[0];
+          setTopActor({
+            name: bestActor.name,
+            role: bestActor.role,
+            photo: bestActor.photo,
+            appearances: `Ekran Frekansı: Yüksek`,
+            description: `${selectedPeriod.label} döneminde izlediğin yapımlarda ekranını en çok dolduran oyuncu.`
+          });
+        } else {
+          setTopActor(null);
+        }
       }
     }
 
     if (isOpen) {
-      fetchSpotlightData();
+      fetchSpotlightAndActor();
     }
 
     return () => { isMounted = false; };
-  }, [isOpen, topShowId, topShowEpCount, topRatedMediaId, topRatedMediaType, topPersonalRating, topReviewText, userWatchList]);
+  }, [isOpen, selectedPeriod, topShow, runnerUpShow, topMovie, userWatchList]);
 
   // Handle Share / Copy to Clipboard
   const handleShareRecap = () => {
-    const summaryText = `✨ ${user.full_name || user.username} - ${currentMonthName} İzleme Özeti (Wrapped) ✨\n` +
+    const summaryText = `✨ ${user.full_name || user.username} - ${selectedPeriod.label} İzleme Özeti (Wrapped) ✨\n` +
       `⏱️ Toplam Ekran Süresi: ${totalHours} Saat\n` +
       `📺 İzlenen Bölümler: ${episodeCount} Bölüm\n` +
       `🍿 Tamamlanan Filmler: ${movieCount} Film\n` +
       (topSeriesDetails ? `🔥 Zirve Dizi: ${topSeriesDetails.title} (${topSeriesDetails.episodesWatched || 0} Bölüm)\n` : '') +
-      `🎭 Favori Tür: ${topGenre.genre} (%${topGenre.percent})\n` +
+      (secondaryDetails ? `🌟 ${secondaryDetails.categoryLabel}: ${secondaryDetails.title}\n` : '') +
+      (topActor ? `🎭 En Çok İzlenen Oyuncu: ${topActor.name}\n` : '') +
+      `🎨 Favori Tür: ${topGenre.genre} (%${topGenre.percent})\n` +
       `📅 En Yoğun İzleme Günü: ${peakDayName}\n` +
       `🎬 ttime.app`;
 
@@ -432,7 +629,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     }).catch(() => {});
   };
 
-  const hasData = (movieCount > 0 || episodeCount > 0 || watchedTvShows.length > 0 || reviewCount > 0);
+  const hasData = (movieCount > 0 || episodeCount > 0 || reviewCount > 0);
 
   if (!isOpen) return null;
 
@@ -456,14 +653,14 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
         >
           {/* Background Ambient Glow */}
           <div className="absolute -top-24 -left-24 w-80 h-80 bg-[#E63946]/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-amber-600/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Top Bar Navigation: Title, Share & Close */}
-          <div className="relative z-10 flex items-center justify-between gap-3 mb-4 pb-3 border-b border-white/15">
+          <div className="relative z-10 flex items-center justify-between gap-3 mb-3 pb-3 border-b border-white/15">
             <div className="flex items-center gap-2.5 min-w-0">
               <Sparkles className="w-6 h-6 text-amber-400 shrink-0" />
               <h2 className="text-base sm:text-lg font-black text-white tracking-wide truncate">
-                {currentMonthName} İzleme Özeti
+                {selectedPeriod.label} İzleme Özeti
               </h2>
             </div>
 
@@ -500,28 +697,99 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
             </div>
           </div>
 
+          {/* PERIOD SELECTOR PILLS BAR */}
+          <div className="relative z-10 mb-4 space-y-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1.5 -mx-1 px-1">
+              {availablePeriods.map(p => {
+                const isSelected = p.id === selectedPeriod.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      if (p.isLocked) {
+                        setLockedNotice(p.lockReason || 'Bu dönem henüz yayınlanmadı.');
+                        setTimeout(() => setLockedNotice(null), 4500);
+                      } else {
+                        setSelectedPeriod(p);
+                        setLockedNotice(null);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-400 text-slate-950 shadow-md font-black ring-2 ring-amber-300'
+                        : p.isLocked
+                          ? 'bg-[#14171D] text-slate-500 hover:text-slate-400 border border-white/5 opacity-75'
+                          : 'bg-[#161926] text-slate-300 hover:text-white border border-white/10 hover:border-white/25'
+                    }`}
+                  >
+                    {p.isLocked && <Lock className="w-3 h-3 text-amber-500/80 shrink-0" />}
+                    {p.type === 'year' && !p.isLocked && <Trophy className="w-3 h-3 text-amber-500 shrink-0" />}
+                    <span>{p.label}</span>
+                    {p.badgeLabel && (
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                        isSelected
+                          ? 'bg-slate-950/20 text-slate-950 font-black'
+                          : p.isLocked
+                            ? 'bg-amber-500/10 text-amber-400/80 border border-amber-500/20'
+                            : 'bg-white/10 text-slate-300'
+                      }`}>
+                        {p.badgeLabel}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* LOCKED NOTICE BANNER */}
+            {lockedNotice && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-semibold p-2.5 rounded-xl flex items-center gap-2 shadow-lg"
+              >
+                <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>{lockedNotice}</span>
+              </motion.div>
+            )}
+          </div>
+
           {/* MAIN RECAP CONTENT */}
           {!hasData ? (
-            /* EMPTY STATE */
+            /* EMPTY STATE FOR SELECTED PERIOD */
             <div className="py-14 px-4 text-center space-y-6">
               <div className="w-24 h-24 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-xl shadow-amber-500/10">
                 <Sparkles className="w-12 h-12" />
               </div>
               <div className="space-y-2">
                 <h3 className="text-2xl font-black text-white">
-                  {currentMonthName} Özetin İçin Henüz Erken!
+                  {selectedPeriod.label} İçin İzleme Verisi Bulunmuyor
                 </h3>
                 <p className="text-sm sm:text-base text-slate-300 max-w-md mx-auto leading-relaxed font-medium">
-                  Bu ay henüz izleme verin bulunmuyor. Dizi ve film izledikçe kişisel özetin burada şekillenecektir! 🎬
+                  Bu dönemde kayıtlı bir film veya dizi bölümü izlemeniz bulunmuyor. Başka bir ayı inceleyebilir veya "Tüm Zamanlar" özetine göz atabilirsiniz! 🎬
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-7 py-3.5 rounded-2xl bg-[#E63946] hover:bg-[#d62839] text-white font-black text-sm shadow-xl shadow-[#E63946]/30 transition hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                Hemen İçerik Keşfet & Ekle 🚀
-              </button>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allTime = availablePeriods.find(p => p.type === 'all-time');
+                    if (allTime) setSelectedPeriod(allTime);
+                  }}
+                  className="px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-xl transition cursor-pointer"
+                >
+                  🏆 Tüm Zamanlar Özetini Aç
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition cursor-pointer"
+                >
+                  Kapat
+                </button>
+              </div>
             </div>
           ) : (
             /* VERTICAL SUMMARY STORY CARD */
@@ -545,10 +813,10 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <h1 className="text-base sm:text-xl font-black tracking-wider text-amber-400 uppercase font-mono">
-                    {currentMonthName}
+                  <h1 className="text-sm sm:text-lg font-black tracking-wider text-amber-400 uppercase font-mono">
+                    {selectedPeriod.label}
                   </h1>
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block font-mono">AYLIK WRAPPED</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block font-mono">WRAPPED ÖZETİ</span>
                 </div>
               </div>
 
@@ -567,7 +835,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 </div>
                 <div className="text-sm sm:text-base italic text-slate-300 font-bold">
                   {totalHours >= 40 
-                    ? '"Bu ay resmen ekran başında maraton koştun! 🚀"' 
+                    ? '"Resmen ekran başında maraton koştun! 🚀"' 
                     : totalHours >= 15 
                       ? '"Harika bir izleme temposu yakaladın! 🍿"' 
                       : '"Kütüphaneni zenginleştirmeye devam ediyorsun! ✨"'}
@@ -594,7 +862,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 </div>
               </div>
 
-              {/* 4. ZİRVEDEKİ DİZİ (TOP WATCHED TV SHOW) */}
+              {/* 4. ZİRVEDEKİ DİZİ (SPOTLIGHT 1) */}
               {topSeriesDetails && (
                 <div 
                   onClick={() => {
@@ -606,7 +874,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
                       <Tv className="w-4 h-4 text-amber-400" />
-                      ZİRVEDEKİ DİZİN
+                      {topSeriesDetails.categoryLabel}
                     </span>
                     <span className="text-[11px] text-[#00e054] font-bold">
                       {topSeriesDetails.badge}
@@ -637,42 +905,42 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 </div>
               )}
 
-              {/* 5. ZİRVE FİLM VEYA EN YÜKSEK PUANLADIĞIN İÇERİK (If available) */}
-              {topRatedDetails && (
+              {/* 5. SPOTLIGHT 2: DİNAMİK İKİNCİ KART (Zirve Film VEYA İkinci Dizi) */}
+              {secondaryDetails && (
                 <div 
                   onClick={() => {
-                    if (onSelectMediaById && topRatedDetails.id) onSelectMediaById(topRatedDetails.id, topRatedDetails.type);
+                    if (onSelectMediaById && secondaryDetails.id) onSelectMediaById(secondaryDetails.id, secondaryDetails.type);
                     onClose();
                   }}
                   className="space-y-1.5 pt-1 cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black uppercase tracking-widest text-[#40bcf4] flex items-center gap-1.5">
-                      {topRatedDetails.type === 'movie' ? <Film className="w-4 h-4 text-[#40bcf4]" /> : <Award className="w-4 h-4 text-[#40bcf4]" />}
-                      {topRatedDetails.type === 'movie' ? 'ZİRVE FİLMİN' : 'EN YÜKSEK PUANLADIĞIN'}
+                      {secondaryDetails.type === 'movie' ? <Film className="w-4 h-4 text-[#40bcf4]" /> : <Award className="w-4 h-4 text-[#40bcf4]" />}
+                      {secondaryDetails.categoryLabel}
                     </span>
                     <span className="text-[11px] text-[#40bcf4] font-bold">
-                      {topRatedDetails.badge}
+                      {secondaryDetails.badge}
                     </span>
                   </div>
 
                   <div className="bg-[#161926]/95 border-2 border-[#40bcf4]/50 rounded-2xl p-4 flex items-center gap-4 shadow-xl group-hover:border-[#40bcf4] transition">
                     <img
-                      src={topRatedDetails.poster}
-                      alt={topRatedDetails.title}
+                      src={secondaryDetails.poster}
+                      alt={secondaryDetails.title}
                       className="w-14 h-20 sm:w-16 sm:h-24 rounded-xl object-cover border-2 border-[#40bcf4]/60 shrink-0 shadow-lg group-hover:scale-105 transition"
                     />
                     <div className="min-w-0 flex-1 space-y-1">
                       <h4 className="text-base sm:text-lg font-black text-white uppercase tracking-wide truncate group-hover:text-[#40bcf4] transition">
-                        {topRatedDetails.title}
+                        {secondaryDetails.title}
                       </h4>
                       <p className="text-xs text-slate-300 italic font-medium">
-                        {topRatedDetails.subtitle}
+                        {secondaryDetails.subtitle}
                       </p>
-                      {topRatedDetails.rating && (
+                      {secondaryDetails.rating && (
                         <div className="flex items-center gap-1 text-amber-400 text-xs font-black pt-0.5">
                           <Star className="w-3.5 h-3.5 fill-current" />
-                          <span>{topRatedDetails.rating} / 10 Kişisel Puanın</span>
+                          <span>{secondaryDetails.rating} / 10 Puan</span>
                         </div>
                       )}
                     </div>
@@ -680,7 +948,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 </div>
               )}
 
-              {/* 6. EKRANINI EN ÇOK SÜSLEYEN OYUNCU */}
+              {/* 6. EKRANINI EN ÇOK SÜSLEYEN OYUNCU (Gerçek Frekans Hesabı) */}
               {topActor && (
                 <div className="space-y-1.5 pt-1">
                   <span className="text-xs font-black uppercase tracking-widest text-purple-400 block">
@@ -739,7 +1007,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 </p>
               </div>
 
-              {/* 9. TÜR & ORT. PUAN GRID */}
+              {/* 9. TÜR & ORT. PUAN VEYA ALTERNATİF METRİK GRID */}
               <div className="grid grid-cols-2 gap-3.5 pt-1">
                 <div className="bg-[#161926]/90 border border-white/15 rounded-2xl p-4 text-center space-y-1">
                   <span className="text-xs font-black uppercase tracking-wider text-amber-400 block">ZİRVE TÜR</span>
@@ -747,18 +1015,36 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                     {topGenre.genre}
                   </span>
                   <span className="text-xs text-slate-300 font-medium block">
-                    %{topGenre.percent} kütüphane ağırlığı
+                    %{topGenre.percent} dönem ağırlığı
                   </span>
                 </div>
 
                 <div className="bg-[#161926]/90 border border-white/15 rounded-2xl p-4 text-center space-y-1">
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-400 block">ORT. PUAN</span>
-                  <div className="flex items-center justify-center gap-1 text-amber-400 text-base">
-                    ★★★★★
-                  </div>
-                  <span className="text-sm sm:text-base font-black text-white font-mono block">
-                    {realAvgRating ? `${realAvgRating} / 10` : (topPersonalRating ? `${topPersonalRating} / 10` : '8.5 / 10')}
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-400 block">
+                    {realAvgRating ? 'ORT. PUAN' : 'İZLEME TEMPOSU'}
                   </span>
+                  {realAvgRating ? (
+                    <>
+                      <div className="flex items-center justify-center gap-1 text-amber-400 text-base">
+                        ★★★★★
+                      </div>
+                      <span className="text-sm sm:text-base font-black text-white font-mono block">
+                        {realAvgRating} / 10
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center gap-1 text-amber-400 text-base">
+                        <Sparkles className="w-4 h-4 fill-current text-amber-400" />
+                      </div>
+                      <span className="text-sm sm:text-base font-black text-white font-mono block">
+                        {episodeCount > 0 ? `${episodeCount} Bölüm` : `${movieCount} Film`}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium block">
+                        Aktif Takipçi
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 

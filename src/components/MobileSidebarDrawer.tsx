@@ -26,6 +26,7 @@ interface MobileSidebarDrawerProps {
   user: Profile;
   onOpenProfile: () => void;
   onOpenStats: () => void;
+  onOpenRecap?: () => void;
   onOpenFavorites?: () => void;
   onOpenCalendar?: () => void;
   onOpenNotifications?: () => void;
@@ -40,6 +41,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   user,
   onOpenProfile,
   onOpenStats,
+  onOpenRecap,
   onOpenFavorites,
   onOpenCalendar,
   onOpenNotifications,
@@ -208,6 +210,33 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                         </div>
                         <div className="text-[10px] text-neutral-400 truncate">
                           Yeni sezon ve bölüm uyarıları
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition shrink-0" />
+                  </button>
+                )}
+
+                {/* ✨ Aylık & Yıllık Wrapped Özeti */}
+                {onOpenRecap && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenRecap();
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-neutral-200 hover:text-white hover:bg-white/5 active:bg-white/10 transition border border-transparent hover:border-amber-500/30 group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 group-hover:bg-amber-400 group-hover:text-slate-950 transition shrink-0">
+                        <Sparkles className="w-4 h-4 fill-current" />
+                      </div>
+                      <div className="text-left min-w-0">
+                        <div className="text-xs font-bold text-white group-hover:text-amber-400 transition">
+                          Aylık Wrapped Özeti
+                        </div>
+                        <div className="text-[10px] text-neutral-400 truncate">
+                          Dönemsel izleme hikayen ve istatistiklerin
                         </div>
                       </div>
                     </div>

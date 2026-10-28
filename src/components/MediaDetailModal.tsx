@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Star, Eye, Clock, Check, Tv, Film, MessageSquare, AlertTriangle, Heart, 
-  Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, ChevronDown, Zap, Info, ShieldAlert, Layers, Pencil, Trash2, Calendar
+  Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, ChevronDown, Zap, Info, ShieldAlert, Layers, Pencil, Trash2, Calendar, Archive
 } from 'lucide-react';
 import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem, WatchStatus } from '../types';
-import { getShowDates, getMovieFinishDate } from '../utils/dateUtils';
+import { getShowDates, getMovieFinishDate, formatTurkishDate, formatTurkishShortDate, isEpisodeAired } from '../utils/dateUtils';
 import { getDetails, getSeasonDetails, getBackdropUrl, getPosterUrl } from '../lib/tmdb';
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { AddToCollectionModal } from './AddToCollectionModal';
@@ -127,12 +127,22 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   // Revealed Spoilers state
   const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, boolean>>({});
 
+  // Unreleased episode warning notice state
+  const [unreleasedNotice, setUnreleasedNotice] = useState<string | null>(null);
+  const noticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
+    };
+  }, []);
+
   const isTv = media.media_type === 'tv' || !!media.first_air_date;
 
 // Watch Dates Calculation (Start date for TV, finish/watched date for TV & movies)
   const watchItem = watchList.find(w => Number(w.media_id) === Number(details.id) && (isTv ? w.media_type === 'tv' : w.media_type === 'movie'));
 
-  const { startDate, finishDate } = React.useMemo(() => {
+  const { startDate, finishDate, isArchived } = React.useMemo(() => {
     if (isTv) {
       return getShowDates(
         details.id,
@@ -145,7 +155,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       const fDate = (userWatchStatus === 'watched')
         ? getMovieFinishDate(watchItem?.updated_at, watchItem?.created_at)
         : null;
-      return { startDate: null, finishDate: fDate };
+      return { startDate: null, finishDate: fDate, isArchived: false };
     }
   }, [details.id, isTv, episodeProgress, userWatchStatus, watchItem]);
 
@@ -223,6 +233,9 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   const getNextEpisodeNumber = (): number => {
     if (!seasonDetails || !seasonDetails.episodes) return 1;
     for (const ep of seasonDetails.episodes) {
+      if (!isEpisodeAired(ep.air_date, details.status)) {
+        continue;
+      }
       const prog = getEpisodeProgress(media.id, selectedSeasonNum, ep.episode_number);
       if (!prog || !prog.is_watched) {
         return ep.episode_number;
@@ -279,6 +292,15 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       return;
     }
 
+    if (!isEpisodeAired(ep.air_date, details.status)) {
+      setRatingEpisodeModal(null);
+      const dateMsg = ep.air_date ? ` (Yayın Tarihi: ${formatTurkishDate(ep.air_date)})` : '';
+      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izlendi olarak işaretlenemez.`);
+      if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
+      noticeTimeoutRef.current = setTimeout(() => setUnreleasedNotice(null), 4500);
+      return;
+    }
+
     const missingItems = getMissingPriorEpisodes(ep.season_number, ep.episode_number);
     if (missingItems.length > 0) {
       setRatingEpisodeModal(null);
@@ -307,6 +329,14 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       return;
     }
 
+    if (!isEpisodeAired(ep.air_date, details.status)) {
+      const dateMsg = ep.air_date ? ` (Yayın Tarihi: ${formatTurkishDate(ep.air_date)})` : '';
+      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izlendi olarak işaretlenemez.`);
+      if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
+      noticeTimeoutRef.current = setTimeout(() => setUnreleasedNotice(null), 4500);
+      return;
+    }
+
     const missingItems = getMissingPriorEpisodes(ep.season_number, ep.episode_number);
     if (missingItems.length > 0) {
       const allItemsToMark = [...missingItems, { season_number: ep.season_number, episode_number: ep.episode_number }];
@@ -322,6 +352,14 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
   // Handle episode click -> Open 1-10 Rating Modal
   const handleOpenEpisodeModal = (ep: TMDBEpisode) => {
+    const isAlreadyWatched = getEpisodeProgress(media.id, ep.season_number, ep.episode_number)?.is_watched;
+    if (!isEpisodeAired(ep.air_date, details.status) && !isAlreadyWatched) {
+      const dateMsg = ep.air_date ? ` (${formatTurkishDate(ep.air_date)})` : '';
+      setUnreleasedNotice(`Henüz yayınlanmamış bölümlere puan verilemez${dateMsg}.`);
+      if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
+      noticeTimeoutRef.current = setTimeout(() => setUnreleasedNotice(null), 4000);
+      return;
+    }
     const prog = getEpisodeProgress(media.id, ep.season_number, ep.episode_number);
     setSelectedEpScore(prog?.rating || 8);
     setRatingEpisodeModal(ep);
@@ -448,15 +486,33 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     </span>
                   )}
 
-                  {startDate && startDate !== finishDate && (
+                  {/* Filmler İçin İzleme Tarihi */}
+                  {!isTv && finishDate && (
+                    <span className="flex items-center gap-1 bg-sky-500/15 text-sky-400 px-2.5 py-0.5 rounded-md border border-sky-500/30 text-[11px]">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" /> İzleme Tarihi: {finishDate}
+                    </span>
+                  )}
+
+                  {/* Diziler İçin Arşiv Rozeti */}
+                  {isTv && isArchived && (
+                    <span 
+                      className="flex items-center gap-1 bg-purple-500/15 text-purple-400 px-2.5 py-0.5 rounded-md border border-purple-500/30 text-[11px]"
+                      title={finishDate ? `Kütüphaneye eklenme: ${finishDate}` : 'Geçmiş İzleme Arşivi'}
+                    >
+                      <Archive className="w-3 h-3 shrink-0" /> Arşiv (Geçmiş İzleme)
+                    </span>
+                  )}
+
+                  {/* Diziler İçin Başlama & Bitiş (Arşiv Değilse) */}
+                  {isTv && !isArchived && startDate && (
                     <span className="flex items-center gap-1 bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-md border border-emerald-500/30 text-[11px]">
                       <Calendar className="w-3 h-3 shrink-0" /> Başlama: {startDate}
                     </span>
                   )}
 
-                  {finishDate && (
+                  {isTv && !isArchived && finishDate && (
                     <span className="flex items-center gap-1 bg-sky-500/15 text-sky-400 px-2.5 py-0.5 rounded-md border border-sky-500/30 text-[11px]">
-                      <CheckCircle2 className="w-3 h-3 shrink-0" /> {isTv ? (startDate === finishDate ? 'İzlendi:' : 'Bitiş:') : 'İzlendi:'} {finishDate}
+                      <CheckCircle2 className="w-3 h-3 shrink-0" /> Bitiş: {finishDate}
                     </span>
                   )}
                 </div>
@@ -556,20 +612,44 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
               </div>
 
-              {/* İzleme Tarihleri Satırı (Başlama / Bitiş / İzlendi) */}
-              {(startDate || finishDate) && (
+              {/* İzleme Tarihleri Satırı (Başlama / Bitiş / İzleme Tarihi / Arşiv) */}
+              {(startDate || finishDate || isArchived) && (
                 <div className="pt-2 border-t border-[#232833] flex items-center justify-between gap-3 text-[11px] font-semibold px-1 flex-wrap">
-                  {startDate && startDate !== finishDate && (
-                    <div className="flex items-center gap-1.5 text-emerald-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                      <span>Başlama: <span className="text-white font-extrabold">{startDate}</span></span>
-                    </div>
-                  )}
-                  {finishDate && (
+                  {/* Filmler İçin */}
+                  {!isTv && finishDate && (
                     <div className="flex items-center gap-1.5 text-sky-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-                      <span>{isTv ? (startDate === finishDate ? 'İzlendi:' : 'Bitiş:') : 'İzlendi:'} <span className="text-white font-extrabold">{finishDate}</span></span>
+                      <span>İzleme Tarihi: <span className="text-white font-extrabold">{finishDate}</span></span>
                     </div>
+                  )}
+
+                  {/* Diziler: Arşiv Durumu */}
+                  {isTv && isArchived && (
+                    <div className="flex items-center gap-1.5 text-purple-400">
+                      <Archive className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span>Kayıt Türü: <span className="text-white font-extrabold">Arşiv (Geçmiş İzleme)</span></span>
+                      {finishDate && (
+                        <span className="text-slate-400 text-[10px] ml-1">(Eklenme: {finishDate})</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Diziler: Normal Başlama & Bitiş */}
+                  {isTv && !isArchived && (
+                    <>
+                      {startDate && (
+                        <div className="flex items-center gap-1.5 text-emerald-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                          <span>Başlama: <span className="text-white font-extrabold">{startDate}</span></span>
+                        </div>
+                      )}
+                      {finishDate && (
+                        <div className="flex items-center gap-1.5 text-sky-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+                          <span>Bitiş: <span className="text-white font-extrabold">{finishDate}</span></span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -693,7 +773,32 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
               {/* BÖLÜM KARTLARI GRID'I (Sadece Açık Olduğunda Gösterilir) */}
               {isEpisodesExpanded && (
-                <div className="p-4 sm:p-6 space-y-5 bg-[#14171D]">
+                <div className="p-4 sm:p-6 space-y-4 bg-[#14171D]">
+                  {/* Bilgilendirme / Uyarı Bildirimi */}
+                  <AnimatePresence>
+                    {unreleasedNotice && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                        className="p-3 sm:p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-between gap-3 shadow-lg"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span className="leading-snug">{unreleasedNotice}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUnreleasedNotice(null)}
+                          className="text-amber-400 hover:text-white p-1 rounded-lg hover:bg-amber-500/20 transition shrink-0"
+                          title="Kapat"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   {loadingSeason ? (
                     <div className="flex flex-col items-center justify-center py-12 space-y-3">
                       <motion.div
@@ -709,7 +814,9 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                         const prog = getEpisodeProgress(details.id, ep.season_number, ep.episode_number);
                         const isWatched = prog?.is_watched;
                         const userScore = prog?.rating;
-                        const isNextToWatch = !isWatched && ep.episode_number === nextEpNum;
+                        const isAired = isEpisodeAired(ep.air_date, details.status);
+                        const isNextToWatch = !isWatched && isAired && ep.episode_number === nextEpNum;
+                        const isUnreleased = !isAired && !isWatched;
 
                         let cardBorderClass = '';
                         let topText = `${ep.season_number}. SEZON ${ep.episode_number}. BÖLÜM`;
@@ -717,7 +824,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                         let bottomBadge = null;
 
                         if (isWatched) {
-                          cardBorderClass = 'border-2 border-[#4ADE80] bg-[#4ADE80]/10 hover:bg-[#4ADE80]/15 shadow-md shadow-[#4ADE80]/10';
+                          cardBorderClass = 'border-2 border-[#4ADE80] bg-[#4ADE80]/10 hover:bg-[#4ADE80]/15 shadow-md shadow-[#4ADE80]/10 cursor-pointer';
                           statusIcon = (
                             <div className="w-5 h-5 rounded-full bg-[#4ADE80] text-[#0B0C0E] flex items-center justify-center shrink-0 shadow-sm">
                               <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -730,7 +837,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                             </span>
                           );
                         } else if (isNextToWatch) {
-                          cardBorderClass = 'border-2 border-[#FBBF24] bg-[#FBBF24]/10 hover:bg-[#FBBF24]/15 shadow-md shadow-[#FBBF24]/10';
+                          cardBorderClass = 'border-2 border-[#FBBF24] bg-[#FBBF24]/10 hover:bg-[#FBBF24]/15 shadow-md shadow-[#FBBF24]/10 cursor-pointer';
                           statusIcon = (
                             <div className="w-5 h-5 rounded-full bg-[#FBBF24] text-[#0B0C0E] flex items-center justify-center shrink-0 shadow-sm">
                               <Zap className="w-3 h-3 fill-current" />
@@ -741,8 +848,24 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                               SIRADAKİ
                             </span>
                           );
+                        } else if (isUnreleased) {
+                          cardBorderClass = 'bg-[#12141A]/70 border border-dashed border-slate-700/60 hover:border-slate-600/80 text-slate-400 opacity-80 cursor-not-allowed';
+                          statusIcon = (
+                            <div 
+                              className="w-5 h-5 rounded-full bg-[#0B0C0E] border border-slate-700/80 flex items-center justify-center shrink-0 text-slate-400"
+                              title="Bu bölüm henüz yayınlanmadı"
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                            </div>
+                          );
+                          bottomBadge = (
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 truncate" title="Bu bölüm henüz yayınlanmadı">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0" />
+                              <span className="truncate">YAYINLANMADI</span>
+                            </span>
+                          );
                         } else {
-                          cardBorderClass = 'bg-[#1A1D23] border border-[#232833] hover:border-slate-500';
+                          cardBorderClass = 'bg-[#1A1D23] border border-[#232833] hover:border-slate-500 cursor-pointer';
                           statusIcon = (
                             <div className="w-5 h-5 rounded-full border border-slate-600 shrink-0 group-hover:border-slate-400 transition-colors" />
                           );
@@ -755,17 +878,19 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
                         const epNote = prog?.note;
                         const epNoteSpoiler = prog?.note_has_spoiler;
+                        const airDateShort = formatTurkishShortDate(ep.air_date);
 
                         return (
                           <div
                             key={ep.id}
                             onClick={() => handleDirectEpisodeClick(ep)}
-                            className={`p-2.5 sm:p-3 rounded-2xl ${cardBorderClass} transition-all duration-200 cursor-pointer group flex flex-col justify-between min-h-[116px] overflow-hidden hover:scale-[1.02] select-none`}
+                            title={isUnreleased ? `Bu bölüm henüz yayınlanmadı${ep.air_date ? ` (Yayın Tarihi: ${formatTurkishDate(ep.air_date)})` : ''}` : undefined}
+                            className={`p-2.5 sm:p-3 rounded-2xl ${cardBorderClass} transition-all duration-200 group flex flex-col justify-between min-h-[116px] overflow-hidden select-none ${isUnreleased ? 'hover:scale-[1.01]' : 'hover:scale-[1.02]'}`}
                           >
                             {/* Üstte küçük metin: 3. SEZON 1. BÖLÜM & Sağ üstte Not İkonu & Dairesel durum ikonu */}
                             <div className="flex items-center justify-between gap-1 z-10">
                               <span className={`text-[10px] font-black font-mono uppercase tracking-wider truncate ${
-                                isWatched ? 'text-[#4ADE80]' : isNextToWatch ? 'text-[#FBBF24]' : 'text-slate-400'
+                                isWatched ? 'text-[#4ADE80]' : isNextToWatch ? 'text-[#FBBF24]' : isUnreleased ? 'text-slate-500' : 'text-slate-400'
                               }`}>
                                 {topText}
                               </span>
@@ -805,28 +930,49 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
                             {/* Ortada bold/koyu başlık: Episode Name */}
                             <h4 className={`font-black text-xs sm:text-sm line-clamp-2 uppercase tracking-wide leading-tight my-1 ${
-                              isWatched ? 'text-white' : isNextToWatch ? 'text-white' : 'text-slate-200 group-hover:text-white'
+                              isWatched ? 'text-white' : isNextToWatch ? 'text-white' : isUnreleased ? 'text-slate-400 group-hover:text-slate-300' : 'text-slate-200 group-hover:text-white'
                             }`}>
                               {ep.name}
                             </h4>
 
-                            {/* Alt tarafta minik durum etiketi & Sağ altta Puanla Butonu */}
+                            {/* Alt tarafta minik durum etiketi & Sağ altta Puanla veya Tarih Rozeti */}
                             <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-white/10 mt-auto min-w-0 w-full overflow-hidden">
                               <div className="min-w-0 flex-1 truncate">
                                 {bottomBadge}
                               </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenEpisodeModal(ep);
-                                }}
-                                className="flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-500/30 transition shadow-sm shrink-0 whitespace-nowrap hover:scale-105 active:scale-95"
-                                title="Bölümü Puanla"
-                              >
-                                <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 shrink-0" />
-                                <span className="whitespace-nowrap">{userScore ? `★ ${userScore}` : 'Puanla'}</span>
-                              </button>
+                              
+                              {/* Unreleased episode shows release date instead of rate button */}
+                              {isUnreleased ? (
+                                ep.air_date ? (
+                                  <span
+                                    className="flex items-center gap-1 text-[9px] sm:text-[10px] font-semibold text-slate-400 bg-[#0B0C0E] px-1.5 py-0.5 rounded-md border border-slate-800 shrink-0 whitespace-nowrap"
+                                    title={`Yayınlanma Tarihi: ${formatTurkishDate(ep.air_date)}`}
+                                  >
+                                    <Calendar className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                                    <span>{airDateShort}</span>
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="text-[9px] font-medium text-slate-500 bg-[#0B0C0E] px-1.5 py-0.5 rounded-md border border-slate-800 shrink-0 whitespace-nowrap"
+                                    title="Yayın tarihi henüz duyurulmadı"
+                                  >
+                                    Tarih Yok
+                                  </span>
+                                )
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEpisodeModal(ep);
+                                  }}
+                                  className="flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-500/30 transition shadow-sm shrink-0 whitespace-nowrap hover:scale-105 active:scale-95"
+                                  title="Bölümü Puanla"
+                                >
+                                  <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 shrink-0" />
+                                  <span className="whitespace-nowrap">{userScore ? `★ ${userScore}` : 'Puanla'}</span>
+                                </button>
+                              )}
                             </div>
                           </div>
                         );

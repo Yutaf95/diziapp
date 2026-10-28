@@ -485,11 +485,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }));
   })();
 
-  // Previous month title for Wrapped banner (e.g. "Temmuz Ayı Aylık Özetin")
-  const currentMonthName = (() => {
+  // Completed month title for Wrapped banner (e.g. if before the 28th, display previous completed month)
+  const recapMonthInfo = (() => {
     const d = new Date();
+    const day = d.getDate();
+    if (day < 28) {
+      d.setMonth(d.getMonth() - 1);
+    }
     const monthStr = d.toLocaleDateString('tr-TR', { month: 'long' });
-    return monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
+    const capitalized = monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
+    return {
+      name: capitalized,
+      isPreviousMonth: day < 28
+    };
   })();
 
   // Real User Reviews filtering — Strictly scoped to this profile's user only
@@ -1213,8 +1221,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <Sparkles className="w-7 h-7 fill-current" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-xl font-black text-white tracking-tight">✨ {currentMonthName} Ayı İzleme Özeti (Wrapped)</h3>
-                    <p className="text-xs text-slate-300 font-medium mt-0.5">Bu ayki tüm izleme dakikaların, favori türlerin ve zirve yapımların animasyonlu hikaye formatında hazır!</p>
+                    <h3 className="text-base sm:text-xl font-black text-white tracking-tight">✨ {recapMonthInfo.name} Ayı İzleme Özeti (Wrapped)</h3>
+                    <p className="text-xs text-slate-300 font-medium mt-0.5">
+                      {recapMonthInfo.isPreviousMonth
+                        ? `${recapMonthInfo.name} ayındaki tüm izleme dakikaların, favori türlerin ve zirve yapımların hazır!`
+                        : 'Bu ayki tüm izleme dakikaların, favori türlerin ve zirve yapımların animasyonlu hikaye formatında hazır!'}
+                    </p>
                   </div>
                 </div>
 

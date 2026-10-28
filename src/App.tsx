@@ -3218,6 +3218,7 @@ export default function App() {
           handleNavigateToProfile(currentUser.username);
         }}
         onOpenStats={() => handleNavigateToProfile(currentUser.username, 'stats')}
+        onOpenRecap={() => setShowRecapModal(true)}
         onOpenCalendar={() => handleTabChange('calendar')}
         onOpenFavorites={() => handleTabChange('favorites')}
         onOpenNotifications={() => setIsNotificationsOpen(true)}

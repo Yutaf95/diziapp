@@ -44,7 +44,7 @@ export const MediaCard: React.FC<MediaCardProps> = React.memo(({
         return (
           <span className="inline-flex items-center gap-1 text-[9px] sm:text-xs font-extrabold bg-emerald-500 text-slate-950 px-1.5 sm:px-2 py-0.5 rounded-md shadow-md max-w-full truncate">
             <Check className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 shrink-0" />
-            <span className="truncate">İzlendi</span>
+            <span className="truncate">İzledim</span>
           </span>
         );
       default:

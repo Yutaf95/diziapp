@@ -458,7 +458,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                     >
                       <Check className="w-4 h-4 stroke-[3] shrink-0" />
                       <span className="truncate">
-                        {isEpWatched(showId, nextEp.season_number, nextEp.episode_number) ? 'İzledim' : 'Sıradakini İzlendi Yap'}
+                        {isEpWatched(showId, nextEp.season_number, nextEp.episode_number) ? 'İzledim' : 'Sıradakini İzledim Yap'}
                       </span>
                     </button>
                   )}
@@ -626,7 +626,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
             </div>
 
             <div className="bg-[#0B0C0E] border border-[#2B313E] rounded-2xl p-4 text-slate-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-inner">
-              {formatMissingEpisodesText(batchModal.missingItems)} de izlendi olarak işaretlemek ister misin?
+              {formatMissingEpisodesText(batchModal.missingItems)} de izledim olarak işaretlemek ister misin?
             </div>
 
             <div className="pt-2 space-y-2.5">

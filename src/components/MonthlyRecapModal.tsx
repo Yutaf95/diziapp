@@ -461,7 +461,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               poster,
               rating: localShow?.rating || (details.vote_average ? Math.round(details.vote_average * 10) / 10 : null),
               episodesWatched: topShow.count,
-              badge: `🔥 ${topShow.count} Bölüm İzlendi`,
+              badge: `🔥 ${topShow.count} Bölüm İzledim`,
               categoryLabel: 'ZİRVEDEKİ DİZİN',
               subtitle: `${selectedPeriod.label} döneminde ekran başında en çok izlediğin dizi`
             });
@@ -488,7 +488,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               poster,
               rating: localShow?.rating || null,
               episodesWatched: topShow.count,
-              badge: `🔥 ${topShow.count} Bölüm İzlendi`,
+              badge: `🔥 ${topShow.count} Bölüm İzledim`,
               categoryLabel: 'ZİRVEDEKİ DİZİN',
               subtitle: `${selectedPeriod.label} döneminde ekran başında en çok izlediğin dizi`
             });
@@ -579,7 +579,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               poster,
               rating: localShow?.rating || (details.vote_average ? Math.round(details.vote_average * 10) / 10 : null),
               episodesWatched: runnerUpShow.count,
-              badge: `🔥 ${runnerUpShow.count} Bölüm İzlendi`,
+              badge: `🔥 ${runnerUpShow.count} Bölüm İzledim`,
               categoryLabel: 'İKİNCİ FAVORİ DİZİN',
               subtitle: `${selectedPeriod.label} döneminde maratona devam ettiğin diğer yapım`
             });
@@ -605,7 +605,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               poster,
               rating: localShow?.rating || null,
               episodesWatched: runnerUpShow.count,
-              badge: `🔥 ${runnerUpShow.count} Bölüm İzlendi`,
+              badge: `🔥 ${runnerUpShow.count} Bölüm İzledim`,
               categoryLabel: 'İKİNCİ FAVORİ DİZİN',
               subtitle: `${selectedPeriod.label} döneminde maratona devam ettiğin diğer yapım`
             });

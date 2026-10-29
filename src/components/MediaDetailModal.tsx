@@ -4,10 +4,11 @@ import {
   X, Star, Eye, Clock, Check, Tv, Film, MessageSquare, AlertTriangle, Heart, 
   Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, ChevronDown, Zap, Info, ShieldAlert, Layers, Pencil, Trash2, Calendar
 } from 'lucide-react';
-import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem, WatchStatus } from '../types';
+import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem, WatchStatus, Profile, MediaType } from '../types';
 import { getShowDates, getMovieFinishDate, formatTurkishDate, formatTurkishShortDate, isEpisodeAired } from '../utils/dateUtils';
 import { getDetails, getSeasonDetails, getBackdropUrl, getPosterUrl } from '../lib/tmdb';
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AddToCollectionModal } from './AddToCollectionModal';
 import { WatchLinksBox } from './WatchLinksBox';
 
@@ -24,6 +25,8 @@ interface MediaDetailModalProps {
   onAddReview: (review: Omit<RatingReview, 'id' | 'created_at'>) => void;
   reviews: RatingReview[];
   currentUserId: string;
+  currentUser?: Profile;
+  onNavigateToProfile?: (username: string) => void;
   collections?: CustomCollection[];
   onToggleItemInCollection?: (collectionId: string, item: Omit<CollectionItem, 'added_at'>) => void;
   onCreateCollection?: (title: string, description: string, color: string, icon: string) => void;
@@ -51,6 +54,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   onAddReview,
   reviews,
   currentUserId,
+  currentUser,
+  onNavigateToProfile,
   collections = [],
   onToggleItemInCollection,
   onCreateCollection,
@@ -208,14 +213,15 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     if (!reviewText.trim()) return;
 
     onAddReview({
-      user_id: currentUserId,
+      user_id: currentUser?.id || currentUserId,
       media_id: media.id,
       media_type: isTv ? 'tv' : 'movie',
       rating: userGeneralRating,
       review_text: reviewText,
       contains_spoiler: containsSpoiler,
       media_title: media.title || media.name,
-      media_poster: media.poster_path ? getPosterUrl(media.poster_path) : undefined
+      media_poster: media.poster_path ? getPosterUrl(media.poster_path) : undefined,
+      profile: currentUser
     });
 
     setReviewText('');
@@ -296,7 +302,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     if (!isEpisodeAired(ep.air_date, details.status)) {
       setRatingEpisodeModal(null);
       const dateMsg = ep.air_date ? ` (Yayın Tarihi: ${formatTurkishDate(ep.air_date)})` : '';
-      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izlendi olarak işaretlenemez.`);
+      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izledim olarak işaretlenemez.`);
       if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
       noticeTimeoutRef.current = setTimeout(() => setUnreleasedNotice(null), 4500);
       return;
@@ -332,7 +338,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
     if (!isEpisodeAired(ep.air_date, details.status)) {
       const dateMsg = ep.air_date ? ` (Yayın Tarihi: ${formatTurkishDate(ep.air_date)})` : '';
-      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izlendi olarak işaretlenemez.`);
+      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izledim olarak işaretlenemez.`);
       if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
       noticeTimeoutRef.current = setTimeout(() => setUnreleasedNotice(null), 4500);
       return;
@@ -376,7 +382,100 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     setRevealedSpoilers(prev => ({ ...prev, [reviewId]: !prev[reviewId] }));
   };
 
-  const mediaReviews = reviews.filter(r => r.media_id === media.id);
+  const [remoteReviews, setRemoteReviews] = useState<RatingReview[]>([]);
+
+  // Concurrently fetch community reviews specifically for this media from Supabase
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchMediaReviews() {
+      if (!isSupabaseConfigured || !media?.id) return;
+      try {
+        const { data: revList, error } = await supabase
+          .from('ratings_reviews')
+          .select('*')
+          .eq('media_id', media.id)
+          .order('created_at', { ascending: false });
+
+        if (error || !revList || revList.length === 0) return;
+
+        // Fetch profiles of users who reviewed this media
+        const userIds = Array.from(new Set(revList.map((r: any) => r.user_id).filter(Boolean)));
+        const profileMap = new Map<string, Profile>();
+
+        if (currentUser?.id) {
+          profileMap.set(currentUser.id, currentUser);
+        }
+
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, avatar_url')
+            .in('id', userIds);
+
+          if (profiles) {
+            profiles.forEach((p: any) => profileMap.set(p.id, p as Profile));
+          }
+        }
+
+        if (isMounted) {
+          const mapped: RatingReview[] = revList.map((r: any) => {
+            const isMe = (currentUser?.id && r.user_id === currentUser.id) || (currentUserId && r.user_id === currentUserId);
+            const p = isMe ? currentUser : profileMap.get(r.user_id);
+            const prof: Profile = {
+              id: r.user_id,
+              username: p?.username || (isMe ? currentUser?.username : '') || 'kullanıcı',
+              full_name: p?.full_name || p?.username || (isMe ? (currentUser?.full_name || currentUser?.username) : '') || 'Kullanıcı',
+              avatar_url: p?.avatar_url || (isMe ? currentUser?.avatar_url : DEFAULT_AVATAR_URL) || DEFAULT_AVATAR_URL
+            };
+
+            return {
+              id: r.id,
+              user_id: r.user_id,
+              media_id: r.media_id,
+              media_type: r.media_type as MediaType,
+              rating: r.rating,
+              review_text: r.review_text,
+              contains_spoiler: r.contains_spoiler,
+              created_at: r.created_at,
+              profile: prof,
+              username: prof.username,
+              user_fullname: prof.full_name,
+              user_avatar: prof.avatar_url
+            };
+          });
+
+          setRemoteReviews(mapped);
+        }
+      } catch (err) {
+        console.warn('Error fetching media reviews:', err);
+      }
+    }
+
+    fetchMediaReviews();
+    return () => { isMounted = false; };
+  }, [media?.id, currentUser, currentUserId]);
+
+  // Merge local state reviews and remote community reviews
+  const mediaReviews = React.useMemo(() => {
+    const localMatches = reviews.filter(r => Number(r.media_id) === Number(media?.id));
+    const map = new Map<string, RatingReview>();
+
+    remoteReviews.forEach(r => {
+      const key = String(r.id || `${r.media_id}_${r.user_id}`);
+      map.set(key, r);
+    });
+
+    localMatches.forEach(r => {
+      const key = String(r.id || `${r.media_id}_${r.user_id}`);
+      map.set(key, r);
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [reviews, remoteReviews, media?.id]);
 
   return (
     <motion.div 
@@ -536,7 +635,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400" /> İzlenecek
                   </button>
 
-                  {/* İzlendi */}
+                  {/* İzledim */}
                   <button
                     onClick={() => {
                       if (userWatchStatus === 'watched') {
@@ -551,7 +650,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                         : 'text-slate-400 hover:text-white hover:bg-[#232833]'
                     }`}
                   >
-                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" /> İzlendi
+                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" /> İzledim
                   </button>
 
                   {/* Trash */}
@@ -566,7 +665,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   )}
                 </div>
 
-                {/* Favori Butonu — Sadece kullanıcı yapımı 'İzlendi' olarak işaretlediğinde gösterilir */}
+                {/* Favori Butonu — Sadece kullanıcı yapımı 'İzledim' olarak işaretlediğinde gösterilir */}
                 {onToggleFavorite && userWatchStatus === 'watched' && (
                   <button
                     onClick={() => onToggleFavorite(details)}
@@ -706,7 +805,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                         ? 'Bölümleri gizlemek için tıklayın' 
                         : userWatchStatus === 'watched'
                         ? 'Tüm bölümler tamamlandı • Bölüm detaylarını görmek için tıklayın'
-                        : 'Puan vermek ve izlendi işaretlemek için tıklayın'}
+                        : 'Puan vermek ve izledim işaretlemek için tıklayın'}
                     </p>
                   </div>
                 </div>
@@ -803,7 +902,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                             </div>
                           );
                           bottomBadge = (
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4ADE80] flex items-center gap-1">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wide text-[#4ADE80] flex items-center gap-1 whitespace-nowrap">
                               <span>İZLEDİM</span>
                               {userScore ? <span className="text-amber-300 font-mono font-bold">★ {userScore}</span> : null}
                             </span>
@@ -816,7 +915,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                             </div>
                           );
                           bottomBadge = (
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#FBBF24] bg-[#FBBF24]/20 px-2 py-0.5 rounded-md border border-[#FBBF24]/30">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wide text-[#FBBF24] whitespace-nowrap">
                               SIRADAKİ
                             </span>
                           );
@@ -831,9 +930,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                             </div>
                           );
                           bottomBadge = (
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 truncate" title="Bu bölüm henüz yayınlanmadı">
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0" />
-                              <span className="truncate">YAYINLANMADI</span>
+                            <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-tight sm:tracking-normal text-slate-400 whitespace-nowrap" title="Bu bölüm henüz yayınlanmadı">
+                              YAYINLANMADI
                             </span>
                           );
                         } else {
@@ -842,7 +940,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                             <div className="w-5 h-5 rounded-full border border-slate-600 shrink-0 group-hover:border-slate-400 transition-colors" />
                           );
                           bottomBadge = (
-                            <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 whitespace-nowrap">
                               İZLENMEDİ
                             </span>
                           );
@@ -908,8 +1006,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                             </h4>
 
                             {/* Alt tarafta minik durum etiketi & Sağ altta Puanla veya Tarih Rozeti */}
-                            <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-white/10 mt-auto min-w-0 w-full overflow-hidden">
-                              <div className="min-w-0 flex-1 truncate">
+                            <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-white/10 mt-auto min-w-0 w-full">
+                              <div className="shrink-0 flex items-center">
                                 {bottomBadge}
                               </div>
                               
@@ -979,7 +1077,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               </div>
             </div>
 
-            {/* WRITE REVIEW FORM: Sadece yapım 'İzlendi' olarak işaretlendiğinde aktif olur */}
+            {/* WRITE REVIEW FORM: Sadece yapım 'İzledim' olarak işaretlendiğinde aktif olur */}
             {userWatchStatus === 'watched' ? (
               <form onSubmit={handleReviewSubmit} className="bg-[#0B0C0E] border border-[#232833] rounded-2xl p-4 sm:p-5 space-y-4 shadow-inner">
                 
@@ -1080,6 +1178,38 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   const isRevealed = revealedSpoilers[revId];
                   const isSpoiler = rev.contains_spoiler;
 
+                  // Determine if this review belongs to current user
+                  const isOwnReview = Boolean(
+                    (currentUser?.id && rev.user_id && rev.user_id === currentUser.id) ||
+                    (currentUserId && rev.user_id && rev.user_id === currentUserId) ||
+                    (!rev.user_id && (currentUserId || currentUser?.id))
+                  );
+
+                  const effectiveProfile = isOwnReview && currentUser?.username
+                    ? currentUser
+                    : rev.profile;
+
+                  const authorUsername =
+                    effectiveProfile?.username ||
+                    (rev as any).username ||
+                    rev.profile?.username ||
+                    (isOwnReview ? currentUser?.username : null) ||
+                    'kullanıcı';
+
+                  const authorFullName =
+                    effectiveProfile?.full_name ||
+                    (rev as any).user_fullname ||
+                    rev.profile?.full_name ||
+                    (isOwnReview ? (currentUser?.full_name || currentUser?.username) : null) ||
+                    authorUsername;
+
+                  const authorAvatar =
+                    effectiveProfile?.avatar_url ||
+                    (rev as any).user_avatar ||
+                    rev.profile?.avatar_url ||
+                    (isOwnReview ? currentUser?.avatar_url : null) ||
+                    DEFAULT_AVATAR_URL;
+
                   return (
                     <div
                       key={revId}
@@ -1087,17 +1217,32 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     >
                       {/* Review User & Rating */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
+                        <div
+                          onClick={() => {
+                            if (onNavigateToProfile && authorUsername && authorUsername !== 'kullanıcı') {
+                              onNavigateToProfile(authorUsername);
+                            }
+                          }}
+                          className={`flex items-center gap-2.5 ${onNavigateToProfile && authorUsername ? 'cursor-pointer group/author' : ''}`}
+                          title={onNavigateToProfile && authorUsername ? `@${authorUsername} profilini görüntüle` : undefined}
+                        >
                           <img
-                            src={rev.profile?.avatar_url || DEFAULT_AVATAR_URL}
-                            alt={rev.profile?.username}
-                            className="w-8 h-8 rounded-full object-cover border border-[#E63946]"
+                            src={authorAvatar}
+                            alt={authorUsername}
+                            className="w-8 h-8 rounded-full object-cover border border-[#E63946] group-hover/author:ring-2 ring-[#E63946]/50 transition"
                           />
                           <div>
-                            <span className="text-xs font-bold text-white block leading-tight">
-                              {rev.profile?.full_name || rev.profile?.username}
-                            </span>
-                            <span className="text-[10px] text-slate-400">@{rev.profile?.username || 'kullanici'}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-white block leading-tight group-hover/author:text-[#E63946] transition">
+                                {authorFullName}
+                              </span>
+                              {isOwnReview && (
+                                <span className="text-[9px] font-extrabold bg-[#E63946]/20 text-[#E63946] border border-[#E63946]/30 px-1.5 py-0.5 rounded leading-none">
+                                  Sen
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-400 block group-hover/author:text-slate-300 transition">@{authorUsername}</span>
                           </div>
                         </div>
 
@@ -1222,7 +1367,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   onClick={handleSaveEpisodeRating}
                   className="w-full py-3 bg-[#4ADE80] hover:bg-[#3ec770] text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-[#4ADE80]/25 transition"
                 >
-                  Puanı Kaydet & İzlendi İşaretle
+                  Puanı Kaydet & İzledim İşaretle
                 </button>
 
                 <button
@@ -1281,7 +1426,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               </div>
 
               <div className="bg-[#0B0C0E] border border-[#2B313E] rounded-2xl p-4 text-slate-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-inner">
-                {formatMissingEpisodesText(batchConfirmModal.missingItems)} de izlendi olarak işaretlemek ister misin?
+                {formatMissingEpisodesText(batchConfirmModal.missingItems)} de izledim olarak işaretlemek ister misin?
               </div>
 
               <div className="pt-2 space-y-2.5">

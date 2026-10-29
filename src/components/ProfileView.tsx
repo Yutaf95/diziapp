@@ -812,7 +812,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     {watchedEpsCount.toLocaleString('tr-TR')}
                   </div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-400">
-                    Bölüm izlendi
+                    Bölüm izledim
                   </div>
                 </div>
 
@@ -822,7 +822,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     {moviesWatchedCount.toLocaleString('tr-TR')}
                   </div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-400">
-                    Film izlendi
+                    Film izledim
                   </div>
                 </div>
 
@@ -1128,7 +1128,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <div className="space-y-1 min-w-0">
                         <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
                         {epsWatched > 0 && (
-                          <p className="text-[11px] text-[#00e054] font-semibold leading-tight">{epsWatched} Bölüm İzlendi</p>
+                          <p className="text-[11px] text-[#00e054] font-semibold leading-tight">{epsWatched} Bölüm İzledim</p>
                         )}
                       </div>
                     </div>
@@ -1271,7 +1271,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Takip Edilen Diziler</div>
                 <div className="text-xl sm:text-2xl font-black text-white">{tvShowsWatchedCount} Dizi</div>
-                <div className="text-[11px] text-slate-400 font-mono">({watchedEpsCount} Bölüm İzlendi)</div>
+                <div className="text-[11px] text-slate-400 font-mono">({watchedEpsCount} Bölüm İzledim)</div>
               </div>
 
               <div className="bg-[#181e23] border border-[#2c3440] rounded-xl p-5 text-center space-y-2 shadow-lg">

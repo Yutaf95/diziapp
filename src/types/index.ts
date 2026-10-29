@@ -72,9 +72,15 @@ export interface RatingReview {
   contains_spoiler: boolean;
   created_at: string;
   profile?: Profile;
+  username?: string;
+  user_fullname?: string;
+  user_avatar?: string;
   media_title?: string;
   media_poster?: string;
   is_pinned?: boolean;
+  likes?: number;
+  likes_count?: number;
+  comments_count?: number;
 }
 
 export interface EpisodeRating {

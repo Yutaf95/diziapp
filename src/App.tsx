@@ -349,13 +349,22 @@ export default function App() {
         // 5. Ratings & Reviews - Smart Merge with Fast Profiles
         if (revRes.status === 'fulfilled') {
           const fetchedReviews: RatingReview[] = rawRevData.map((r: any) => {
-            const p = feedProfileMap.get(r.user_id) || {};
+            const isMe = (userId && r.user_id === userId) || (currentUser?.id && r.user_id === currentUser.id);
+            const userP = isMe ? currentUser : feedProfileMap.get(r.user_id);
+            const p = userP || {};
+            const prof: Profile = {
+              id: r.user_id,
+              username: p.username || (isMe ? currentUser?.username : '') || 'kullanıcı',
+              full_name: p.full_name || p.username || (isMe ? (currentUser?.full_name || currentUser?.username) : '') || 'Kullanıcı',
+              avatar_url: p.avatar_url || (isMe ? currentUser?.avatar_url : DEFAULT_AVATAR_URL) || DEFAULT_AVATAR_URL
+            };
             return {
               id: r.id,
               user_id: r.user_id,
-              username: p.username || 'kullanıcı',
-              user_fullname: p.full_name || 'Kullanıcı',
-              user_avatar: p.avatar_url || DEFAULT_AVATAR_URL,
+              profile: prof,
+              username: prof.username,
+              user_fullname: prof.full_name,
+              user_avatar: prof.avatar_url,
               media_id: r.media_id,
               media_type: r.media_type as MediaType,
               rating: r.rating,
@@ -2277,7 +2286,10 @@ export default function App() {
       ...newRev,
       id: `rev_${Date.now()}`,
       created_at: new Date().toISOString(),
-      profile: currentUser
+      profile: currentUser,
+      username: currentUser.username,
+      user_fullname: currentUser.full_name || currentUser.username,
+      user_avatar: currentUser.avatar_url || DEFAULT_AVATAR_URL
     };
     setReviews(prev => [fullRev, ...prev]);
 
@@ -3183,6 +3195,11 @@ export default function App() {
               onAddReview={handleAddReview}
               reviews={reviews}
               currentUserId={currentUser.id}
+              currentUser={currentUser}
+              onNavigateToProfile={(username) => {
+                setSelectedMedia(null);
+                handleNavigateToProfile(username);
+              }}
               collections={collections}
               onToggleItemInCollection={handleToggleItemInCollection}
               onCreateCollection={handleCreateCollection}

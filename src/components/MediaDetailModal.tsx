@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Star, Eye, Clock, Check, Tv, Film, MessageSquare, AlertTriangle, Heart, 
-  Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, ChevronDown, Zap, Info, ShieldAlert, Layers, Pencil, Trash2, Calendar, Archive
+  Send, User, ArrowLeft, Play, Sparkles, CheckCircle2, ChevronRight, ChevronDown, Zap, Info, ShieldAlert, Layers, Pencil, Trash2, Calendar
 } from 'lucide-react';
 import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, WatchStatusType, RatingReview, EpisodeProgress, CustomCollection, CollectionItem, WatchStatus } from '../types';
 import { getShowDates, getMovieFinishDate, formatTurkishDate, formatTurkishShortDate, isEpisodeAired } from '../utils/dateUtils';
@@ -144,13 +144,14 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
   const { startDate, finishDate, isArchived } = React.useMemo(() => {
     if (isTv) {
-      return getShowDates(
+      const dates = getShowDates(
         details.id,
         episodeProgress,
         userWatchStatus || undefined,
         watchItem?.updated_at,
         watchItem?.created_at
       );
+      return { startDate: dates.startDate, finishDate: dates.finishDate, isArchived: dates.isArchived };
     } else {
       const fDate = (userWatchStatus === 'watched')
         ? getMovieFinishDate(watchItem?.updated_at, watchItem?.created_at)
@@ -485,36 +486,6 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                       {details.number_of_seasons} Sezon
                     </span>
                   )}
-
-                  {/* Filmler İçin İzleme Tarihi */}
-                  {!isTv && finishDate && (
-                    <span className="flex items-center gap-1 bg-sky-500/15 text-sky-400 px-2.5 py-0.5 rounded-md border border-sky-500/30 text-[11px]">
-                      <CheckCircle2 className="w-3 h-3 shrink-0" /> İzleme Tarihi: {finishDate}
-                    </span>
-                  )}
-
-                  {/* Diziler İçin Arşiv Rozeti */}
-                  {isTv && isArchived && (
-                    <span 
-                      className="flex items-center gap-1 bg-purple-500/15 text-purple-400 px-2.5 py-0.5 rounded-md border border-purple-500/30 text-[11px]"
-                      title={finishDate ? `Kütüphaneye eklenme: ${finishDate}` : 'Geçmiş İzleme Arşivi'}
-                    >
-                      <Archive className="w-3 h-3 shrink-0" /> Arşiv (Geçmiş İzleme)
-                    </span>
-                  )}
-
-                  {/* Diziler İçin Başlama & Bitiş (Arşiv Değilse) */}
-                  {isTv && !isArchived && startDate && (
-                    <span className="flex items-center gap-1 bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-md border border-emerald-500/30 text-[11px]">
-                      <Calendar className="w-3 h-3 shrink-0" /> Başlama: {startDate}
-                    </span>
-                  )}
-
-                  {isTv && !isArchived && finishDate && (
-                    <span className="flex items-center gap-1 bg-sky-500/15 text-sky-400 px-2.5 py-0.5 rounded-md border border-sky-500/30 text-[11px]">
-                      <CheckCircle2 className="w-3 h-3 shrink-0" /> Bitiş: {finishDate}
-                    </span>
-                  )}
                 </div>
 
                 {/* Başlık */}
@@ -612,8 +583,12 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
               </div>
 
-              {/* İzleme Tarihleri Satırı (Başlama / Bitiş / İzleme Tarihi / Arşiv) */}
-              {(startDate || finishDate || isArchived) && (
+              {/* İzleme / Eklenme Tarihi Satırı */}
+              {(
+                (!isTv && finishDate) ||
+                (isTv && isArchived && finishDate) ||
+                (isTv && !isArchived && (startDate || finishDate))
+              ) && (
                 <div className="pt-2 border-t border-[#232833] flex items-center justify-between gap-3 text-[11px] font-semibold px-1 flex-wrap">
                   {/* Filmler İçin */}
                   {!isTv && finishDate && (
@@ -623,18 +598,15 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     </div>
                   )}
 
-                  {/* Diziler: Arşiv Durumu */}
-                  {isTv && isArchived && (
+                  {/* Arşiv Olarak Eklenen Diziler İçin: Sadece Eklenme Tarihi */}
+                  {isTv && isArchived && finishDate && (
                     <div className="flex items-center gap-1.5 text-purple-400">
-                      <Archive className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                      <span>Kayıt Türü: <span className="text-white font-extrabold">Arşiv (Geçmiş İzleme)</span></span>
-                      {finishDate && (
-                        <span className="text-slate-400 text-[10px] ml-1">(Eklenme: {finishDate})</span>
-                      )}
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                      <span>Eklenme Tarihi: <span className="text-white font-extrabold">{finishDate}</span></span>
                     </div>
                   )}
 
-                  {/* Diziler: Normal Başlama & Bitiş */}
+                  {/* Normal İzlenen Diziler İçin: Başlama ve Bitiş */}
                   {isTv && !isArchived && (
                     <>
                       {startDate && (

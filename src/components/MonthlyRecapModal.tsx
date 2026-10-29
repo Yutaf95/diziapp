@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, Film, Tv, Clock, Star, Calendar, Trophy, User, 
-  Share2, X, ChevronRight, ChevronLeft, Flame, Award, Heart, CheckCircle2,
+  Share2, X, ChevronRight, ChevronLeft, ChevronDown, Flame, Award, Heart, CheckCircle2,
   Play, BarChart2, MessageSquare, Check, Copy, Lock, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,9 +22,9 @@ interface MonthlyRecapModalProps {
 
 export interface RecapPeriodOption {
   id: string;
-  type: 'month' | 'year' | 'all-time';
+  type: 'month' | 'all-time';
   year?: number;
-  month?: number; // 0 = Ocak, 9 = Ekim, 11 = Aralık
+  month?: number; // 0 = Ocak, 9 = Ekim
   label: string;
   badgeLabel?: string;
   isLocked: boolean;
@@ -115,18 +115,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
       });
     }
 
-    // Year Recap (Strict 20 Aralık kuralı: only unlocked from Dec 20 onwards)
-    const isYearUnlocked = (curMonth === 11 && curDay >= 20);
-    periods.push({
-      id: `year-${curYear}`,
-      type: 'year',
-      year: curYear,
-      label: `${curYear} Yıl Özeti`,
-      badgeLabel: isYearUnlocked ? 'Yayında' : '20 Aralık\'ta',
-      isLocked: !isYearUnlocked,
-      lockReason: `${curYear} Yıllık Wrapped özeti 20 Aralık'ta yayınlanacaktır.`
-    });
-
     // All-Time
     periods.push({
       id: 'all-time',
@@ -147,12 +135,14 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   }, [availablePeriods]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<RecapPeriodOption>(defaultPeriod);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
   // Sync selectedPeriod with defaultPeriod whenever modal opens
   useEffect(() => {
     if (isOpen) {
       setSelectedPeriod(defaultPeriod);
       setLockedNotice(null);
+      setIsDropdownOpen(false);
     }
   }, [isOpen, defaultPeriod]);
 
@@ -162,9 +152,6 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return false;
     if (selectedPeriod.type === 'all-time') return true;
-    if (selectedPeriod.type === 'year') {
-      return d.getFullYear() === selectedPeriod.year;
-    }
     if (selectedPeriod.type === 'month') {
       return d.getFullYear() === selectedPeriod.year && d.getMonth() === selectedPeriod.month;
     }
@@ -322,71 +309,114 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
     return null;
   }, [watchedMovies, targetUserReviews, watchedEpisodes]);
 
-  // 9. Weekly Rhythm Calculation for This Period
-  const daysMap = [
-    { short: 'Pzt', full: 'Pazartesi' },
-    { short: 'Sal', full: 'Salı' },
-    { short: 'Çar', full: 'Çarşamba' },
-    { short: 'Per', full: 'Perşembe' },
-    { short: 'Cum', full: 'Cuma' },
-    { short: 'Cmt', full: 'Cumartesi' },
-    { short: 'Paz', full: 'Pazar' }
-  ];
-
-  const { weeklyCounts, peakDayName, peakDayIdx } = useMemo(() => {
-    const counts = [0, 0, 0, 0, 0, 0, 0];
-    let realTracked = 0;
+  // 9. Calculate the Single Day with the Maximum Watch Activity (Binge Record Day)
+  const peakMarathonDay = useMemo(() => {
+    const dayStats: Record<string, {
+      dateObj: Date;
+      episodeCount: number;
+      movieCount: number;
+      totalMinutes: number;
+      shows: Record<number, number>;
+    }> = {};
 
     watchedEpisodes.forEach(ep => {
-      const dateStr = ep.watched_at || (ep as any).created_at || (ep as any).updated_at;
-      if (dateStr) {
-        const d = new Date(dateStr);
-        if (!isNaN(d.getTime())) {
-          const dayIdx = (d.getDay() + 6) % 7;
-          counts[dayIdx] += 1;
-          realTracked++;
-        }
+      const raw = ep.watched_at || (ep as any).created_at || (ep as any).updated_at;
+      if (!raw) return;
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return;
+      const dayKey = d.toISOString().slice(0, 10);
+      if (!dayStats[dayKey]) {
+        dayStats[dayKey] = {
+          dateObj: d,
+          episodeCount: 0,
+          movieCount: 0,
+          totalMinutes: 0,
+          shows: {}
+        };
+      }
+      dayStats[dayKey].episodeCount += 1;
+      dayStats[dayKey].totalMinutes += (ep.runtime && ep.runtime > 0) ? ep.runtime : 45;
+      const sid = Number(ep.show_id);
+      if (sid) {
+        dayStats[dayKey].shows[sid] = (dayStats[dayKey].shows[sid] || 0) + 1;
       }
     });
 
     watchedMovies.forEach(m => {
-      const dateStr = m.updated_at || (m as any).created_at || (m as any).watched_at;
-      if (dateStr) {
-        const d = new Date(dateStr);
-        if (!isNaN(d.getTime())) {
-          const dayIdx = (d.getDay() + 6) % 7;
-          counts[dayIdx] += 1;
-          realTracked++;
-        }
+      const raw = m.updated_at || (m as any).created_at || (m as any).watched_at;
+      if (!raw) return;
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return;
+      const dayKey = d.toISOString().slice(0, 10);
+      if (!dayStats[dayKey]) {
+        dayStats[dayKey] = {
+          dateObj: d,
+          episodeCount: 0,
+          movieCount: 0,
+          totalMinutes: 0,
+          shows: {}
+        };
+      }
+      dayStats[dayKey].movieCount += 1;
+      dayStats[dayKey].totalMinutes += (m.runtime && m.runtime > 0) ? m.runtime : 118;
+    });
+
+    const entries = Object.entries(dayStats);
+    if (entries.length === 0) return null;
+
+    // Sort by totalItems (or totalMinutes) descending
+    entries.sort((a, b) => {
+      const totalA = a[1].episodeCount + a[1].movieCount;
+      const totalB = b[1].episodeCount + b[1].movieCount;
+      if (totalB !== totalA) return totalB - totalA;
+      return b[1].totalMinutes - a[1].totalMinutes;
+    });
+
+    const best = entries[0][1];
+    const bestTotal = best.episodeCount + best.movieCount;
+    if (bestTotal === 0) return null;
+
+    let topShowIdOnDay: number | null = null;
+    let topShowEpCountOnDay = 0;
+    Object.entries(best.shows).forEach(([sidStr, count]) => {
+      if (count > topShowEpCountOnDay) {
+        topShowEpCountOnDay = count;
+        topShowIdOnDay = Number(sidStr);
       }
     });
 
-    if (realTracked === 0 && (episodeCount + movieCount) > 0) {
-      const total = episodeCount + movieCount;
-      counts[0] = Math.round(total * 0.12);
-      counts[1] = Math.round(total * 0.14);
-      counts[2] = Math.round(total * 0.10);
-      counts[3] = Math.round(total * 0.16);
-      counts[4] = Math.round(total * 0.22);
-      counts[5] = Math.round(total * 0.16);
-      counts[6] = Math.round(total * 0.10);
+    let topShowTitle: string | null = null;
+    if (topShowIdOnDay) {
+      const foundShow = userWatchList.find(w => Number(w.media_id) === topShowIdOnDay && w.media_type === 'tv');
+      topShowTitle = foundShow?.title || null;
     }
 
-    let maxCnt = 0;
-    let pIdx = 4; // Cuma
-    counts.forEach((cnt, idx) => {
-      if (cnt > maxCnt) {
-        maxCnt = cnt;
-        pIdx = idx;
-      }
+    const formattedDate = best.dateObj.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      weekday: 'long'
     });
 
+    const hours = Math.floor(best.totalMinutes / 60);
+    const mins = best.totalMinutes % 60;
+    const timeStr = hours > 0 ? (mins > 0 ? `${hours} sa ${mins} dk` : `${hours} saat`) : `${mins} dakika`;
+
+    const parts: string[] = [];
+    if (best.episodeCount > 0) parts.push(`${best.episodeCount} bölüm`);
+    if (best.movieCount > 0) parts.push(`${best.movieCount} film`);
+    const highlightText = `${parts.join(' ve ')} (${timeStr})`;
+
     return {
-      weeklyCounts: counts,
-      peakDayName: daysMap[pIdx].full,
-      peakDayIdx: pIdx
+      formattedDate,
+      totalItems: bestTotal,
+      episodeCount: best.episodeCount,
+      movieCount: best.movieCount,
+      timeStr,
+      highlightText,
+      topShowTitle,
+      topShowEpCount: topShowEpCountOnDay
     };
-  }, [watchedEpisodes, watchedMovies, episodeCount, movieCount]);
+  }, [watchedEpisodes, watchedMovies, userWatchList]);
 
   // Lock background scroll when modal is open
   useEffect(() => {
@@ -620,7 +650,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
       (secondaryDetails ? `🌟 ${secondaryDetails.categoryLabel}: ${secondaryDetails.title}\n` : '') +
       (topActor ? `🎭 En Çok İzlenen Oyuncu: ${topActor.name}\n` : '') +
       `🎨 Favori Tür: ${topGenre.genre} (%${topGenre.percent})\n` +
-      `📅 En Yoğun İzleme Günü: ${peakDayName}\n` +
+      (peakMarathonDay ? `🔥 Ayın Maraton Rekoru: ${peakMarathonDay.formattedDate} (${peakMarathonDay.totalItems} İçerik • ${peakMarathonDay.timeStr})\n` : '') +
       `🎬 ttime.app`;
 
     navigator.clipboard.writeText(summaryText).then(() => {
@@ -697,50 +727,102 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
             </div>
           </div>
 
-          {/* PERIOD SELECTOR PILLS BAR */}
-          <div className="relative z-10 mb-4 space-y-2">
-            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1.5 -mx-1 px-1">
-              {availablePeriods.map(p => {
-                const isSelected = p.id === selectedPeriod.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      if (p.isLocked) {
-                        setLockedNotice(p.lockReason || 'Bu dönem henüz yayınlanmadı.');
-                        setTimeout(() => setLockedNotice(null), 4500);
-                      } else {
-                        setSelectedPeriod(p);
-                        setLockedNotice(null);
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                      isSelected
-                        ? 'bg-amber-400 text-slate-950 shadow-md font-black ring-2 ring-amber-300'
-                        : p.isLocked
-                          ? 'bg-[#14171D] text-slate-500 hover:text-slate-400 border border-white/5 opacity-75'
-                          : 'bg-[#161926] text-slate-300 hover:text-white border border-white/10 hover:border-white/25'
-                    }`}
-                  >
-                    {p.isLocked && <Lock className="w-3 h-3 text-amber-500/80 shrink-0" />}
-                    {p.type === 'year' && !p.isLocked && <Trophy className="w-3 h-3 text-amber-500 shrink-0" />}
-                    <span>{p.label}</span>
-                    {p.badgeLabel && (
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
-                        isSelected
-                          ? 'bg-slate-950/20 text-slate-950 font-black'
-                          : p.isLocked
-                            ? 'bg-amber-500/10 text-amber-400/80 border border-amber-500/20'
-                            : 'bg-white/10 text-slate-300'
-                      }`}>
-                        {p.badgeLabel}
+          {/* PERIOD SELECTOR COLLAPSIBLE DROPDOWN */}
+          <div className="relative z-20 mb-4 space-y-2">
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(prev => !prev)}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-[#141722] hover:bg-[#181C2A] border border-amber-500/35 hover:border-amber-400 transition shadow-lg cursor-pointer group"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400 group-hover:scale-105 transition shrink-0">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div className="text-left min-w-0">
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Görüntülenen Dönem</div>
+                  <div className="text-sm font-black text-white flex items-center gap-2 truncate">
+                    <span>{selectedPeriod.label}</span>
+                    {selectedPeriod.badgeLabel && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30 font-bold shrink-0">
+                        {selectedPeriod.badgeLabel}
                       </span>
                     )}
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-amber-300 transition shrink-0">
+                <span className="text-xs font-semibold hidden sm:inline">Dönemi Değiştir</span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-amber-400' : ''}`} />
+              </div>
+            </button>
+
+            {/* DROPDOWN MENU */}
+            <AnimatePresence>
+              {isDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -6 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="bg-[#11131B] border-2 border-amber-500/40 rounded-2xl p-3 shadow-2xl space-y-1.5 overflow-hidden"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
+                    <span>İzleme Dönemi Seçin</span>
+                    <span className="text-[10px] font-normal text-slate-500">Aylık veya Genel Özet</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                    {availablePeriods.map(p => {
+                      const isSelected = p.id === selectedPeriod.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            if (p.isLocked) {
+                              setLockedNotice(p.lockReason || 'Bu dönem henüz yayınlanmadı.');
+                              setTimeout(() => setLockedNotice(null), 4500);
+                            } else {
+                              setSelectedPeriod(p);
+                              setIsDropdownOpen(false);
+                              setLockedNotice(null);
+                            }
+                          }}
+                          className={`flex items-center justify-between p-2.5 rounded-xl text-left transition cursor-pointer border ${
+                            isSelected
+                              ? 'bg-amber-400/15 border-amber-400 text-amber-300 font-black shadow-sm'
+                              : p.isLocked
+                                ? 'bg-white/5 border-transparent text-slate-500 opacity-70 hover:opacity-90'
+                                : 'bg-[#161924] border-white/5 text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/15'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {p.isLocked ? (
+                              <Lock className="w-3.5 h-3.5 text-amber-500/70 shrink-0" />
+                            ) : p.type === 'all-time' ? (
+                              <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            ) : (
+                              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            )}
+                            <div className="min-w-0 truncate">
+                              <span className="text-xs block font-bold truncate">{p.label}</span>
+                              {p.badgeLabel && (
+                                <span className="text-[10px] text-slate-400 block font-normal">
+                                  {p.badgeLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* LOCKED NOTICE BANNER */}
             {lockedNotice && (
@@ -969,43 +1051,55 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 </div>
               )}
 
-              {/* 7. HAFTALIK RİTİM (7-Day Cards) */}
-              <div className="space-y-2.5 pt-2">
-                <span className="text-xs font-black uppercase tracking-widest text-amber-400 block">HAFTALIK RİTİM</span>
-                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-                  {daysMap.map((d, idx) => {
-                    const isPeak = idx === peakDayIdx;
-                    const count = weeklyCounts[idx];
-                    return (
-                      <div
-                        key={d.short}
-                        className={`rounded-2xl p-2 flex flex-col items-center justify-between h-20 text-center transition border-2 ${
-                          isPeak
-                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-xl shadow-amber-400/40 font-black'
-                            : 'bg-[#161926]/90 text-slate-200 border-white/15 font-bold'
-                        }`}
-                      >
-                        <span className={`text-xs sm:text-sm ${isPeak ? 'text-slate-950 font-black' : 'text-slate-300'}`}>
-                          {d.short}
-                        </span>
-                        {isPeak ? (
-                          <Sparkles className="w-4 h-4 text-slate-950 fill-slate-950" />
-                        ) : (
-                          <span className="text-[11px] font-mono text-slate-400">{count > 0 ? count : '•'}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* 7. AYIN MARATON REKORU GÜNÜ (TEK GÜNDE EN ÇOK İZLENEN GÜN) */}
+              {peakMarathonDay && (
+                <div className="space-y-1.5 pt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
+                      <Flame className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      AYIN MARATON REKORU
+                    </span>
+                    <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/30">
+                      Tek Günde Zirve
+                    </span>
+                  </div>
 
-              {/* 8. EN YOĞUN ANIN CALLOUT BANNER */}
-              <div className="bg-[#2E151A]/95 border-2 border-[#E63946]/50 rounded-2xl p-4 flex items-center gap-3 shadow-lg">
-                <span className="text-2xl shrink-0">🔥</span>
-                <p className="leading-relaxed text-slate-100 text-xs sm:text-sm font-semibold">
-                  <strong className="text-amber-400 font-extrabold">En yoğun anın:</strong> <span className="font-black text-white">{peakDayName}</span> günü yüksek tempolu izleme maratonu gerçekleştirdin.
-                </p>
-              </div>
+                  <div className="bg-gradient-to-r from-[#22131A] via-[#1A1322] to-[#141724] border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden space-y-3">
+                    <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+                      <div className="space-y-1 min-w-0">
+                        <div className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span className="capitalize">{peakMarathonDay.formattedDate}</span>
+                        </div>
+                        <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                          Bu tarihte ekran başına geçip tam <strong className="text-amber-400 font-bold">{peakMarathonDay.highlightText}</strong> izleyerek ayın izleme rekorunu kırdın! 🚀
+                        </p>
+                      </div>
+
+                      <div className="bg-[#0D0F17]/90 border border-amber-500/30 rounded-xl px-4 py-2 text-center shrink-0 shadow-md">
+                        <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">
+                          {peakMarathonDay.totalItems}
+                        </div>
+                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          İÇERİK
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* O günün öne çıkan ana dizisi / yapımı */}
+                    {peakMarathonDay.topShowTitle && (
+                      <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 flex-wrap gap-1">
+                        <span className="text-slate-400 text-[11px]">Günün ana maratonu:</span>
+                        <span className="font-extrabold text-white truncate flex items-center gap-1.5 bg-white/5 px-2 py-0.5 rounded-md border border-white/10">
+                          <Tv className="w-3 h-3 text-amber-400" />
+                          {peakMarathonDay.topShowTitle}
+                          <span className="text-amber-400 font-mono text-[11px]">({peakMarathonDay.topShowEpCount} Bölüm)</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* 9. TÜR & ORT. PUAN VEYA ALTERNATİF METRİK GRID */}
               <div className="grid grid-cols-2 gap-3.5 pt-1">

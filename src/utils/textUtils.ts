@@ -98,3 +98,12 @@ export const getEpisodeAccusativeSuffix = (ep: number): string => {
       return "'i";
   }
 };
+
+
+/**
+ * Checks if a string is a valid UUID format (standard RFC 4122 v4)
+ */
+export const isUUIDString = (str?: string): boolean => {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+};

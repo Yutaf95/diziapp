@@ -48,11 +48,12 @@ import { sortFranchiseAlphabetical } from './lib/sorting';
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile, AppNotification } from './types';
 import { getTrending, search, getDetails, getSeasonDetails } from './lib/tmdb';
 import { DEFAULT_AVATAR_URL } from './lib/constants';
-import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp, Pin } from 'lucide-react';
+import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp, Pin, Pencil, Trash2, Check } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
 import { CURRENT_USER, MOCK_USER_PROFILES } from './data/mockData';
 import { syncWatchLinksWithSupabase } from './utils/watchLinksStorage';
+import { isUUIDString } from './utils/textUtils';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -134,7 +135,8 @@ export default function App() {
           actRes,
           favRes,
           collRes,
-          followRes
+          followRes,
+          userRevRes
         ] = await Promise.allSettled([
           supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
           supabase.from('watch_status').select('*').eq('user_id', userId),
@@ -143,7 +145,8 @@ export default function App() {
           supabase.from('activity_feed').select('*').gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()).order('created_at', { ascending: false }).limit(50),
           supabase.from('favorites').select('*').eq('user_id', userId),
           supabase.from('custom_collections').select('*, collection_items(*)').eq('user_id', userId),
-          supabase.from('follows').select('following_id').eq('follower_id', userId)
+          supabase.from('follows').select('following_id').eq('follower_id', userId),
+          supabase.from('ratings_reviews').select('*').eq('user_id', userId)
         ]);
 
         // Background Dual-Layer Sync for Custom Watch Links
@@ -318,7 +321,15 @@ export default function App() {
         }
 
         // 4. Collect user IDs for fast 1-shot profiles batch lookup (eliminates 15s PostgREST join)
-        const rawRevData = revRes.status === 'fulfilled' ? (revRes.value?.data || []) : [];
+        const rawRevList = [
+          ...(revRes.status === 'fulfilled' && revRes.value?.data ? revRes.value.data : []),
+          ...(userRevRes.status === 'fulfilled' && userRevRes.value?.data ? userRevRes.value.data : [])
+        ];
+        const uniqueRawRevMap = new Map<string, any>();
+        rawRevList.forEach((r: any) => {
+          if (r && r.id) uniqueRawRevMap.set(String(r.id), r);
+        });
+        const rawRevData = Array.from(uniqueRawRevMap.values());
         const rawActData = actRes.status === 'fulfilled' ? (actRes.value?.data || []) : [];
 
         const userIdsToFetch = new Set<string>();
@@ -347,7 +358,7 @@ export default function App() {
         }
 
         // 5. Ratings & Reviews - Smart Merge with Fast Profiles
-        if (revRes.status === 'fulfilled') {
+        if (revRes.status === 'fulfilled' || userRevRes.status === 'fulfilled') {
           const fetchedReviews: RatingReview[] = rawRevData.map((r: any) => {
             const isMe = (userId && r.user_id === userId) || (currentUser?.id && r.user_id === currentUser.id);
             const userP = isMe ? currentUser : feedProfileMap.get(r.user_id);
@@ -382,10 +393,44 @@ export default function App() {
 
           setReviews(prev => {
             const revMap = new Map<string, RatingReview>();
-            prev.forEach(r => revMap.set(String(r.id || `${r.media_type}_${r.media_id}`), r));
-            fetchedReviews.forEach(r => revMap.set(String(r.id || `${r.media_type}_${r.media_id}`), r));
+            // Key strictly by media_type + media_id + user_id to guarantee no duplicate reviews exist
+            prev.forEach(r => {
+              const uKey = r.user_id || r.username || (r.profile?.id) || (r.profile?.username) || 'unknown';
+              revMap.set(`${r.media_type}_${r.media_id}_${uKey}`, r);
+            });
+            fetchedReviews.forEach(r => {
+              const uKey = r.user_id || r.username || (r.profile?.id) || (r.profile?.username) || 'unknown';
+              revMap.set(`${r.media_type}_${r.media_id}_${uKey}`, r);
+            });
             return Array.from(revMap.values());
           });
+
+          // Automatically purge any duplicate review rows from Supabase for current user
+          if (userId && isSupabaseConfigured) {
+            const userMediaSeen = new Set<string>();
+            const dupIdsToDelete: string[] = [];
+            rawRevData.forEach((r: any) => {
+              if (r.user_id === userId) {
+                const key = `${r.media_type}_${r.media_id}`;
+                if (userMediaSeen.has(key)) {
+                  if (r.id && isUUIDString(r.id) && !dupIdsToDelete.includes(r.id)) {
+                    dupIdsToDelete.push(r.id);
+                  }
+                } else {
+                  userMediaSeen.add(key);
+                }
+              }
+            });
+            if (dupIdsToDelete.length > 0) {
+              supabase
+                .from('ratings_reviews')
+                .delete()
+                .in('id', dupIdsToDelete)
+                .eq('user_id', userId)
+                .then(() => {})
+                .catch(() => {});
+            }
+          }
         }
 
         // 6. Activity Feed - Smart Merge with Fast Profiles
@@ -500,6 +545,8 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
+  const selectedMediaRef = useRef<TMDBMedia | null>(selectedMedia);
+  selectedMediaRef.current = selectedMedia;
   
   // Left Sidebar Filter States
   const [mediaFilter, setMediaFilter] = useState<'all' | 'tv' | 'movie'>('tv');
@@ -918,6 +965,11 @@ export default function App() {
     } catch {}
     return [];
   });
+  const watchListRef = useRef<WatchStatus[]>(watchList);
+  watchListRef.current = watchList;
+
+  const processingCompletionRef = useRef<Set<number>>(new Set());
+  const completedShowModalShownRef = useRef<Set<number>>(new Set());
 
   const [episodeProgress, setEpisodeProgress] = useState<EpisodeProgress[]>(() => {
     try {
@@ -942,7 +994,22 @@ export default function App() {
   const [reviews, setReviews] = useState<RatingReview[]>(() => {
     try {
       const saved = localStorage.getItem('diziapp_reviews');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const seen = new Set<string>();
+          const unique: RatingReview[] = [];
+          for (const r of parsed) {
+            const uKey = r.user_id || r.username || (r.profile?.id) || (r.profile?.username) || 'unknown';
+            const key = `${r.media_type}_${r.media_id}_${uKey}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              unique.push(r);
+            }
+          }
+          return unique;
+        }
+      }
     } catch (e) {}
     return [];
   });
@@ -952,6 +1019,59 @@ export default function App() {
       localStorage.setItem('diziapp_reviews', JSON.stringify(reviews));
     } catch (e) {}
   }, [reviews]);
+
+  // Silent Automatic Duplicate Review Cleanup (runs seamlessly in background without requiring user intervention)
+  useEffect(() => {
+    if (!reviews || reviews.length === 0) return;
+
+    const seen = new Set<string>();
+    const toKeep: RatingReview[] = [];
+    const duplicatesToDelete: RatingReview[] = [];
+    let hasDuplicates = false;
+
+    for (const r of reviews) {
+      const uKey = r.user_id || currentUser.id || currentUser.username || 'unknown';
+      const key = `${r.media_type}_${r.media_id}_${uKey}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        toKeep.push(r);
+      } else {
+        hasDuplicates = true;
+        duplicatesToDelete.push(r);
+      }
+    }
+
+    if (hasDuplicates) {
+      setReviews(toKeep);
+      try {
+        localStorage.setItem('diziapp_reviews', JSON.stringify(toKeep));
+      } catch {}
+
+      if (session && isSupabaseConfigured) {
+        const userId = session.user.id;
+        const validUuids = duplicatesToDelete
+          .map(d => d.id)
+          .filter((id): id is string => Boolean(id && isUUIDString(id)));
+
+        if (validUuids.length > 0) {
+          supabase
+            .from('ratings_reviews')
+            .delete()
+            .in('id', validUuids)
+            .eq('user_id', userId)
+            .then(() => {})
+            .catch(err => console.warn('Silent duplicate delete error:', err));
+        }
+      }
+    }
+  }, [reviews, session, currentUser.id, currentUser.username]);
+
+  // Review editing and delete confirmation states
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState<number>(10);
+  const [editReviewText, setEditReviewText] = useState<string>('');
+  const [editContainsSpoiler, setEditContainsSpoiler] = useState<boolean>(false);
+  const [confirmDeleteReviewId, setConfirmDeleteReviewId] = useState<string | null>(null);
 
   const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>(() => {
     try {
@@ -1566,10 +1686,18 @@ export default function App() {
   };
 
   // Update watch status (Watching, Plan to watch, Watched, or null to remove)
-  const handleUpdateWatchStatus = async (media: TMDBMedia, status: WatchStatusType | null) => {
+  const handleUpdateWatchStatus = async (
+    media: TMDBMedia, 
+    status: WatchStatusType | null, 
+    skipEpisodeSync: boolean = false
+  ) => {
     const isTv = media.media_type === 'tv' || !!media.first_air_date;
     const type: MediaType = isTv ? 'tv' : 'movie';
     const title = media.title || media.name || 'Yapım';
+
+    if (status !== 'watched') {
+      completedShowModalShownRef.current.delete(media.id);
+    }
 
     if (status === null) {
       setWatchList(prev => prev.filter(item => !(item.media_id === media.id && item.media_type === type)));
@@ -1625,8 +1753,8 @@ export default function App() {
       };
       setActivityFeed(prev => [newActivity, ...prev]);
 
-      // If a TV show is marked as 'watched', automatically mark all episodes as watched
-      if (status === 'watched' && isTv) {
+      // If a TV show is marked as 'watched', automatically mark all episodes as watched (unless triggered by show completion)
+      if (status === 'watched' && isTv && !skipEpisodeSync) {
         (async () => {
           try {
             const details = await getDetails(media.id, 'tv');
@@ -1703,6 +1831,20 @@ export default function App() {
 
   // Helper to check if a TV show is 100% completed across all available seasons, and handle status & modal transition based on TMDB status ('Ended'/'Canceled' vs 'Returning Series')
   const checkAndProcessShowCompletion = async (showId: number, targetProgressList?: EpisodeProgress[]) => {
+    // 1. Guard against overlapping executions for the same show
+    if (processingCompletionRef.current.has(showId)) return;
+
+    // 2. Guard against reopening modal if completion modal was already presented in this cycle
+    if (completedShowModalShownRef.current.has(showId)) return;
+
+    // 3. Guard against shows that are already marked as 'watched'
+    const currentShow = watchListRef.current.find(
+      w => Number(w.media_id) === Number(showId) && w.media_type === 'tv'
+    );
+    if (currentShow && currentShow.status === 'watched') return;
+
+    processingCompletionRef.current.add(showId);
+
     try {
       const details = await getDetails(showId, 'tv');
       if (!details) return;
@@ -1740,11 +1882,14 @@ export default function App() {
         const isEndedOrCanceled = tmdbStatus.includes('ended') || tmdbStatus.includes('canceled');
 
         if (isEndedOrCanceled) {
-          // Show is completely finished/canceled (e.g. Breaking Bad, Friends).
-          // Move show to 'watched' status category!
-          handleUpdateWatchStatus(details, 'watched');
-          // Open detail modal so user can write a review/rating if they wish
-          setSelectedMedia(details);
+          // Record that completion modal has been presented for this show
+          completedShowModalShownRef.current.add(showId);
+          // Move show to 'watched' status category, skipping episode re-sync to prevent infinite loop
+          await handleUpdateWatchStatus(details, 'watched', true);
+          // Open detail modal only if not already open for this show so user can write a review/rating
+          if (!selectedMediaRef.current || Number(selectedMediaRef.current.id) !== Number(showId)) {
+            setSelectedMedia(details);
+          }
         } else {
           // Show has returning seasons / ongoing status (e.g. High Potential, House of the Dragon).
           // Keep in 'watching' status (remains in user's library, automatically hidden in tracker until new episodes release).
@@ -1752,6 +1897,8 @@ export default function App() {
       }
     } catch (e) {
       console.error('Failed checking show completion status:', e);
+    } finally {
+      processingCompletionRef.current.delete(showId);
     }
   };
 
@@ -1767,7 +1914,8 @@ export default function App() {
       isMarkingAsWatched = !isCurrentlyWatched;
 
       if (!isMarkingAsWatched) {
-        // UNWATCHING: Mark target episode AND ALL SUBSEQUENT EPISODES of this show as unwatched
+        // UNWATCHING: Reset completion modal lock and mark target episode AND ALL SUBSEQUENT EPISODES of this show as unwatched
+        completedShowModalShownRef.current.delete(showId);
         return prev.map(e => {
           if (e.show_id === showId) {
             const isAfterOrEqual = e.season_number > seasonNum || (e.season_number === seasonNum && e.episode_number >= epNum);
@@ -2102,12 +2250,14 @@ export default function App() {
       }
     }
 
-    setTimeout(() => {
-      setEpisodeProgress(latest => {
-        checkAndProcessShowCompletion(showId, latest);
-        return latest;
-      });
-    }, 300);
+    if (!skipActivity) {
+      setTimeout(() => {
+        setEpisodeProgress(latest => {
+          checkAndProcessShowCompletion(showId, latest);
+          return latest;
+        });
+      }, 300);
+    }
   };
 
   // Rate Episode & Mark as Watched
@@ -2280,18 +2430,43 @@ export default function App() {
     }
   };
 
-  // Add Review
+  // Add Review (or update if user already reviewed this media item)
   const handleAddReview = async (newRev: Omit<RatingReview, 'id' | 'created_at'>) => {
-    const fullRev: RatingReview = {
-      ...newRev,
-      id: `rev_${Date.now()}`,
-      created_at: new Date().toISOString(),
-      profile: currentUser,
-      username: currentUser.username,
-      user_fullname: currentUser.full_name || currentUser.username,
-      user_avatar: currentUser.avatar_url || DEFAULT_AVATAR_URL
-    };
-    setReviews(prev => [fullRev, ...prev]);
+    const userId = session?.user?.id || currentUser.id;
+    let isExisting = false;
+
+    setReviews(prev => {
+      const idx = prev.findIndex(
+        r => Number(r.media_id) === Number(newRev.media_id) &&
+             r.media_type === newRev.media_type &&
+             ((userId && r.user_id === userId) || (currentUser.username && r.username === currentUser.username))
+      );
+
+      if (idx >= 0) {
+        isExisting = true;
+        const existing = prev[idx];
+        const updated: RatingReview = {
+          ...existing,
+          ...newRev,
+          rating: newRev.rating,
+          review_text: newRev.review_text,
+          contains_spoiler: newRev.contains_spoiler,
+          created_at: new Date().toISOString()
+        };
+        return prev.map((r, i) => i === idx ? updated : r);
+      } else {
+        const fullRev: RatingReview = {
+          ...newRev,
+          id: `rev_${Date.now()}`,
+          created_at: new Date().toISOString(),
+          profile: currentUser,
+          username: currentUser.username,
+          user_fullname: currentUser.full_name || currentUser.username,
+          user_avatar: currentUser.avatar_url || DEFAULT_AVATAR_URL
+        };
+        return [fullRev, ...prev];
+      }
+    });
 
     const newActivity: ActivityFeedItem = {
       id: `act_${Date.now()}`,
@@ -2313,24 +2488,44 @@ export default function App() {
 
     if (session && isSupabaseConfigured) {
       try {
-        const userId = session.user.id;
-        await supabase
-          .from('ratings_reviews')
-          .insert({
-            user_id: userId,
-            media_id: newRev.media_id,
-            media_type: newRev.media_type,
-            rating: newRev.rating,
-            review_text: newRev.review_text,
-            contains_spoiler: newRev.contains_spoiler,
-            media_title: newRev.media_title,
-            media_poster: newRev.media_poster
-          });
+        const dbUserId = session.user.id;
+        const existingInState = reviews.find(
+          r => Number(r.media_id) === Number(newRev.media_id) &&
+               r.media_type === newRev.media_type &&
+               (r.user_id === dbUserId || (currentUser.username && r.username === currentUser.username))
+        );
+
+        if (existingInState && existingInState.id && isUUIDString(existingInState.id)) {
+          await supabase
+            .from('ratings_reviews')
+            .update({
+              rating: newRev.rating,
+              review_text: newRev.review_text,
+              contains_spoiler: newRev.contains_spoiler,
+              media_title: newRev.media_title,
+              media_poster: newRev.media_poster
+            })
+            .eq('id', existingInState.id)
+            .eq('user_id', dbUserId);
+        } else {
+          await supabase
+            .from('ratings_reviews')
+            .insert({
+              user_id: dbUserId,
+              media_id: newRev.media_id,
+              media_type: newRev.media_type,
+              rating: newRev.rating,
+              review_text: newRev.review_text,
+              contains_spoiler: newRev.contains_spoiler,
+              media_title: newRev.media_title,
+              media_poster: newRev.media_poster
+            });
+        }
 
         await supabase
           .from('activity_feed')
           .insert({
-            user_id: userId,
+            user_id: dbUserId,
             action_type: 'review_added',
             media_id: newRev.media_id,
             media_type: newRev.media_type,
@@ -2344,6 +2539,148 @@ export default function App() {
           });
       } catch (err) {
         console.error('Failed to save review in Supabase:', err);
+      }
+    }
+  };
+
+  // Edit Review
+  const handleEditReview = async (
+    reviewId: string,
+    updatedFields: { rating: number; review_text: string; contains_spoiler: boolean }
+  ) => {
+    setReviews(prev => prev.map(r => {
+      const isMatch = r.id === reviewId || `rev_${r.media_id}` === reviewId || String(r.media_id) === reviewId;
+      if (isMatch) {
+        return {
+          ...r,
+          rating: updatedFields.rating,
+          review_text: updatedFields.review_text,
+          contains_spoiler: updatedFields.contains_spoiler
+        };
+      }
+      return r;
+    }));
+
+    if (session && isSupabaseConfigured) {
+      try {
+        const userId = session.user.id;
+        const targetRev = reviews.find(r => r.id === reviewId || `rev_${r.media_id}` === reviewId || String(r.media_id) === reviewId);
+        if (targetRev) {
+          if (targetRev.id && isUUIDString(targetRev.id)) {
+            await supabase
+              .from('ratings_reviews')
+              .update({
+                rating: updatedFields.rating,
+                review_text: updatedFields.review_text,
+                contains_spoiler: updatedFields.contains_spoiler
+              })
+              .eq('id', targetRev.id)
+              .eq('user_id', userId);
+          } else {
+            await supabase
+              .from('ratings_reviews')
+              .update({
+                rating: updatedFields.rating,
+                review_text: updatedFields.review_text,
+                contains_spoiler: updatedFields.contains_spoiler
+              })
+              .eq('user_id', userId)
+              .eq('media_id', targetRev.media_id)
+              .eq('media_type', targetRev.media_type);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to edit review in Supabase:', err);
+      }
+    }
+  };
+
+  // Delete Review
+  const handleDeleteReview = async (reviewId?: string, mediaId?: number, mediaType?: MediaType) => {
+    setReviews(prev => prev.filter(r => {
+      if (reviewId && r.id && r.id === reviewId) return false;
+      if (!reviewId && mediaId && Number(r.media_id) === Number(mediaId) && (!mediaType || r.media_type === mediaType)) return false;
+      return true;
+    }));
+
+    if (session && isSupabaseConfigured) {
+      try {
+        const userId = session.user.id;
+        if (reviewId && isUUIDString(reviewId)) {
+          await supabase
+            .from('ratings_reviews')
+            .delete()
+            .eq('id', reviewId)
+            .eq('user_id', userId);
+        } else if (mediaId) {
+          await supabase
+            .from('ratings_reviews')
+            .delete()
+            .eq('user_id', userId)
+            .eq('media_id', mediaId)
+            .eq('media_type', mediaType || 'tv');
+        } else if (reviewId) {
+          await supabase
+            .from('ratings_reviews')
+            .delete()
+            .eq('id', reviewId)
+            .eq('user_id', userId);
+        }
+
+        if (mediaId) {
+          await supabase
+            .from('activity_feed')
+            .delete()
+            .eq('user_id', userId)
+            .eq('action_type', 'review_added')
+            .eq('media_id', mediaId);
+        }
+      } catch (err) {
+        console.error('Failed to delete review in Supabase:', err);
+      }
+    }
+
+    if (mediaId) {
+      setActivityFeed(prev => prev.filter(a => !(a.action_type === 'review_added' && Number(a.media_id) === Number(mediaId) && a.user_id === currentUser.id)));
+    }
+  };
+
+  // Clean Duplicate Reviews (keeps first entry, removes redundant duplicates)
+  const handleCleanDuplicateReviews = async () => {
+    const seen = new Set<string>();
+    const toKeep: RatingReview[] = [];
+    const duplicatesToDelete: RatingReview[] = [];
+
+    for (const r of reviews) {
+      const key = `${r.media_type}_${r.media_id}_${r.user_id || currentUser.id || currentUser.username}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        toKeep.push(r);
+      } else {
+        duplicatesToDelete.push(r);
+      }
+    }
+
+    if (duplicatesToDelete.length === 0) return;
+
+    setReviews(toKeep);
+
+    if (session && isSupabaseConfigured) {
+      try {
+        const userId = session.user.id;
+        const validUuids = duplicatesToDelete
+          .map(d => d.id)
+          .filter((id): id is string => Boolean(id && isUUIDString(id)));
+
+        if (validUuids.length > 0) {
+          await supabase
+            .from('ratings_reviews')
+            .delete()
+            .in('id', validUuids)
+            .eq('user_id', userId);
+        }
+      } catch (e) {
+        console.warn('Clean duplicate reviews error:', e);
       }
     }
   };
@@ -2614,6 +2951,8 @@ export default function App() {
                       followingUserIds={followingUserIds}
                       onToggleFollowUser={handleToggleFollowUser}
                       onUpdateProfile={handleUpdateProfile}
+                      onDeleteReview={handleDeleteReview}
+                      onEditReview={handleEditReview}
                       initialSubTab={profileSubTab}
                       isLoading={isExternalLoading}
                     />
@@ -3047,6 +3386,8 @@ export default function App() {
                     </span>
                   </div>
 
+
+
                   {reviews.length === 0 ? (
                     <div className="py-16 text-center space-y-4">
                       <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto shadow-inner">
@@ -3068,6 +3409,8 @@ export default function App() {
                   ) : (
                     <div className="space-y-4">
                       {reviews.map((rev) => {
+                        const revKey = rev.id || `rev_${rev.media_id}`;
+                        const isEditingThis = editingReviewId === revKey;
                         const watchItem = watchList.find(w => Number(w.media_id) === Number(rev.media_id));
                         const title = rev.media_title || watchItem?.title || (rev.media_type === 'tv' ? 'Dizi' : 'Film');
                         const rawPoster = rev.media_poster || watchItem?.poster_path;
@@ -3077,7 +3420,7 @@ export default function App() {
 
                         return (
                           <div
-                            key={rev.id || `rev-${rev.media_id}`}
+                            key={revKey}
                             className="bg-[#0B0C0E] border border-[#232833] hover:border-[#333a4a] rounded-xl p-4 transition shadow-sm space-y-3"
                           >
                             <div className="flex items-start gap-4">
@@ -3093,57 +3436,183 @@ export default function App() {
                                 />
                               </div>
 
-                              {/* İnceleme İçeriği */}
+                              {/* İnceleme İçeriği veya Düzenleme Formu */}
                               <div className="flex-1 space-y-2 min-w-0">
-                                <div className="flex items-center justify-between flex-wrap gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <h3
-                                      onClick={() => handleSelectMediaById(rev.media_id, rev.media_type)}
-                                      className="text-sm sm:text-base font-extrabold text-white hover:text-[#E63946] cursor-pointer transition"
-                                    >
-                                      {title}
-                                    </h3>
-                                    <span className="text-xs text-slate-400 font-semibold px-2 py-0.5 rounded bg-white/5 border border-white/10">
-                                      {rev.media_type === 'tv' ? 'Dizi' : 'Film'}
-                                    </span>
-                                    {rev.contains_spoiler && (
-                                      <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded">
-                                        Spoiler İçerir
+                                {isEditingThis ? (
+                                  <div className="space-y-3 bg-[#14171D] p-3.5 rounded-xl border border-[#232833]">
+                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                      <h3 className="text-sm font-extrabold text-white">İncelemeyi Düzenle: {title}</h3>
+                                      <span className="text-xs text-amber-400 font-bold">Puan: {editRating} / 10</span>
+                                    </div>
+
+                                    {/* 1-10 Puan Seçimi */}
+                                    <div className="grid grid-cols-10 gap-1">
+                                      {Array.from({ length: 10 }).map((_, idx) => {
+                                        const val = idx + 1;
+                                        const isSel = editRating === val;
+                                        return (
+                                          <button
+                                            type="button"
+                                            key={val}
+                                            onClick={() => setEditRating(val)}
+                                            className={`aspect-square rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center justify-center ${
+                                              isSel
+                                                ? 'bg-[#E63946] text-white shadow-md'
+                                                : 'bg-[#0B0C0E] text-slate-400 hover:text-white border border-[#232833]'
+                                            }`}
+                                          >
+                                            {val}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* Yorum Metni */}
+                                    <textarea
+                                      value={editReviewText}
+                                      onChange={(e) => setEditReviewText(e.target.value)}
+                                      rows={3}
+                                      className="w-full bg-[#0B0C0E] border border-[#232833] rounded-xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#E63946] transition"
+                                      placeholder="Yorumunuzu güncelleyin..."
+                                    />
+
+                                    {/* Spoiler ve Kaydet/Vazgeç Butonları */}
+                                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                                      <label className="flex items-center gap-2 text-xs text-amber-400 cursor-pointer select-none font-bold">
+                                        <input
+                                          type="checkbox"
+                                          checked={editContainsSpoiler}
+                                          onChange={(e) => setEditContainsSpoiler(e.target.checked)}
+                                          className="w-3.5 h-3.5 rounded bg-[#0B0C0E] border-[#232833] text-[#E63946]"
+                                        />
+                                        <span>Spoiler İçerir</span>
+                                      </label>
+
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingReviewId(null)}
+                                          className="px-3 py-1.5 rounded-lg bg-[#232833] hover:bg-[#2B313E] text-slate-300 font-bold text-xs transition cursor-pointer"
+                                        >
+                                          Vazgeç
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            await handleEditReview(revKey, {
+                                              rating: editRating,
+                                              review_text: editReviewText,
+                                              contains_spoiler: editContainsSpoiler
+                                            });
+                                            setEditingReviewId(null);
+                                          }}
+                                          className="px-4 py-1.5 rounded-lg bg-[#4ADE80] hover:bg-[#3ec770] text-slate-950 font-extrabold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5"
+                                        >
+                                          <Check className="w-3.5 h-3.5" /> Değişiklikleri Kaydet
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                      <div className="flex items-center gap-2">
+                                        <h3
+                                          onClick={() => handleSelectMediaById(rev.media_id, rev.media_type)}
+                                          className="text-sm sm:text-base font-extrabold text-white hover:text-[#E63946] cursor-pointer transition"
+                                        >
+                                          {title}
+                                        </h3>
+                                        <span className="text-xs text-slate-400 font-semibold px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                                          {rev.media_type === 'tv' ? 'Dizi' : 'Film'}
+                                        </span>
+                                        {rev.contains_spoiler && (
+                                          <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded">
+                                            Spoiler İçerir
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* Puan Rozeti */}
+                                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-extrabold">
+                                        <Star className="w-3.5 h-3.5 fill-emerald-400" />
+                                        <span>{rev.rating} / 10</span>
+                                      </div>
+                                    </div>
+
+                                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed italic font-normal bg-[#14171D]/60 p-3 rounded-xl border border-[#232833]">
+                                      "{rev.review_text}"
+                                    </p>
+
+                                    <div className="flex items-center justify-between text-xs text-slate-400 pt-1 flex-wrap gap-2">
+                                      <span>
+                                        {rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın zamanda'}
                                       </span>
-                                    )}
-                                  </div>
 
-                                  {/* Puan Rozeti */}
-                                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-extrabold">
-                                    <Star className="w-3.5 h-3.5 fill-emerald-400" />
-                                    <span>{rev.rating} / 10</span>
-                                  </div>
-                                </div>
+                                      <div className="flex items-center gap-2">
+                                        {confirmDeleteReviewId === revKey ? (
+                                          <div className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg text-xs">
+                                            <span className="text-rose-400 font-bold text-[11px]">Silinsin mi?</span>
+                                            <button
+                                              onClick={() => {
+                                                handleDeleteReview(rev.id, rev.media_id, rev.media_type);
+                                                setConfirmDeleteReviewId(null);
+                                              }}
+                                              className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[11px] font-extrabold transition cursor-pointer"
+                                            >
+                                              Evet, Sil
+                                            </button>
+                                            <button
+                                              onClick={() => setConfirmDeleteReviewId(null)}
+                                              className="bg-[#232833] hover:bg-[#2B313E] text-slate-300 px-2 py-0.5 rounded text-[11px] font-bold transition cursor-pointer"
+                                            >
+                                              İptal
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <button
+                                              onClick={() => {
+                                                setEditingReviewId(revKey);
+                                                setEditRating(rev.rating || 10);
+                                                setEditReviewText(rev.review_text || '');
+                                                setEditContainsSpoiler(rev.contains_spoiler || false);
+                                                setConfirmDeleteReviewId(null);
+                                              }}
+                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                                              title="İncelemeyi düzenle"
+                                            >
+                                              <Pencil className="w-3.5 h-3.5" />
+                                              <span>Düzenle</span>
+                                            </button>
 
-                                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed italic font-normal bg-[#14171D]/60 p-3 rounded-xl border border-[#232833]">
-                                  "{rev.review_text}"
-                                </p>
+                                            <button
+                                              onClick={() => setConfirmDeleteReviewId(revKey)}
+                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:text-white hover:bg-rose-600 transition cursor-pointer"
+                                              title="İncelemeyi sil"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                              <span>Sil</span>
+                                            </button>
+                                          </>
+                                        )}
 
-                                <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                                  <span>
-                                    {rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın zamanda'}
-                                  </span>
-
-                                  <div className="flex items-center gap-3">
-                                    <button
-                                      onClick={() => handleTogglePinReview(rev.id || `rev_${rev.media_id}`)}
-                                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                                        rev.is_pinned
-                                          ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-sm'
-                                          : 'bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                                      }`}
-                                      title={rev.is_pinned ? 'Profilinizden sabitlemeyi kaldırın' : 'Profilinize sabitleyin'}
-                                    >
-                                      <Pin className={`w-3.5 h-3.5 ${rev.is_pinned ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                      <span>{rev.is_pinned ? 'Profilde Sabitlendi' : 'Profile Sabitle'}</span>
-                                    </button>
-                                  </div>
-                                </div>
+                                        <button
+                                          onClick={() => handleTogglePinReview(rev.id || `rev_${rev.media_id}`)}
+                                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                            rev.is_pinned
+                                              ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-sm'
+                                              : 'bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                                          }`}
+                                          title={rev.is_pinned ? 'Profilinizden sabitlemeyi kaldırın' : 'Profilinize sabitleyin'}
+                                        >
+                                          <Pin className={`w-3.5 h-3.5 ${rev.is_pinned ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                          <span>{rev.is_pinned ? 'Sabitlendi' : 'Sabitle'}</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -3193,6 +3662,8 @@ export default function App() {
               onRateEpisode={handleRateEpisode}
               onSaveEpisodeNote={handleSaveEpisodeNote}
               onAddReview={handleAddReview}
+              onDeleteReview={handleDeleteReview}
+              onEditReview={handleEditReview}
               reviews={reviews}
               currentUserId={currentUser.id}
               currentUser={currentUser}

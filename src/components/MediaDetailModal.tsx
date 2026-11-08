@@ -11,6 +11,7 @@ import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AddToCollectionModal } from './AddToCollectionModal';
 import { WatchLinksBox } from './WatchLinksBox';
+import { isUUIDString } from '../utils/textUtils';
 
 interface MediaDetailModalProps {
   media: TMDBMedia | null;
@@ -23,6 +24,8 @@ interface MediaDetailModalProps {
   onRateEpisode?: (showId: number, seasonNum: number, epNum: number, rating: number) => void;
   onSaveEpisodeNote?: (showId: number, seasonNum: number, epNum: number, note: string, hasSpoiler?: boolean) => void;
   onAddReview: (review: Omit<RatingReview, 'id' | 'created_at'>) => void;
+  onDeleteReview?: (reviewId?: string, mediaId?: number, mediaType?: MediaType) => void;
+  onEditReview?: (reviewId: string, updatedFields: { rating: number; review_text: string; contains_spoiler: boolean }) => void;
   reviews: RatingReview[];
   currentUserId: string;
   currentUser?: Profile;
@@ -52,6 +55,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   onRateEpisode,
   onSaveEpisodeNote,
   onAddReview,
+  onDeleteReview,
+  onEditReview,
   reviews,
   currentUserId,
   currentUser,
@@ -128,6 +133,13 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   const [reviewText, setReviewText] = useState<string>('');
   const [containsSpoiler, setContainsSpoiler] = useState<boolean>(false);
   const [showReviewSubmitted, setShowReviewSubmitted] = useState<boolean>(false);
+
+  // Review inline editing and delete confirmation states
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState<number>(10);
+  const [editReviewText, setEditReviewText] = useState<string>('');
+  const [editContainsSpoiler, setEditContainsSpoiler] = useState<boolean>(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Revealed Spoilers state
   const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, boolean>>({});
@@ -212,16 +224,31 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     e.preventDefault();
     if (!reviewText.trim()) return;
 
-    onAddReview({
+    const newRevObj = {
       user_id: currentUser?.id || currentUserId,
       media_id: media.id,
-      media_type: isTv ? 'tv' : 'movie',
+      media_type: isTv ? ('tv' as MediaType) : ('movie' as MediaType),
       rating: userGeneralRating,
       review_text: reviewText,
       contains_spoiler: containsSpoiler,
       media_title: media.title || media.name,
       media_poster: media.poster_path ? getPosterUrl(media.poster_path) : undefined,
       profile: currentUser
+    };
+
+    onAddReview(newRevObj);
+
+    setRemoteReviews(prev => {
+      const idx = prev.findIndex(r =>
+        (r.user_id && (r.user_id === currentUser?.id || r.user_id === currentUserId)) ||
+        (r.username && currentUser?.username && r.username === currentUser.username)
+      );
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], ...newRevObj, created_at: new Date().toISOString() };
+        return copy;
+      }
+      return [{ ...newRevObj, id: `rev_${Date.now()}`, created_at: new Date().toISOString() }, ...prev];
     });
 
     setReviewText('');
@@ -455,19 +482,32 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     return () => { isMounted = false; };
   }, [media?.id, currentUser, currentUserId]);
 
-  // Merge local state reviews and remote community reviews
+  // Merge local state reviews and remote community reviews (strictly 1 review per user, automatically deduplicated)
   const mediaReviews = React.useMemo(() => {
     const localMatches = reviews.filter(r => Number(r.media_id) === Number(media?.id));
     const map = new Map<string, RatingReview>();
 
     remoteReviews.forEach(r => {
-      const key = String(r.id || `${r.media_id}_${r.user_id}`);
-      map.set(key, r);
+      const uKey = String(r.user_id || r.username || r.profile?.id || r.profile?.username || r.id);
+      if (!map.has(uKey)) {
+        map.set(uKey, r);
+      } else {
+        // Redundant duplicate detected from Supabase for current user: auto-purge in background
+        if (currentUser?.id && r.user_id === currentUser.id && r.id && isUUIDString(r.id) && isSupabaseConfigured) {
+          supabase
+            .from('ratings_reviews')
+            .delete()
+            .eq('id', r.id)
+            .eq('user_id', currentUser.id)
+            .then(() => {})
+            .catch(() => {});
+        }
+      }
     });
 
     localMatches.forEach(r => {
-      const key = String(r.id || `${r.media_id}_${r.user_id}`);
-      map.set(key, r);
+      const uKey = String(r.user_id || r.username || r.profile?.id || r.profile?.username || r.id);
+      map.set(uKey, r);
     });
 
     return Array.from(map.values()).sort((a, b) => {
@@ -475,7 +515,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return dateB - dateA;
     });
-  }, [reviews, remoteReviews, media?.id]);
+  }, [reviews, remoteReviews, media?.id, currentUser?.id]);
 
   return (
     <motion.div 
@@ -1246,42 +1286,181 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 bg-amber-500/15 text-amber-400 px-3 py-1 rounded-xl text-xs font-extrabold border border-amber-500/30">
-                          <Star className="w-3.5 h-3.5 fill-amber-400" /> {rev.rating} / 10
+                        <div className="flex items-center gap-2">
+                          {isOwnReview && (
+                            <div className="flex items-center gap-1">
+                              {confirmDeleteId === revId ? (
+                                <div className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 px-2 py-1 rounded-xl">
+                                  <span className="text-rose-400 font-bold text-[10px]">Silinsin mi?</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (onDeleteReview) onDeleteReview(rev.id, rev.media_id, rev.media_type);
+                                      setRemoteReviews(prev => prev.filter(r => r.id !== rev.id));
+                                      setConfirmDeleteId(null);
+                                    }}
+                                    className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[10px] font-extrabold cursor-pointer transition"
+                                  >
+                                    Evet
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="bg-[#232833] text-slate-300 px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition"
+                                  >
+                                    İptal
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingReviewId(revId);
+                                      setEditRating(rev.rating || 10);
+                                      setEditReviewText(rev.review_text || '');
+                                      setEditContainsSpoiler(rev.contains_spoiler || false);
+                                      setConfirmDeleteId(null);
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer"
+                                    title="İncelemeyi Düzenle"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(revId)}
+                                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
+                                    title="İncelemeyi Sil"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-1.5 bg-amber-500/15 text-amber-400 px-3 py-1 rounded-xl text-xs font-extrabold border border-amber-500/30">
+                            <Star className="w-3.5 h-3.5 fill-amber-400" /> {rev.rating} / 10
+                          </div>
                         </div>
                       </div>
 
-                      {/* Review Text Area: SPOILER BLUR EFFECT (backdrop-filter: blur(8px)) */}
-                      <div className="relative overflow-hidden rounded-xl">
-                        {isSpoiler && !isRevealed ? (
-                          <div
-                            onClick={() => toggleSpoilerReveal(revId)}
-                            className="relative cursor-pointer group"
-                          >
-                            {/* Blurred Text Preview */}
-                            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed blur-md select-none opacity-40 p-3 bg-[#14171D] rounded-xl border border-[#232833]">
-                              {rev.review_text}
-                            </p>
+                      {/* Review Content or Inline Edit Form */}
+                      {editingReviewId === revId ? (
+                        <div className="space-y-3 bg-[#14171D] p-3.5 rounded-xl border border-[#232833]">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="text-xs font-extrabold text-white">İncelemeyi Düzenle</span>
+                            <span className="text-xs text-amber-400 font-bold">Puan: {editRating} / 10</span>
+                          </div>
 
-                            {/* Spoiler Warning Overlay */}
-                            <div className="absolute inset-0 bg-amber-950/80 border border-amber-500/40 rounded-xl flex items-center justify-center gap-2 p-3 text-amber-400 font-bold text-xs group-hover:bg-amber-950/90 transition">
-                              <ShieldAlert className="w-4 h-4 text-amber-400 animate-pulse" />
-                              <span>⚠️ SPOILER İÇERİR - Görmek İçin Tıklayın</span>
+                          {/* 1-10 Puan Seçimi */}
+                          <div className="grid grid-cols-10 gap-1">
+                            {Array.from({ length: 10 }).map((_, idx) => {
+                              const val = idx + 1;
+                              const isSel = editRating === val;
+                              return (
+                                <button
+                                  type="button"
+                                  key={val}
+                                  onClick={() => setEditRating(val)}
+                                  className={`aspect-square rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center justify-center ${
+                                    isSel
+                                      ? 'bg-[#E63946] text-white shadow-md'
+                                      : 'bg-[#0B0C0E] text-slate-400 hover:text-white border border-[#232833]'
+                                  }`}
+                                >
+                                  {val}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <textarea
+                            value={editReviewText}
+                            onChange={(e) => setEditReviewText(e.target.value)}
+                            rows={3}
+                            className="w-full bg-[#0B0C0E] border border-[#232833] rounded-xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#E63946] transition"
+                            placeholder="İncelemenizi güncelleyin..."
+                          />
+
+                          <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                            <label className="flex items-center gap-2 text-xs text-amber-400 cursor-pointer select-none font-bold">
+                              <input
+                                type="checkbox"
+                                checked={editContainsSpoiler}
+                                onChange={(e) => setEditContainsSpoiler(e.target.checked)}
+                                className="w-3.5 h-3.5 rounded bg-[#0B0C0E] border-[#232833] text-[#E63946]"
+                              />
+                              <span>Spoiler İçerir</span>
+                            </label>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setEditingReviewId(null)}
+                                className="px-3 py-1.5 rounded-lg bg-[#232833] hover:bg-[#2B313E] text-slate-300 font-bold text-xs transition cursor-pointer"
+                              >
+                                Vazgeç
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (onEditReview) {
+                                    onEditReview(rev.id || `rev_${rev.media_id}`, {
+                                      rating: editRating,
+                                      review_text: editReviewText,
+                                      contains_spoiler: editContainsSpoiler
+                                    });
+                                  }
+                                  setRemoteReviews(prev => prev.map(r => r.id === rev.id ? {
+                                    ...r,
+                                    rating: editRating,
+                                    review_text: editReviewText,
+                                    contains_spoiler: editContainsSpoiler
+                                  } : r));
+                                  setEditingReviewId(null);
+                                }}
+                                className="px-4 py-1.5 rounded-lg bg-[#4ADE80] hover:bg-[#3ec770] text-slate-950 font-extrabold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5"
+                              >
+                                <Check className="w-3.5 h-3.5" /> Kaydet
+                              </button>
                             </div>
                           </div>
-                        ) : (
-                          <div className="p-3 bg-[#14171D] rounded-xl border border-[#232833] space-y-1">
-                            {isSpoiler && (
-                              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 inline-block mb-1">
-                                ⚠️ SPOILER İÇERİR
-                              </span>
-                            )}
-                            <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                              "{rev.review_text}"
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        /* Review Text Area: SPOILER BLUR EFFECT (backdrop-filter: blur(8px)) */
+                        <div className="relative overflow-hidden rounded-xl">
+                          {isSpoiler && !isRevealed ? (
+                            <div
+                              onClick={() => toggleSpoilerReveal(revId)}
+                              className="relative cursor-pointer group"
+                            >
+                              {/* Blurred Text Preview */}
+                              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed blur-md select-none opacity-40 p-3 bg-[#14171D] rounded-xl border border-[#232833]">
+                                {rev.review_text}
+                              </p>
+
+                              {/* Spoiler Warning Overlay */}
+                              <div className="absolute inset-0 bg-amber-950/80 border border-amber-500/40 rounded-xl flex items-center justify-center gap-2 p-3 text-amber-400 font-bold text-xs group-hover:bg-amber-950/90 transition">
+                                <ShieldAlert className="w-4 h-4 text-amber-400 animate-pulse" />
+                                <span>⚠️ SPOILER İÇERİR - Görmek İçin Tıklayın</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-[#14171D] rounded-xl border border-[#232833] space-y-1">
+                              {isSpoiler && (
+                                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 inline-block mb-1">
+                                  ⚠️ SPOILER İÇERİR
+                                </span>
+                              )}
+                              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                                "{rev.review_text}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                     </div>
                   );

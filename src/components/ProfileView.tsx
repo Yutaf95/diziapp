@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Clock, Film, Tv, Star, Heart, Calendar, Play, Sparkles, CheckCircle2, Award, 
   Settings, MoreHorizontal, Users, UserCheck, X, Edit3, ShieldCheck, Check, ArrowLeft, Layers, UserPlus,
-  Camera, Upload, Link, Image as ImageIcon, Flame, BarChart2, MessageSquare, ThumbsUp, Eye, Zap, Share2, Pin, Loader2
+  Camera, Upload, Link, Image as ImageIcon, Flame, BarChart2, MessageSquare, ThumbsUp, Eye, Zap, Share2, Pin, Loader2,
+  Pencil, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Profile, WatchStatus, EpisodeProgress, RatingReview, CustomCollection } from '../types';
+import { Profile, WatchStatus, EpisodeProgress, RatingReview, CustomCollection, MediaType } from '../types';
 import { getPosterUrl } from '../lib/tmdb';
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -32,6 +33,8 @@ interface ProfileViewProps {
   followingUserIds?: string[];
   onToggleFollowUser?: (userId: string) => void;
   onUpdateProfile?: (updated: Partial<Profile>) => void;
+  onDeleteReview?: (reviewId?: string, mediaId?: number, mediaType?: MediaType) => void;
+  onEditReview?: (reviewId: string, updatedFields: { rating: number; review_text: string; contains_spoiler: boolean }) => void;
   initialSubTab?: 'profil' | 'movies' | 'tv' | 'reviews' | 'stats';
   isLoading?: boolean;
 }
@@ -91,6 +94,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   followingUserIds = [],
   onToggleFollowUser,
   onUpdateProfile,
+  onDeleteReview,
+  onEditReview,
   initialSubTab = 'profil',
   isLoading = false
 }) => {
@@ -140,6 +145,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   }, [initialSubTab]);
   const [showMonthlyRecapModal, setShowMonthlyRecapModal] = useState(false);
+
+  // Review editing and delete confirmation states
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState<number>(10);
+  const [editReviewText, setEditReviewText] = useState<string>('');
+  const [editContainsSpoiler, setEditContainsSpoiler] = useState<boolean>(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followerTab, setFollowerTab] = useState<'followers' | 'following'>('followers');
@@ -500,14 +512,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     };
   })();
 
-  // Real User Reviews filtering — Strictly scoped to this profile's user only
+  // Real User Reviews filtering — Strictly scoped to this profile's user only (automatically deduplicated)
   const userReviews = React.useMemo(() => {
-    return reviews.filter(r => 
-      (r.user_id && user.id && r.user_id === user.id) || 
-      (r.username && user.username && r.username === user.username) ||
-      (r.profile?.id && user.id && r.profile.id === user.id) ||
-      (r.profile?.username && user.username && r.profile.username === user.username)
-    );
+    const revMap = new Map<string, RatingReview>();
+    reviews.forEach(r => {
+      const isMatch = (r.user_id && user.id && r.user_id === user.id) || 
+        (r.username && user.username && r.username === user.username) ||
+        (r.profile?.id && user.id && r.profile.id === user.id) ||
+        (r.profile?.username && user.username && r.profile.username === user.username);
+      if (isMatch) {
+        const key = `${r.media_type}_${r.media_id}`;
+        if (!revMap.has(key)) {
+          revMap.set(key, r);
+        }
+      }
+    });
+    return Array.from(revMap.values());
   }, [reviews, user.id, user.username]);
 
   const displayReviews = userReviews;
@@ -968,9 +988,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     {reviewsToDisplay.length > 0 ? (
                       reviewsToDisplay.map(rev => {
                         const mediaInfo = getReviewMediaInfo(rev);
+                        const revKey = rev.id || `rev_${rev.media_id}`;
+                        const isEditingThis = editingReviewId === revKey;
+
                         return (
                           <div
-                            key={rev.id}
+                            key={revKey}
                             className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
                           >
                             {/* Poster Thumbnail */}
@@ -987,38 +1010,170 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                             {/* İnceleme Detayları */}
                             <div className="flex-1 space-y-2 min-w-0">
-                              <div className="flex items-center justify-between flex-wrap gap-2">
-                                <div className="flex items-center gap-2">
-                                  <h3 
-                                    onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                                    className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
-                                  >
-                                    {mediaInfo.title}
-                                  </h3>
-                                  <span className="text-xs sm:text-sm text-[#9ab]">
-                                    ({rev.media_type === 'tv' ? 'Dizi' : 'Film'})
-                                  </span>
-                                  {rev.is_pinned && (
-                                    <span className="text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                      <Pin className="w-3 h-3" /> Sabitlendi
-                                    </span>
-                                  )}
+                              {isEditingThis ? (
+                                <div className="space-y-3 bg-[#14171D] p-3.5 rounded-xl border border-[#232833]">
+                                  <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <h3 className="text-sm font-extrabold text-white">İncelemeyi Düzenle: {mediaInfo.title}</h3>
+                                    <span className="text-xs text-amber-400 font-bold">Puan: {editRating} / 10</span>
+                                  </div>
+
+                                  <div className="grid grid-cols-10 gap-1">
+                                    {Array.from({ length: 10 }).map((_, idx) => {
+                                      const val = idx + 1;
+                                      const isSel = editRating === val;
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={val}
+                                          onClick={() => setEditRating(val)}
+                                          className={`aspect-square rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center justify-center ${
+                                            isSel
+                                              ? 'bg-[#E63946] text-white shadow-md'
+                                              : 'bg-[#0B0C0E] text-slate-400 hover:text-white border border-[#232833]'
+                                          }`}
+                                        >
+                                          {val}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+
+                                  <textarea
+                                    value={editReviewText}
+                                    onChange={(e) => setEditReviewText(e.target.value)}
+                                    rows={3}
+                                    className="w-full bg-[#0B0C0E] border border-[#232833] rounded-xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#E63946] transition"
+                                    placeholder="İncelemenizi güncelleyin..."
+                                  />
+
+                                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                                    <label className="flex items-center gap-2 text-xs text-amber-400 cursor-pointer select-none font-bold">
+                                      <input
+                                        type="checkbox"
+                                        checked={editContainsSpoiler}
+                                        onChange={(e) => setEditContainsSpoiler(e.target.checked)}
+                                        className="w-3.5 h-3.5 rounded bg-[#0B0C0E] border-[#232833] text-[#E63946]"
+                                      />
+                                      <span>Spoiler İçerir</span>
+                                    </label>
+
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingReviewId(null)}
+                                        className="px-3 py-1.5 rounded-lg bg-[#232833] hover:bg-[#2B313E] text-slate-300 font-bold text-xs transition cursor-pointer"
+                                      >
+                                        Vazgeç
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (onEditReview) {
+                                            onEditReview(revKey, {
+                                              rating: editRating,
+                                              review_text: editReviewText,
+                                              contains_spoiler: editContainsSpoiler
+                                            });
+                                          }
+                                          setEditingReviewId(null);
+                                        }}
+                                        className="px-4 py-1.5 rounded-lg bg-[#4ADE80] hover:bg-[#3ec770] text-slate-950 font-extrabold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5"
+                                      >
+                                        <Check className="w-3.5 h-3.5" /> Kaydet
+                                      </button>
+                                    </div>
+                                  </div>
                                 </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <h3 
+                                        onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
+                                        className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
+                                      >
+                                        {mediaInfo.title}
+                                      </h3>
+                                      <span className="text-xs sm:text-sm text-[#9ab]">
+                                        ({rev.media_type === 'tv' ? 'Dizi' : 'Film'})
+                                      </span>
+                                      {rev.is_pinned && (
+                                        <span className="text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                          <Pin className="w-3 h-3" /> Sabitlendi
+                                        </span>
+                                      )}
+                                    </div>
 
-                                {/* Puan */}
-                                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
-                                  <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
-                                  <span>{rev.rating || 10} / 10</span>
-                                </div>
-                              </div>
+                                    {/* Puan */}
+                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
+                                      <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
+                                      <span>{rev.rating || 10} / 10</span>
+                                    </div>
+                                  </div>
 
-                              <p className="text-sm sm:text-base text-slate-200 italic leading-relaxed font-normal">
-                                "{rev.review_text}"
-                              </p>
+                                  <p className="text-sm sm:text-base text-slate-200 italic leading-relaxed font-normal">
+                                    "{rev.review_text}"
+                                  </p>
 
-                              <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
-                                <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
-                              </div>
+                                  <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5 flex-wrap gap-2">
+                                    <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
+
+                                    {isOwnProfile && (
+                                      <div className="flex items-center gap-2">
+                                        {confirmDeleteId === revKey ? (
+                                          <div className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg text-xs">
+                                            <span className="text-rose-400 font-bold text-[11px]">Silinsin mi?</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                onDeleteReview?.(rev.id, rev.media_id, rev.media_type);
+                                                setConfirmDeleteId(null);
+                                              }}
+                                              className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[11px] font-extrabold transition cursor-pointer"
+                                            >
+                                              Evet, Sil
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setConfirmDeleteId(null)}
+                                              className="bg-[#232833] text-slate-300 px-2 py-0.5 rounded text-[11px] font-bold transition cursor-pointer"
+                                            >
+                                              İptal
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setEditingReviewId(revKey);
+                                                setEditRating(rev.rating || 10);
+                                                setEditReviewText(rev.review_text || '');
+                                                setEditContainsSpoiler(rev.contains_spoiler || false);
+                                                setConfirmDeleteId(null);
+                                              }}
+                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                                              title="İncelemeyi düzenle"
+                                            >
+                                              <Pencil className="w-3.5 h-3.5" />
+                                              <span>Düzenle</span>
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setConfirmDeleteId(revKey)}
+                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:text-white hover:bg-rose-600 transition cursor-pointer"
+                                              title="İncelemeyi sil"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                              <span>Sil</span>
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
@@ -1155,9 +1310,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {displayReviews.length > 0 ? (
                 displayReviews.map(rev => {
                   const mediaInfo = getReviewMediaInfo(rev);
+                  const revKey = rev.id || `rev_${rev.media_id}`;
+                  const isEditingThis = editingReviewId === revKey;
+
                   return (
                     <div
-                      key={rev.id}
+                      key={revKey}
                       className="flex items-start gap-4 sm:gap-5 pb-5 border-b border-[#2c3440]/40 last:border-b-0 group"
                     >
                       <div 
@@ -1172,30 +1330,162 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </div>
 
                       <div className="flex-1 space-y-2 min-w-0">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <h3 
-                              onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
-                              className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
-                            >
-                              {mediaInfo.title}
-                            </h3>
-                            <span className="text-xs sm:text-sm text-[#9ab]">({rev.media_type === 'tv' ? 'Dizi' : 'Film'})</span>
+                        {isEditingThis ? (
+                          <div className="space-y-3 bg-[#14171D] p-3.5 rounded-xl border border-[#232833]">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <h3 className="text-sm font-extrabold text-white">İncelemeyi Düzenle: {mediaInfo.title}</h3>
+                              <span className="text-xs text-amber-400 font-bold">Puan: {editRating} / 10</span>
+                            </div>
+
+                            <div className="grid grid-cols-10 gap-1">
+                              {Array.from({ length: 10 }).map((_, idx) => {
+                                const val = idx + 1;
+                                const isSel = editRating === val;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={val}
+                                    onClick={() => setEditRating(val)}
+                                    className={`aspect-square rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center justify-center ${
+                                      isSel
+                                        ? 'bg-[#E63946] text-white shadow-md'
+                                        : 'bg-[#0B0C0E] text-slate-400 hover:text-white border border-[#232833]'
+                                    }`}
+                                  >
+                                    {val}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            <textarea
+                              value={editReviewText}
+                              onChange={(e) => setEditReviewText(e.target.value)}
+                              rows={3}
+                              className="w-full bg-[#0B0C0E] border border-[#232833] rounded-xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#E63946] transition"
+                              placeholder="İncelemenizi güncelleyin..."
+                            />
+
+                            <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                              <label className="flex items-center gap-2 text-xs text-amber-400 cursor-pointer select-none font-bold">
+                                <input
+                                  type="checkbox"
+                                  checked={editContainsSpoiler}
+                                  onChange={(e) => setEditContainsSpoiler(e.target.checked)}
+                                  className="w-3.5 h-3.5 rounded bg-[#0B0C0E] border-[#232833] text-[#E63946]"
+                                />
+                                <span>Spoiler İçerir</span>
+                              </label>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingReviewId(null)}
+                                  className="px-3 py-1.5 rounded-lg bg-[#232833] hover:bg-[#2B313E] text-slate-300 font-bold text-xs transition cursor-pointer"
+                                >
+                                  Vazgeç
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onEditReview) {
+                                      onEditReview(revKey, {
+                                        rating: editRating,
+                                        review_text: editReviewText,
+                                        contains_spoiler: editContainsSpoiler
+                                      });
+                                    }
+                                    setEditingReviewId(null);
+                                  }}
+                                  className="px-4 py-1.5 rounded-lg bg-[#4ADE80] hover:bg-[#3ec770] text-slate-950 font-extrabold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Kaydet
+                                </button>
+                              </div>
+                            </div>
                           </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <h3 
+                                  onClick={() => onSelectMediaById?.(rev.media_id, rev.media_type)}
+                                  className="text-sm sm:text-base font-extrabold text-white hover:text-[#40bcf4] cursor-pointer transition"
+                                >
+                                  {mediaInfo.title}
+                                </h3>
+                                <span className="text-xs sm:text-sm text-[#9ab]">({rev.media_type === 'tv' ? 'Dizi' : 'Film'})</span>
+                              </div>
 
-                          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
-                            <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
-                            <span>{rev.rating || 10} / 10</span>
-                          </div>
-                        </div>
+                              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-white">
+                                <Star className="w-4 h-4 fill-[#00e054] text-[#00e054]" />
+                                <span>{rev.rating || 10} / 10</span>
+                              </div>
+                            </div>
 
-                        <p className="text-sm sm:text-base text-slate-200 leading-relaxed italic font-normal">
-                          "{rev.review_text}"
-                        </p>
+                            <p className="text-sm sm:text-base text-slate-200 leading-relaxed italic font-normal">
+                              "{rev.review_text}"
+                            </p>
 
-                        <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5">
-                          <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
-                        </div>
+                            <div className="flex items-center justify-between text-xs sm:text-sm text-[#9ab] pt-1.5 flex-wrap gap-2">
+                              <span>{rev.created_at ? (rev.created_at.includes('T') ? new Date(rev.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : rev.created_at) : 'Yakın Zamanda'}</span>
+
+                              {isOwnProfile && (
+                                <div className="flex items-center gap-2">
+                                  {confirmDeleteId === revKey ? (
+                                    <div className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg text-xs">
+                                      <span className="text-rose-400 font-bold text-[11px]">Silinsin mi?</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          onDeleteReview?.(rev.id, rev.media_id, rev.media_type);
+                                          setConfirmDeleteId(null);
+                                        }}
+                                        className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[11px] font-extrabold transition cursor-pointer"
+                                      >
+                                        Evet, Sil
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmDeleteId(null)}
+                                        className="bg-[#232833] text-slate-300 px-2 py-0.5 rounded text-[11px] font-bold transition cursor-pointer"
+                                      >
+                                        İptal
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingReviewId(revKey);
+                                          setEditRating(rev.rating || 10);
+                                          setEditReviewText(rev.review_text || '');
+                                          setEditContainsSpoiler(rev.contains_spoiler || false);
+                                          setConfirmDeleteId(null);
+                                        }}
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                                        title="İncelemeyi düzenle"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                        <span>Düzenle</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmDeleteId(revKey)}
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:text-white hover:bg-rose-600 transition cursor-pointer"
+                                        title="İncelemeyi sil"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Sil</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Star, Eye, MessageSquare, ThumbsUp, Send, Sparkles, UserPlus, CheckCircle2 } from 'lucide-react';
+import { Activity, Star, Eye, MessageSquare, ThumbsUp, Send, Sparkles, UserPlus, CheckCircle2, Clock } from 'lucide-react';
 import { ActivityFeedItem, Profile, WatchStatus } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix, getFullPosterUrl } from '../utils/textUtils';
@@ -184,31 +184,33 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
 
                 {/* Action Details Card */}
                 <div className="bg-[#0B0C0E] border border-[#232833] rounded-xl p-3 flex items-center justify-between gap-3 shadow-inner">
-                  <div className="space-y-1 min-w-0 flex-1">
+                  <div className="space-y-1.5 min-w-0 flex-1">
                     
+                    {/* Media Title (Always clear and visible) */}
+                    <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-[#E63946] transition-colors line-clamp-1 leading-snug">
+                      {mediaTitle}
+                    </h5>
+
                     {/* Action Description */}
                     {item.action_type === 'episode_watched' && (
-                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
-                        <Eye className="w-4 h-4 text-[#E63946] shrink-0" />
+                      <div className="flex items-center gap-1.5 text-xs text-slate-300 font-semibold">
+                        <Eye className="w-3.5 h-3.5 text-[#E63946] shrink-0" />
                         <span className="truncate">
-                          <strong className="text-white font-bold">{mediaTitle}</strong>
                           {item.details?.season_number && item.details?.episode_number
-                            ? ` S${item.details.season_number}B${item.details.episode_number}${getEpisodeAccusativeSuffix(item.details.episode_number)} izledi`
-                            : `${getTurkishAccusativeSuffix(mediaTitle)} bir bölümünü izledi`}
+                            ? `S${item.details.season_number}B${item.details.episode_number}${getEpisodeAccusativeSuffix(item.details.episode_number)} izledi`
+                            : 'Bir bölüm izledi'}
                         </span>
                       </div>
                     )}
 
                     {item.action_type === 'review_added' && (
                       <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
-                          <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
-                          <span className="truncate">
-                            <strong className="text-white font-bold">{mediaTitle}</strong> <span className="text-amber-400 font-black">{item.details?.rating || 10}/10</span>
-                          </span>
+                        <div className="flex items-center gap-1.5 text-xs text-amber-400 font-bold">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 shrink-0" />
+                          <span>{item.details?.rating || 10}/10 • İnceleme yazdı</span>
                         </div>
                         {item.details?.review_text && (
-                          <p className="text-xs text-slate-300 italic line-clamp-2 pl-2 border-l-2 border-[#E63946] font-normal">
+                          <p className="text-[11px] text-slate-300 italic line-clamp-2 pl-2 border-l-2 border-[#E63946] font-normal leading-relaxed">
                             "{item.details.review_text}"
                           </p>
                         )}
@@ -216,36 +218,36 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     )}
 
                     {item.action_type === 'rating_given' && (
-                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
-                        <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
-                        <span className="truncate">
-                          <strong className="text-white font-bold">{mediaTitle}</strong> <span className="text-amber-400 font-black">{item.details?.rating}/10</span>
-                        </span>
+                      <div className="flex items-center gap-1.5 text-xs text-amber-400 font-bold">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 shrink-0" />
+                        <span>{item.details?.rating}/10 puan verdi</span>
                       </div>
                     )}
 
                     {item.action_type === 'status_update' && (
-                      <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
-                        {item.details?.status === 'watched' && isTv ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div className="flex items-center gap-1.5 text-xs font-semibold">
+                        {item.details?.status === 'watched' ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span className="text-emerald-400">
+                              {isTv ? 'Diziyi bitirdi' : 'Filmi izledi'}
+                            </span>
+                          </>
+                        ) : item.details?.status === 'watching' ? (
+                          <>
+                            <Eye className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span className="text-amber-400">
+                              İzlemeye başladı
+                            </span>
+                          </>
                         ) : (
-                          <Sparkles className="w-4 h-4 text-[#E63946] shrink-0" />
+                          <>
+                            <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span className="text-blue-400">
+                              İzlenecekler listesine ekledi
+                            </span>
+                          </>
                         )}
-                        <span className="truncate">
-                          {item.details?.status === 'watched' ? (
-                            <>
-                              <strong className="text-white font-bold">{mediaTitle}</strong>{getTurkishAccusativeSuffix(mediaTitle)} {isTv ? 'bitirdi' : 'izledi'}
-                            </>
-                          ) : item.details?.status === 'watching' ? (
-                            <>
-                              <strong className="text-white font-bold">{mediaTitle}</strong> izlemeye başladı
-                            </>
-                          ) : (
-                            <>
-                              <strong className="text-white font-bold">{mediaTitle}</strong> izlenecekler listesine ekledi
-                            </>
-                          )}
-                        </span>
                       </div>
                     )}
 

@@ -3223,7 +3223,7 @@ export default function App() {
                     onToggleFollowUser={handleToggleFollowUser}
                     watchList={watchList}
                     onRefresh={refreshActivityFeed}
-                    isRefreshing={isRefreshingFeed}
+                    isRefreshing={isRefreshingFeed || isDataLoading}
                   />
                 </React.Suspense>
               ) : activeTab === 'collections' ? (
@@ -3665,7 +3665,7 @@ export default function App() {
                 currentUser={currentUser}
                 onNavigateToProfile={handleNavigateToProfile}
                 onAddActivity={handlePostStatusUpdate}
-                isLoading={isDataLoading}
+                isLoading={isDataLoading || isRefreshingFeed}
                 watchList={watchList}
               />
             </div>

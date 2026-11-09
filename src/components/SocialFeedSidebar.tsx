@@ -97,7 +97,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
             })
             .slice(0, 6);
 
-          if (isLoading && validActivities.length === 0) {
+          if (isLoading) {
             return (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (

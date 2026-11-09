@@ -187,14 +187,14 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                   <div className="space-y-1.5 min-w-0 flex-1">
                     
                     {/* Media Title (Always clear and visible) */}
-                    <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-[#E63946] transition-colors line-clamp-1 leading-snug">
+                    <h5 className="font-black text-sm sm:text-base text-white group-hover:text-[#E63946] transition-colors line-clamp-1 leading-snug">
                       {mediaTitle}
                     </h5>
 
                     {/* Action Description */}
                     {item.action_type === 'episode_watched' && (
-                      <div className="flex items-center gap-1.5 text-xs text-slate-300 font-semibold">
-                        <Eye className="w-3.5 h-3.5 text-[#E63946] shrink-0" />
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-200 font-bold">
+                        <Eye className="w-4 h-4 text-[#E63946] shrink-0" />
                         <span className="truncate">
                           {item.details?.season_number && item.details?.episode_number
                             ? `S${item.details.season_number}B${item.details.episode_number}${getEpisodeAccusativeSuffix(item.details.episode_number)} izledi`
@@ -205,12 +205,12 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
 
                     {item.action_type === 'review_added' && (
                       <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-xs text-amber-400 font-bold">
-                          <Star className="w-3.5 h-3.5 fill-amber-400 shrink-0" />
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-400 font-bold">
+                          <Star className="w-4 h-4 fill-amber-400 shrink-0" />
                           <span>{item.details?.rating || 10}/10 • İnceleme yazdı</span>
                         </div>
                         {item.details?.review_text && (
-                          <p className="text-[11px] text-slate-300 italic line-clamp-2 pl-2 border-l-2 border-[#E63946] font-normal leading-relaxed">
+                          <p className="text-xs text-slate-300 italic line-clamp-2 pl-2 border-l-2 border-[#E63946] font-normal leading-relaxed">
                             "{item.details.review_text}"
                           </p>
                         )}
@@ -218,31 +218,31 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     )}
 
                     {item.action_type === 'rating_given' && (
-                      <div className="flex items-center gap-1.5 text-xs text-amber-400 font-bold">
-                        <Star className="w-3.5 h-3.5 fill-amber-400 shrink-0" />
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-400 font-bold">
+                        <Star className="w-4 h-4 fill-amber-400 shrink-0" />
                         <span>{item.details?.rating}/10 puan verdi</span>
                       </div>
                     )}
 
                     {item.action_type === 'status_update' && (
-                      <div className="flex items-center gap-1.5 text-xs font-semibold">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm font-bold">
                         {item.details?.status === 'watched' ? (
                           <>
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                             <span className="text-emerald-400">
                               {isTv ? 'Diziyi bitirdi' : 'Filmi izledi'}
                             </span>
                           </>
                         ) : item.details?.status === 'watching' ? (
                           <>
-                            <Eye className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <Eye className="w-4 h-4 text-amber-400 shrink-0" />
                             <span className="text-amber-400">
                               İzlemeye başladı
                             </span>
                           </>
                         ) : (
                           <>
-                            <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <Clock className="w-4 h-4 text-blue-400 shrink-0" />
                             <span className="text-blue-400">
                               İzlenecekler listesine ekledi
                             </span>
@@ -258,7 +258,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     <img
                       src={mediaPoster}
                       alt={mediaTitle}
-                      className="w-10 h-14 sm:w-11 sm:h-16 rounded-lg object-cover border border-[#232833] shrink-0 shadow-md group-hover:scale-105 transition duration-300"
+                      className="w-11 h-16 sm:w-12 sm:h-16 rounded-lg object-cover border border-[#232833] shrink-0 shadow-md group-hover:scale-105 transition duration-300"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = 'none';
                       }}

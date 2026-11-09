@@ -206,8 +206,8 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                     {item.action_type === 'review_added' && (
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-400 font-bold">
-                          <Star className="w-4 h-4 fill-amber-400 shrink-0" />
-                          <span>{item.details?.rating || 10}/10 • İnceleme yazdı</span>
+                          <MessageSquare className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span>{item.details?.rating || 10}/10 puan verdi ve inceleme yazdı</span>
                         </div>
                         {item.details?.review_text && (
                           <p className="text-xs text-slate-300 italic line-clamp-2 pl-2 border-l-2 border-[#E63946] font-normal leading-relaxed">

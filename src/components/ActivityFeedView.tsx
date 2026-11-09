@@ -161,7 +161,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
       case 'review_added':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-            <MessageSquare className="w-3 h-3" /> Yorum Yazdı
+            <MessageSquare className="w-3 h-3" /> İnceleme Yazdı
           </span>
         );
       case 'status_update': {
@@ -169,7 +169,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
         if (item.details?.status === 'watched') {
           return (
             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-              <Sparkles className="w-3 h-3" /> {isTv ? 'Diziyi Bitirdi' : 'Filmi İzledi'}
+              <CheckCircle2 className="w-3 h-3" /> {isTv ? 'Diziyi Bitirdi' : 'Filmi İzledi'}
             </span>
           );
         }
@@ -182,7 +182,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
         }
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
-            <Eye className="w-3 h-3" /> Listesine Ekledi
+            <Clock className="w-3 h-3" /> İzleneceklere Ekledi
           </span>
         );
       }
@@ -483,7 +483,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                         <div className="text-xs font-semibold mt-0.5">
                           {details.status === 'watched' ? (
                             <span className="text-emerald-400">
-                              {(item.media_type === 'tv' || (details as any)?.media_type === 'tv') ? 'Dizinin tamamını bitirdi' : 'Filmi izledi'}
+                              {(item.media_type === 'tv' || (details as any)?.media_type === 'tv') ? 'Diziyi bitirdi' : 'Filmi izledi'}
                             </span>
                           ) : details.status === 'watching' ? (
                             <span className="text-amber-400">İzlemeye başladı</span>
@@ -493,9 +493,15 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                         </div>
                       )}
 
-                      {details.rating && (
+                      {item.action_type === 'rating_given' && details.rating && (
                         <div className="inline-flex items-center gap-1 text-xs font-bold text-amber-400 mt-1">
-                          <Star className="w-3.5 h-3.5 fill-amber-400" /> {details.rating} / 10 Verildi
+                          <Star className="w-3.5 h-3.5 fill-amber-400" /> {details.rating}/10 puan verdi
+                        </div>
+                      )}
+
+                      {item.action_type === 'review_added' && (
+                        <div className="inline-flex items-center gap-1 text-xs font-bold text-amber-400 mt-1">
+                          <MessageSquare className="w-3.5 h-3.5 text-amber-400" /> {details.rating || 10}/10 puan verdi ve inceleme yazdı
                         </div>
                       )}
                     </div>

@@ -10,6 +10,7 @@ import { getDetails, getSeasonDetails, getBackdropUrl, getPosterUrl } from '../l
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AddToCollectionModal } from './AddToCollectionModal';
+import { ConfirmRemoveModal } from './ConfirmRemoveModal';
 import { WatchLinksBox } from './WatchLinksBox';
 import { isUUIDString } from '../utils/textUtils';
 
@@ -82,6 +83,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
   const reviewSectionRef = useRef<HTMLDivElement>(null);
   const [showAddToCollectionModal, setShowAddToCollectionModal] = useState<boolean>(false);
+  const [confirmRemoveStatus, setConfirmRemoveStatus] = useState<WatchStatusType | null>(null);
   const [prevWatchStatus, setPrevWatchStatus] = useState<WatchStatusType>('watching');
 
   const [details, setDetails] = useState<TMDBMedia>(media);
@@ -652,7 +654,13 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   {/* İzliyorum — only for TV shows */}
                   {isTv && (
                     <button
-                      onClick={() => onUpdateWatchStatus(details, userWatchStatus === 'watching' ? null : 'watching')}
+                      onClick={() => {
+                        if (userWatchStatus === 'watching') {
+                          setConfirmRemoveStatus('watching');
+                        } else {
+                          onUpdateWatchStatus(details, 'watching');
+                        }
+                      }}
                       className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-1.5 sm:px-2.5 py-1.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                         userWatchStatus === 'watching'
                           ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 font-extrabold'
@@ -665,7 +673,13 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
                   {/* İzleyeceğim */}
                   <button
-                    onClick={() => onUpdateWatchStatus(details, userWatchStatus === 'plan_to_watch' ? null : 'plan_to_watch')}
+                    onClick={() => {
+                      if (userWatchStatus === 'plan_to_watch') {
+                        setConfirmRemoveStatus('plan_to_watch');
+                      } else {
+                        onUpdateWatchStatus(details, 'plan_to_watch');
+                      }
+                    }}
                     className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-1.5 sm:px-2.5 py-1.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                       userWatchStatus === 'plan_to_watch'
                         ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30 font-extrabold'
@@ -679,7 +693,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   <button
                     onClick={() => {
                       if (userWatchStatus === 'watched') {
-                        onUpdateWatchStatus(details, null);
+                        setConfirmRemoveStatus('watched');
                       } else {
                         onUpdateWatchStatus(details, 'watched');
                       }
@@ -696,7 +710,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   {/* Trash */}
                   {userWatchStatus !== null && (
                     <button
-                      onClick={() => onUpdateWatchStatus(details, null)}
+                      onClick={() => setConfirmRemoveStatus(userWatchStatus || 'watched')}
                       className="flex items-center justify-center p-1.5 sm:p-1 rounded-lg text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer shrink-0"
                       title="Listemden Tamamen Kaldır"
                     >
@@ -781,6 +795,18 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
             onCreateCollection={onCreateCollection}
           />
         )}
+
+        {/* Listeden Kaldır Onay Modalı */}
+        <ConfirmRemoveModal
+          isOpen={!!confirmRemoveStatus}
+          media={details}
+          status={confirmRemoveStatus}
+          onConfirm={() => {
+            onUpdateWatchStatus(details, null);
+            setConfirmRemoveStatus(null);
+          }}
+          onCancel={() => setConfirmRemoveStatus(null)}
+        />
 
         {/* 2. BODY CONTENT */}
         <div className="p-4 sm:p-8 space-y-8">

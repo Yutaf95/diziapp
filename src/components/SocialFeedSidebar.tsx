@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Star, Eye, MessageSquare, ThumbsUp, Send, Sparkles, UserPlus } from 'lucide-react';
+import { Activity, Star, Eye, MessageSquare, ThumbsUp, Send, Sparkles, UserPlus, CheckCircle2 } from 'lucide-react';
 import { ActivityFeedItem, Profile, WatchStatus } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix, getFullPosterUrl } from '../utils/textUtils';
@@ -74,6 +74,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
         {(() => {
           const now = new Date().getTime();
           const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 48 hours
+          const seen = new Set<string>();
 
           const validActivities = activities
             .filter(a => {
@@ -87,6 +88,11 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                   return false;
                 }
               }
+
+              // Deduplicate rapid repeated activities
+              const key = `${a.user_id}_${a.action_type}_${a.media_id || ''}_${a.details?.status || ''}_${a.details?.season_number || ''}_${a.details?.episode_number || ''}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
               return true;
             })
             .slice(0, 6);
@@ -132,6 +138,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
               }
             }
             const mediaTitle = resolvedTitle || 'Dizi';
+            const isTv = item.media_type === 'tv' || item.details?.media_type === 'tv' || Boolean(watchList?.some(w => Number(w.media_id) === Number(item.media_id) && w.media_type === 'tv'));
             const rawPoster = item.details?.media_poster || item.poster_path;
             const mediaPoster = getFullPosterUrl(rawPoster);
             const isLiked = likedActivities[item.id];
@@ -219,11 +226,15 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
 
                     {item.action_type === 'status_update' && (
                       <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-200 font-medium">
-                        <Sparkles className="w-4 h-4 text-[#E63946] shrink-0" />
+                        {item.details?.status === 'watched' && isTv ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <Sparkles className="w-4 h-4 text-[#E63946] shrink-0" />
+                        )}
                         <span className="truncate">
                           {item.details?.status === 'watched' ? (
                             <>
-                              <strong className="text-white font-bold">{mediaTitle}</strong>{getTurkishAccusativeSuffix(mediaTitle)} izledi
+                              <strong className="text-white font-bold">{mediaTitle}</strong>{getTurkishAccusativeSuffix(mediaTitle)} {isTv ? 'bitirdi' : 'izledi'}
                             </>
                           ) : item.details?.status === 'watching' ? (
                             <>

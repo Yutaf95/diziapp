@@ -1705,12 +1705,18 @@ export default function App() {
     const type: MediaType = isTv ? 'tv' : 'movie';
     const title = media.title || media.name || 'Yapım';
 
+    // Prevent duplicate status updates if status has not changed
+    const currentItem = watchList.find(item => Number(item.media_id) === Number(media.id) && item.media_type === type);
+    if (status !== null && currentItem && currentItem.status === status) {
+      return;
+    }
+
     if (status !== 'watched') {
       completedShowModalShownRef.current.delete(media.id);
     }
 
     if (status === null) {
-      setWatchList(prev => prev.filter(item => !(item.media_id === media.id && item.media_type === type)));
+      setWatchList(prev => prev.filter(item => !(Number(item.media_id) === Number(media.id) && item.media_type === type)));
     } else {
       const nowStr = new Date().toISOString();
       setWatchList(prev => {
@@ -2783,7 +2789,7 @@ export default function App() {
       if (isNaN(t) || (nowForFeed - t) > FORTY_EIGHT_HOURS_MS) continue;
 
       // Deduplicate rapid repeated status updates for the same media/user
-      const key = `${a.user_id}_${a.action_type}_${a.media_id || ''}_${a.details?.season_number || ''}_${a.details?.episode_number || ''}`;
+      const key = `${a.user_id}_${a.action_type}_${a.media_id || ''}_${a.details?.status || ''}_${a.details?.season_number || ''}_${a.details?.episode_number || ''}`;
       if (!seen.has(key)) {
         seen.add(key);
         result.push(a);

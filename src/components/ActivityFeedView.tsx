@@ -112,12 +112,19 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
   const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
 
   const filterLast48Hours = (list: ActivityFeedItem[]) => {
+    const seen = new Set<string>();
     return list.filter(item => {
       if (!item.created_at) return false;
       const t = new Date(item.created_at).getTime();
       if (isNaN(t) || (now - t) > FORTY_EIGHT_HOURS_MS) return false;
       const hasMedia = item.details?.media_title || (item as any).media_title || item.action_type === 'status_update';
-      return !!hasMedia;
+      if (!hasMedia) return false;
+
+      // Deduplicate rapid repeated activities
+      const key = `${item.user_id}_${item.action_type}_${item.media_id || ''}_${item.details?.status || ''}_${item.details?.season_number || ''}_${item.details?.episode_number || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
   };
 
@@ -157,12 +164,28 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
             <MessageSquare className="w-3 h-3" /> Yorum Yazdı
           </span>
         );
-      case 'status_update':
+      case 'status_update': {
+        const isTv = item.media_type === 'tv' || (item.details as any)?.media_type === 'tv';
+        if (item.details?.status === 'watched') {
+          return (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+              <Sparkles className="w-3 h-3" /> {isTv ? 'Diziyi Bitirdi' : 'Filmi İzledi'}
+            </span>
+          );
+        }
+        if (item.details?.status === 'watching') {
+          return (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+              <Eye className="w-3 h-3" /> İzlemeye Başladı
+            </span>
+          );
+        }
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
             <Eye className="w-3 h-3" /> Listesine Ekledi
           </span>
         );
+      }
       case 'rating_given':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-md border border-yellow-500/20">
@@ -453,6 +476,20 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                         <div className="text-xs text-slate-300 font-bold mt-0.5">
                           S{details.season_number}B{details.episode_number}{getEpisodeAccusativeSuffix(details.episode_number)} izledi
                           {details.episode_name && <span className="text-slate-400 font-normal"> - "{details.episode_name}"</span>}
+                        </div>
+                      )}
+
+                      {item.action_type === 'status_update' && (
+                        <div className="text-xs font-semibold mt-0.5">
+                          {details.status === 'watched' ? (
+                            <span className="text-emerald-400">
+                              {(item.media_type === 'tv' || (details as any)?.media_type === 'tv') ? 'Dizinin tamamını bitirdi' : 'Filmi izledi'}
+                            </span>
+                          ) : details.status === 'watching' ? (
+                            <span className="text-amber-400">İzlemeye başladı</span>
+                          ) : (
+                            <span className="text-blue-400">İzlenecekler listesine ekledi</span>
+                          )}
                         </div>
                       )}
 

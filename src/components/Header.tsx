@@ -4,6 +4,7 @@ import { Profile, TMDBMedia, WatchStatusType } from '../types';
 import { getPosterUrl } from '../lib/tmdb';
 import { MobileSidebarDrawer } from './MobileSidebarDrawer';
 import { UserAvatar } from './UserAvatar';
+import { ConfirmRemoveModal } from './ConfirmRemoveModal';
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 
 const SettingsModal = lazyWithRetry(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
@@ -35,7 +36,7 @@ interface HeaderProps {
   onOpenStats?: () => void;
   onOpenNotifications?: () => void;
   onOpenSettings?: () => void;
-  onUpdateWatchStatus?: (media: TMDBMedia, status: WatchStatusType) => void;
+  onUpdateWatchStatus?: (media: TMDBMedia, status: WatchStatusType | null) => void;
   getUserWatchStatus?: (id: number, type: 'tv' | 'movie') => WatchStatusType | null;
 }
 
@@ -69,6 +70,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [showMobileSearchInput, setShowMobileSearchInput] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [confirmRemoveItem, setConfirmRemoveItem] = useState<{
+    media: TMDBMedia;
+    status: WatchStatusType;
+  } | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
   const searchScrollRef = useRef<HTMLDivElement>(null);
@@ -195,6 +200,7 @@ export const Header: React.FC<HeaderProps> = ({
           ) : searchResults.length > 0 ? (
             searchResults.map((item) => {
               const isTv = item.media_type === 'tv' || !!item.first_air_date;
+              const currentStatus = getUserWatchStatus ? getUserWatchStatus(item.id, isTv ? 'tv' : 'movie') : null;
               const title = item.title || item.name || 'Yapım';
               const year = (item.release_date || item.first_air_date || '').substring(0, 4);
               const poster = item.poster_path
@@ -265,31 +271,21 @@ export const Header: React.FC<HeaderProps> = ({
                           {year}
                         </span>
                       )}
-                      {(() => {
-                        const status = getUserWatchStatus ? getUserWatchStatus(item.id, isTv ? 'tv' : 'movie') : null;
-                        if (status === 'watching') {
-                          return (
-                            <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                              İzliyorum
-                            </span>
-                          );
-                        }
-                        if (status === 'plan_to_watch') {
-                          return (
-                            <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                              İzlenecek
-                            </span>
-                          );
-                        }
-                        if (status === 'watched') {
-                          return (
-                            <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                              İzledim
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
+                      {currentStatus === 'watching' && (
+                        <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          İzliyorum
+                        </span>
+                      )}
+                      {currentStatus === 'plan_to_watch' && (
+                        <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                          İzlenecek
+                        </span>
+                      )}
+                      {currentStatus === 'watched' && (
+                        <span className="px-2.5 py-0.5 rounded-lg font-black uppercase text-xs tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          İzledim
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -300,10 +296,18 @@ export const Header: React.FC<HeaderProps> = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onUpdateWatchStatus(item, 'watching');
+                            if (currentStatus === 'watching') {
+                              setConfirmRemoveItem({ media: item, status: 'watching' });
+                            } else {
+                              onUpdateWatchStatus(item, 'watching');
+                            }
                           }}
-                          className="p-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all duration-150 active:scale-90 shadow-md"
-                          title="İzliyorum"
+                          className={`p-2 rounded-xl transition-all duration-150 active:scale-90 shadow-md cursor-pointer ${
+                            currentStatus === 'watching'
+                              ? 'bg-emerald-500 text-white font-extrabold ring-2 ring-emerald-400/50 shadow-emerald-500/30'
+                              : 'bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30'
+                          }`}
+                          title={currentStatus === 'watching' ? 'İzliyorsunuz (Kaldırmak için tıklayın)' : 'İzliyorum olarak işaretle'}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -311,20 +315,36 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onUpdateWatchStatus(item, 'plan_to_watch');
+                          if (currentStatus === 'plan_to_watch') {
+                            setConfirmRemoveItem({ media: item, status: 'plan_to_watch' });
+                          } else {
+                            onUpdateWatchStatus(item, 'plan_to_watch');
+                          }
                         }}
-                        className="p-2 rounded-xl bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 transition-all duration-150 active:scale-90 shadow-md"
-                        title="İzlenecek"
+                        className={`p-2 rounded-xl transition-all duration-150 active:scale-90 shadow-md cursor-pointer ${
+                          currentStatus === 'plan_to_watch'
+                            ? 'bg-blue-500 text-white font-extrabold ring-2 ring-blue-400/50 shadow-blue-500/30'
+                            : 'bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30'
+                        }`}
+                        title={currentStatus === 'plan_to_watch' ? 'İzlenecekler listenizde (Kaldırmak için tıklayın)' : 'İzlenecek olarak işaretle'}
                       >
                         <Clock className="w-4 h-4" />
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onUpdateWatchStatus(item, 'watched');
+                          if (currentStatus === 'watched') {
+                            setConfirmRemoveItem({ media: item, status: 'watched' });
+                          } else {
+                            onUpdateWatchStatus(item, 'watched');
+                          }
                         }}
-                        className="p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/30 transition-all duration-150 active:scale-90 shadow-md"
-                        title="İzledim"
+                        className={`p-2 rounded-xl transition-all duration-150 active:scale-90 shadow-md cursor-pointer ${
+                          currentStatus === 'watched'
+                            ? 'bg-amber-500 text-slate-950 font-extrabold ring-2 ring-amber-400/50 shadow-amber-500/30'
+                            : 'bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/30'
+                        }`}
+                        title={currentStatus === 'watched' ? 'İzlediniz (Kaldırmak için tıklayın)' : 'İzledim olarak işaretle'}
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
@@ -697,6 +717,20 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </React.Suspense>
           )}
+
+          {/* Confirm Remove Watch Status Modal */}
+          <ConfirmRemoveModal
+            isOpen={!!confirmRemoveItem}
+            media={confirmRemoveItem?.media || null}
+            status={confirmRemoveItem?.status || null}
+            onConfirm={() => {
+              if (confirmRemoveItem && onUpdateWatchStatus) {
+                onUpdateWatchStatus(confirmRemoveItem.media, null);
+              }
+              setConfirmRemoveItem(null);
+            }}
+            onCancel={() => setConfirmRemoveItem(null)}
+          />
         </>
       )}
     </header>

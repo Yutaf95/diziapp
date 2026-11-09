@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { ActivityFeedItem, Profile, WatchStatus } from '../types';
 import { EmptyState } from './EmptyState';
-import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix } from '../utils/textUtils';
+import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix, getFullPosterUrl } from '../utils/textUtils';
 import { DEFAULT_AVATAR_URL } from '../lib/constants';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { UserAvatar } from './UserAvatar';
@@ -434,10 +434,13 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                   >
                     {details.media_poster && (
                       <img
-                        src={details.media_poster}
+                        src={getFullPosterUrl(details.media_poster)}
                         alt={details.media_title}
                         referrerPolicy="no-referrer"
                         className="w-12 h-16 object-cover rounded-lg shrink-0 shadow group-hover:scale-105 transition duration-200"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
                       />
                     )}
 

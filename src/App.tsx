@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Header } from './components/Header';
 import { LeftSidebar } from './components/LeftSidebar';
@@ -53,7 +53,7 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthView } from './components/AuthView';
 import { CURRENT_USER, MOCK_USER_PROFILES } from './data/mockData';
 import { syncWatchLinksWithSupabase } from './utils/watchLinksStorage';
-import { isUUIDString } from './utils/textUtils';
+import { isUUIDString, getFullPosterUrl } from './utils/textUtils';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -453,10 +453,13 @@ export default function App() {
               media_id: a.media_id,
               media_type: a.media_type as MediaType,
               media_title: a.details?.media_title || a.media_title || 'Yapım',
-              poster_path: a.details?.media_poster || a.poster_path || '',
+              poster_path: getFullPosterUrl(a.details?.media_poster || a.poster_path),
               detail_text: a.details?.status || '',
               contains_spoiler: a.details?.contains_spoiler || false,
-              details: a.details || {},
+              details: {
+                ...(a.details || {}),
+                media_poster: getFullPosterUrl(a.details?.media_poster || a.poster_path)
+              },
               created_at: a.created_at
             };
           });
@@ -1137,10 +1140,13 @@ export default function App() {
             media_id: a.media_id,
             media_type: a.media_type as MediaType,
             media_title: a.details?.media_title || a.media_title || 'Yapım',
-            poster_path: a.details?.media_poster || a.poster_path || '',
+            poster_path: getFullPosterUrl(a.details?.media_poster || a.poster_path),
             detail_text: a.details?.status || '',
             contains_spoiler: a.details?.contains_spoiler || false,
-            details: a.details || {},
+            details: {
+              ...(a.details || {}),
+              media_poster: getFullPosterUrl(a.details?.media_poster || a.poster_path)
+            },
             created_at: a.created_at
           };
         });
@@ -1173,7 +1179,11 @@ export default function App() {
     }
   }, []);
 
-  // Auto-refresh activities when switching to activity tab
+  // Auto-refresh activities on initial startup and when switching to activity tab
+  useEffect(() => {
+    refreshActivityFeed();
+  }, [refreshActivityFeed]);
+
   useEffect(() => {
     if (activeTab === 'activity') {
       refreshActivityFeed();
@@ -2182,7 +2192,7 @@ export default function App() {
         media_type: 'tv',
         details: {
           media_title: showItem?.title || 'Dizi',
-          media_poster: showItem?.poster_path,
+          media_poster: getFullPosterUrl(showItem?.poster_path),
           season_number: lastItem.season_number,
           episode_number: lastItem.episode_number
         },
@@ -2239,7 +2249,7 @@ export default function App() {
               media_type: 'tv',
               details: {
                 media_title: showItem?.title || 'Dizi',
-                media_poster: showItem?.poster_path,
+                media_poster: getFullPosterUrl(showItem?.poster_path),
                 season_number: lastItem.season_number,
                 episode_number: lastItem.episode_number
               }
@@ -2312,7 +2322,7 @@ export default function App() {
       media_type: 'tv',
       details: {
         media_title: showItem?.title || 'Dizi',
-        media_poster: showItem?.poster_path,
+        media_poster: getFullPosterUrl(showItem?.poster_path),
         season_number: seasonNum,
         episode_number: epNum,
         rating
@@ -2362,7 +2372,7 @@ export default function App() {
             media_type: 'tv',
             details: {
               media_title: showItem?.title || 'Dizi',
-              media_poster: showItem?.poster_path,
+              media_poster: getFullPosterUrl(showItem?.poster_path),
               season_number: seasonNum,
               episode_number: epNum,
               rating
@@ -2760,21 +2770,35 @@ export default function App() {
     }
   });
 
-  // Filter Activity Feed strictly to last 48 hours
+  // Filter Activity Feed strictly to last 48 hours and deduplicate repeated actions for same media/user
   const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
   const nowForFeed = Date.now();
 
-  const recent48hActivities = activityFeed.filter(a => {
-    if (!a.created_at) return false;
-    const t = new Date(a.created_at).getTime();
-    return !isNaN(t) && (nowForFeed - t) <= FORTY_EIGHT_HOURS_MS;
-  });
+  const recent48hActivities = useMemo(() => {
+    const seen = new Set<string>();
+    const result: ActivityFeedItem[] = [];
+    for (const a of activityFeed) {
+      if (!a.created_at) continue;
+      const t = new Date(a.created_at).getTime();
+      if (isNaN(t) || (nowForFeed - t) > FORTY_EIGHT_HOURS_MS) continue;
 
-  const followedActivities = recent48hActivities.filter(a => {
-    if (a.user_id === currentUser.id) return true;
-    if (followingUserIds && followingUserIds.includes(a.user_id)) return true;
-    return false;
-  });
+      // Deduplicate rapid repeated status updates for the same media/user
+      const key = `${a.user_id}_${a.action_type}_${a.media_id || ''}_${a.details?.season_number || ''}_${a.details?.episode_number || ''}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(a);
+      }
+    }
+    return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [activityFeed, nowForFeed]);
+
+  const followedActivities = useMemo(() => {
+    return recent48hActivities.filter(a => {
+      if (a.user_id === currentUser.id) return true;
+      if (followingUserIds && followingUserIds.length > 0 && followingUserIds.includes(a.user_id)) return true;
+      return false;
+    });
+  }, [recent48hActivities, currentUser.id, followingUserIds]);
 
   const rawFilteredGridMedia = allAvailableMedia.filter(item => {
     const isTv = item.media_type === 'tv' || !!item.first_air_date;
@@ -3630,7 +3654,7 @@ export default function App() {
             {/* Sağ Sidebar: 'Sosyal Akış' (Masaüstünde görünür, mobilde gizli) */}
             <div className="hidden lg:block w-[20.5rem] xl:w-[22.5rem] shrink-0 space-y-4 sticky top-24 h-fit pr-2">
               <SocialFeedSidebar
-                activities={followedActivities.length > 0 ? followedActivities : recent48hActivities}
+                activities={recent48hActivities}
                 onSelectMediaById={handleSelectMediaById}
                 currentUser={currentUser}
                 onNavigateToProfile={handleNavigateToProfile}

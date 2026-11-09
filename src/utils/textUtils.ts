@@ -107,3 +107,19 @@ export const isUUIDString = (str?: string): boolean => {
   if (!str) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
 };
+
+
+/**
+ * Normalizes media poster URLs to full TMDB image URLs or returns clean fallback.
+ * Fixes relative paths such as "/5MoiMBZprur4uKCCbWxqUXwydvd.jpg" into valid image URLs.
+ */
+export const getFullPosterUrl = (path?: string | null): string => {
+  if (!path) return '';
+  const trimmed = path.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+  const clean = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `https://image.tmdb.org/t/p/w500${clean}`;
+};

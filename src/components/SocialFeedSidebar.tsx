@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Activity, Star, Eye, MessageSquare, ThumbsUp, Send, Sparkles, UserPlus } from 'lucide-react';
 import { ActivityFeedItem, Profile, WatchStatus } from '../types';
 import { UserAvatar } from './UserAvatar';
-import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix } from '../utils/textUtils';
+import { getTurkishAccusativeSuffix, getEpisodeAccusativeSuffix, getFullPosterUrl } from '../utils/textUtils';
 
 interface SocialFeedSidebarProps {
   activities: ActivityFeedItem[];
@@ -132,7 +132,8 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
               }
             }
             const mediaTitle = resolvedTitle || 'Dizi';
-            const mediaPoster = item.details?.media_poster || item.poster_path;
+            const rawPoster = item.details?.media_poster || item.poster_path;
+            const mediaPoster = getFullPosterUrl(rawPoster);
             const isLiked = likedActivities[item.id];
 
             return (
@@ -245,6 +246,9 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                       src={mediaPoster}
                       alt={mediaTitle}
                       className="w-10 h-14 sm:w-11 sm:h-16 rounded-lg object-cover border border-[#232833] shrink-0 shadow-md group-hover:scale-105 transition duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
                     />
                   )}
                 </div>

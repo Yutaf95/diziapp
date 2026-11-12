@@ -446,7 +446,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                               {ep.showName}
                             </p>
                             <p className="text-[8px] sm:text-[10px] text-amber-400 font-semibold truncate">
-                              S{ep.seasonNumber}E{ep.episodeNumber}
+                              S{ep.seasonNumber}B{ep.episodeNumber}
                             </p>
                           </div>
                         </div>
@@ -618,7 +618,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     <div className="space-y-1 min-w-0">
                       <h4 className="font-bold text-sm text-white truncate">{ep.showName}</h4>
                       <p className="text-xs text-amber-400 font-semibold">
-                        S{ep.seasonNumber}E{ep.episodeNumber} - {ep.episodeName}
+                        S{ep.seasonNumber}B{ep.episodeNumber} - {ep.episodeName}
                       </p>
                       <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase ${ep.networkColor}`}>
                         {ep.network}

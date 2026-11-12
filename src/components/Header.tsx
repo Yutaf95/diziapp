@@ -307,7 +307,7 @@ export const Header: React.FC<HeaderProps> = ({
                               ? 'bg-emerald-500 text-white font-extrabold ring-2 ring-emerald-400/50 shadow-emerald-500/30'
                               : 'bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30'
                           }`}
-                          title={currentStatus === 'watching' ? 'İzliyorsunuz (Kaldırmak için tıklayın)' : 'İzliyorum olarak işaretle'}
+                          title={currentStatus === 'watching' ? 'İzliyorsunuz (Kaldırmak için tıklayın)' : 'İzliyorum listesine ekleyin'}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -326,7 +326,7 @@ export const Header: React.FC<HeaderProps> = ({
                             ? 'bg-blue-500 text-white font-extrabold ring-2 ring-blue-400/50 shadow-blue-500/30'
                             : 'bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30'
                         }`}
-                        title={currentStatus === 'plan_to_watch' ? 'İzlenecekler listenizde (Kaldırmak için tıklayın)' : 'İzlenecek olarak işaretle'}
+                        title={currentStatus === 'plan_to_watch' ? 'İzlenecekler listenizde (Kaldırmak için tıklayın)' : 'İzlenecekler listesine ekleyin'}
                       >
                         <Clock className="w-4 h-4" />
                       </button>
@@ -344,7 +344,7 @@ export const Header: React.FC<HeaderProps> = ({
                             ? 'bg-amber-500 text-slate-950 font-extrabold ring-2 ring-amber-400/50 shadow-amber-500/30'
                             : 'bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white border border-amber-500/30'
                         }`}
-                        title={currentStatus === 'watched' ? 'İzlediniz (Kaldırmak için tıklayın)' : 'İzledim olarak işaretle'}
+                        title={currentStatus === 'watched' ? 'İzlediniz (Kaldırmak için tıklayın)' : 'İzlendi olarak işaretleyin'}
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
@@ -492,8 +492,6 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => {
                 if (onLogout) {
                   onLogout();
-                } else {
-                  alert("Çıkış yapıldı (Oturum kapatıldı).");
                 }
               }}
               className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-200 hover:text-white bg-[#0B0C0E] border border-[#232833] hover:border-[#E63946] hover:bg-[#E63946]/10 transition ml-1"
@@ -621,7 +619,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Clock className={`w-3.5 h-3.5 ${statusFilter === 'plan_to_watch' ? 'text-amber-500' : 'text-slate-400'}`} />
-              <span>İzlenecek</span>
+              <span>İzlenecekler</span>
             </button>
 
             <button
@@ -634,7 +632,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <CheckCircle2 className={`w-3.5 h-3.5 ${statusFilter === 'watched' ? 'text-emerald-500' : 'text-slate-400'}`} />
-              <span>İzledim</span>
+              <span>İzlediklerim</span>
             </button>
           </div>
         )}

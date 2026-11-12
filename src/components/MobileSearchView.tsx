@@ -105,7 +105,7 @@ export const MobileSearchView: React.FC<MobileSearchViewProps> = ({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Dizi veya film ara, kütüphanene ekle..."
+            placeholder="Dizi veya film arayın, kitaplığınıza ekleyin..."
             className="w-full bg-[#0B0C0E] border border-[#2B313E] rounded-xl pl-11 pr-9 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#E63946] focus:ring-1 focus:ring-[#E63946] transition shadow-inner"
           />
           {query && (

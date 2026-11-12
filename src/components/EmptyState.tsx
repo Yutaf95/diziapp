@@ -11,7 +11,7 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  title = "Henüz İçerik Bulunmuyor",
+  title = "Henüz Yapım Bulunmuyor",
   description = "Aradığınız kriterlere uygun yapım bulunamadı. Filtreleri değiştirebilir veya keşfetmeye devam edebilirsiniz.",
   iconType = 'film',
   actionLabel = "Keşfe Çık",

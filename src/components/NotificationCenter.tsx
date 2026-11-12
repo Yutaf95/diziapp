@@ -224,10 +224,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <BellOff className="w-6 h-6 stroke-[1.5]" />
               </div>
               <h4 className="text-sm font-bold text-white mb-1">
-                {activeFilter === 'unread' ? 'Okunmamış Bildirim Yok' : 'Yeni Bildiriminiz Yok'}
+                {activeFilter === 'unread' ? 'Okunmamış Bildiriminiz Yok' : 'Yeni Bildiriminiz Yok'}
               </h4>
               <p className="text-xs text-slate-400 max-w-[240px] leading-relaxed">
-                İzlediğiniz dizilere yeni sezon veya bölümler yayınlandığında anında burada haber verilecektir.
+                Takip ettiğiniz dizilere yeni sezon veya bölümler eklendiğinde buradan anında bildirim alırsınız.
               </p>
               {onScanNow && (
                 <button
@@ -325,7 +325,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         {/* Panel Footer */}
         {notifications.length > 0 && (
           <div className="p-3 bg-[#0B0C0E] border-t border-[#232833] text-[11px] text-slate-400 flex items-center justify-between">
-            <span>Dizilerinize yeni bölümler geldikçe otomatik güncellenir.</span>
+            <span>Dizilerinize yeni bölümler eklendikçe otomatik güncellenir.</span>
             {unreadCount > 0 && (
               <button
                 type="button"

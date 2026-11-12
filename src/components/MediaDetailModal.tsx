@@ -41,8 +41,8 @@ interface MediaDetailModalProps {
 
 const formatMissingEpisodesText = (items: Array<{ season_number: number; episode_number: number }>): string => {
   if (items.length === 0) return '';
-  if (items.length === 1) return `S${items[0].season_number}E${items[0].episode_number} bölümünü`;
-  return `önceki ${items.length} bölümü (tüm önceki sezonlar dahil)`;
+  if (items.length === 1) return `S${items[0].season_number}B${items[0].episode_number} bölümünü`;
+  return `önceki ${items.length} bölümün tümünü (önceki sezonlar dahil)`;
 };
 
 export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
@@ -331,7 +331,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     if (!isEpisodeAired(ep.air_date, details.status)) {
       setRatingEpisodeModal(null);
       const dateMsg = ep.air_date ? ` (Yayın Tarihi: ${formatTurkishDate(ep.air_date)})` : '';
-      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izledim olarak işaretlenemez.`);
+      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izlendi olarak işaretlenemez.`);
       if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
       noticeTimeoutRef.current = setTimeout(() => setUnreleasedNotice(null), 4500);
       return;
@@ -367,7 +367,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
     if (!isEpisodeAired(ep.air_date, details.status)) {
       const dateMsg = ep.air_date ? ` (Yayın Tarihi: ${formatTurkishDate(ep.air_date)})` : '';
-      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izledim olarak işaretlenemez.`);
+      setUnreleasedNotice(`Bu bölüm henüz yayınlanmadı${dateMsg}. Henüz yayınlanmamış bölümler izlendi olarak işaretlenemez.`);
       if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
       noticeTimeoutRef.current = setTimeout(() => setUnreleasedNotice(null), 4500);
       return;
@@ -871,7 +871,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                         ? 'Bölümleri gizlemek için tıklayın' 
                         : userWatchStatus === 'watched'
                         ? 'Tüm bölümler tamamlandı • Bölüm detaylarını görmek için tıklayın'
-                        : 'Puan vermek ve izledim işaretlemek için tıklayın'}
+                        : 'Puan vermek ve izlendi olarak işaretlemek için tıklayın'}
                     </p>
                   </div>
                 </div>
@@ -1039,14 +1039,14 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); openNoteModal(ep); }}
                                       className="p-1 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/40 transition"
-                                      title="Kişisel Notu Oku/Düzenle"
+                                      title="Bölüm Notunu Düzenleyin"
                                     >
                                       <MessageSquare className="w-3.5 h-3.5" />
                                     </button>
                                     {/* Tooltip Bilgi Baloncuğu */}
                                     <div className="absolute bottom-full right-0 mb-2 w-52 p-2.5 rounded-xl bg-[#0B0C0E] border border-amber-500/50 text-white text-[11px] shadow-2xl opacity-0 group-hover/note:opacity-100 transition-all duration-200 pointer-events-none z-50">
                                       <div className="flex items-center justify-between mb-1 text-[9px] font-bold text-amber-400 uppercase tracking-wider">
-                                        <span>Kişisel Notun</span>
+                                        <span>Bölüm Notunuz</span>
                                         {epNoteSpoiler && (
                                           <span className="text-[#E63946] flex items-center gap-0.5">
                                             <AlertTriangle className="w-2.5 h-2.5" /> Spoiler
@@ -1133,7 +1133,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-xs sm:text-base font-extrabold text-white whitespace-nowrap truncate">Genel İnceleme & Yorumlar</h3>
-                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">Bu yapım hakkındaki puanını ver, eleştirini yaz</p>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">Bu yapım hakkındaki puanınızı verin, eleştirinizi yazın</p>
                 </div>
               </div>
 
@@ -1182,7 +1182,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                   <textarea
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
-                    placeholder="Bu yapım hakkındaki detaylı düşüncelerinizi, senaryo ve oyunculuk yorumlarınızı yazın..."
+                    placeholder="Bu yapım hakkındaki detaylı düşüncelerinizi, senaryo ve oyunculuk yorumlarınızı paylaşın..."
                     rows={3}
                     className="w-full bg-[#14171D] border border-[#232833] rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#E63946] focus:ring-1 focus:ring-[#E63946] transition"
                   />
@@ -1535,7 +1535,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
               <div>
                 <span className="text-xs font-mono font-bold text-[#E63946]">
-                  S{ratingEpisodeModal.season_number}E{ratingEpisodeModal.episode_number}
+                  S{ratingEpisodeModal.season_number}B{ratingEpisodeModal.episode_number}
                 </span>
                 <h3 className="text-lg font-black text-white mt-1">
                   {ratingEpisodeModal.name}
@@ -1631,7 +1631,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               </div>
 
               <div className="bg-[#0B0C0E] border border-[#2B313E] rounded-2xl p-4 text-slate-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-inner">
-                {formatMissingEpisodesText(batchConfirmModal.missingItems)} de izledim olarak işaretlemek ister misin?
+                {formatMissingEpisodesText(batchConfirmModal.missingItems)} de izlendi olarak işaretlemek ister misiniz?
               </div>
 
               <div className="pt-2 space-y-2.5">
@@ -1731,7 +1731,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                 <textarea
                   value={noteInputText}
                   onChange={(e) => setNoteInputText(e.target.value)}
-                  placeholder="Bu bölüm hakkında düşüncelerin, unutmak istemediğin sahneler veya notların..."
+                  placeholder="Bu bölüm hakkındaki düşünceleriniz, unutmak istemediğiniz sahneler veya notlarınız..."
                   rows={4}
                   className="w-full bg-[#0B0C0E] border border-[#2B313E] rounded-2xl p-3.5 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none custom-scrollbar leading-relaxed"
                 />

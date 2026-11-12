@@ -185,7 +185,7 @@ export const WatchLinksBox: React.FC<WatchLinksBoxProps> = ({
           </div>
           <div className="min-w-0">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#E63946] flex items-center gap-2">
-              <span>Buradan İzleyebilirsin</span>
+              <span>Buradan İzleyebilirsiniz</span>
               {links.length > 0 && (
                 <span className="text-[10px] font-mono font-bold bg-[#232833] text-slate-300 px-2 py-0.5 rounded-full">
                   {links.length} {links.length === 1 ? 'Link' : 'Link'}
@@ -382,7 +382,7 @@ export const WatchLinksBox: React.FC<WatchLinksBoxProps> = ({
                   </div>
                   <div className="min-w-0">
                     <div className="text-[11px] font-bold text-amber-300 truncate flex items-center gap-1.5">
-                      <span>Sıradaki: S{nextEpisode.seasonNumber}E{nextEpisode.episodeNumber}</span>
+                      <span>Sıradaki: S{nextEpisode.seasonNumber}B{nextEpisode.episodeNumber}</span>
                       {nextEpisode.name && <span className="opacity-80 truncate">• {nextEpisode.name}</span>}
                     </div>
                     <div className="text-[10px] text-slate-400">
@@ -403,7 +403,7 @@ export const WatchLinksBox: React.FC<WatchLinksBoxProps> = ({
                       title={`${smartLink.site_name} üzerinde S${nextEpisode.seasonNumber}B${nextEpisode.episodeNumber} bölümünü aç`}
                     >
                       <Play className="w-3.5 h-3.5 fill-current transition-transform duration-150 ease-out group-hover:scale-90 group-active:scale-75" />
-                      <span>S{nextEpisode.seasonNumber}B{nextEpisode.episodeNumber}'ü {smartLink.site_name}'da Aç</span>
+                      <span>S{nextEpisode.seasonNumber}B{nextEpisode.episodeNumber} • {smartLink.site_name} Üzerinden Aç</span>
                     </button>
                   ) : null}
 
@@ -419,7 +419,7 @@ export const WatchLinksBox: React.FC<WatchLinksBoxProps> = ({
                     title="Google'da bu bölümü ara"
                   >
                     <Search className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{smartNextEpisodeUrl ? 'Ara' : `S${nextEpisode.seasonNumber}B${nextEpisode.episodeNumber} Ara`}</span>
+                    <span>{smartNextEpisodeUrl ? 'Ara' : `S${nextEpisode.seasonNumber}B${nextEpisode.episodeNumber} Bölümünü Ara`}</span>
                   </button>
 
                   {/* Quick Add Episode Link Button */}
@@ -475,7 +475,7 @@ export const WatchLinksBox: React.FC<WatchLinksBoxProps> = ({
                         </div>
                         <div className="text-[10px] text-slate-500 truncate max-w-[170px]">
                           {hasTemplate && nextEpisode
-                            ? `Sıradaki: S${nextEpisode.seasonNumber}E${nextEpisode.episodeNumber}`
+                            ? `Sıradaki: S${nextEpisode.seasonNumber}B${nextEpisode.episodeNumber}`
                             : link.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                         </div>
                       </div>

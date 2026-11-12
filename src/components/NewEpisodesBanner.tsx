@@ -34,7 +34,7 @@ export const NewEpisodesBanner: React.FC<NewEpisodesBannerProps> = ({ onSelectSh
             </div>
             
             <p className="text-sm font-bold text-white mt-1 leading-snug">
-              <span className="text-[#E63946]">Blue Eye Samurai</span> (Sezon 2, Bölüm 1-4) ve <span className="text-amber-400">Severance</span> (S02E03) Türkçe altyazılı eklendi!
+              <span className="text-[#E63946]">Blue Eye Samurai</span> (2. Sezon, 1-4. Bölümler) ve <span className="text-amber-400">Severance</span> (2. Sezon, 3. Bölüm) Türkçe altyazı seçeneğiyle eklendi!
             </p>
           </div>
         </div>

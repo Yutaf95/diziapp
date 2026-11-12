@@ -129,7 +129,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-bold text-white">Ayarlar ve Gizlilik</h3>
-                <p className="text-xs text-neutral-400">Hesap tercihlerinizi yönetin</p>
+                <p className="text-xs text-neutral-400">Hesap tercihlerinizi ve bildirimlerinizi yönetin</p>
               </div>
             </div>
 
@@ -229,7 +229,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex items-center justify-between p-3.5 bg-neutral-900 rounded-xl border border-neutral-800">
                   <div>
                     <div className="text-xs font-bold text-white">Yeni Sezon & Bölüm Uyarıları</div>
-                    <div className="text-[11px] text-neutral-400">İzlediğin dizilere yeni bölüm geldiğinde anında haber ver.</div>
+                    <div className="text-[11px] text-neutral-400">Takip ettiğiniz dizilere yeni bölüm geldiğinde anında bildirim alın.</div>
                   </div>
                   <input
                     type="checkbox"
@@ -242,7 +242,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex items-center justify-between p-3.5 bg-neutral-900 rounded-xl border border-neutral-800">
                   <div>
                     <div className="text-xs font-bold text-white">Takip Edilen Arkadaş Bildirimleri</div>
-                    <div className="text-[11px] text-neutral-400">Arkadaşların yeni inceleme yazdığında veya puanladığında bildir.</div>
+                    <div className="text-[11px] text-neutral-400">Arkadaşlarınız yeni inceleme yazdığında veya puanlama yaptığında bildirim alın.</div>
                   </div>
                   <input
                     type="checkbox"

@@ -254,7 +254,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/15 shadow-md"
               >
                 <Plus className="w-4 h-4 text-[#E63946]" />
-                <span>İçerik Ekle</span>
+                <span>Yapım Ekle</span>
               </button>
             </div>
           </div>
@@ -268,7 +268,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
               <div className="space-y-1 max-w-md mx-auto">
                 <h3 className="text-lg font-bold text-white">Bu Liste Henüz Boş</h3>
                 <p className="text-xs text-slate-400">
-                  Kütüphanenizdeki dizi ve filmleri bu listeye ekleyerek sayfanızı kişiselleştirin.
+                  Kitaplığınızdaki dizi ve filmleri bu listeye ekleyerek sayfanızı kişiselleştirin.
                 </p>
               </div>
               <button
@@ -276,7 +276,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#E63946] text-white text-xs font-bold hover:bg-[#d62839] transition shadow-lg"
               >
                 <Plus className="w-4 h-4" />
-                <span>Kütüphanemden Ekle</span>
+                <span>Kitaplığınızdan Ekle</span>
               </button>
             </div>
           ) : (
@@ -308,7 +308,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
 
                     <div className="px-1 space-y-0.5">
                       <h4 className="text-xs font-bold text-white truncate group-hover:text-[#E63946] transition">
-                        {item.title || 'İçerik İsmi'}
+                        {item.title || 'Yapım Adı'}
                       </h4>
                     </div>
                   </div>
@@ -397,7 +397,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                         />
                       ))
                     ) : (
-                      <span className="text-[11px] text-slate-500 font-medium italic">Henüz içerik eklenmedi</span>
+                      <span className="text-[11px] text-slate-500 font-medium italic">Henüz yapım eklenmedi</span>
                     )}
                   </div>
 
@@ -517,8 +517,8 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
             
             <div className="flex items-center justify-between border-b border-[#232833] pb-3">
               <div>
-                <h3 className="text-lg font-bold text-white">İçerik Ekle</h3>
-                <p className="text-xs text-slate-400">"{activeCollection.title}" koleksiyonuna takip listenizden ekleyin</p>
+                <h3 className="text-lg font-bold text-white">Yapım Ekle</h3>
+                <p className="text-xs text-slate-400">"{activeCollection.title}" listesine kitaplığınızdan ekleyin</p>
               </div>
               <button
                 onClick={() => setShowAddItemModal(false)}
@@ -533,7 +533,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
               <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
               <input
                 type="text"
-                placeholder="Takip listenizde ara..."
+                placeholder="Kitaplığınızda arayın..."
                 value={itemSearchQuery}
                 onChange={e => setItemSearchQuery(e.target.value)}
                 className="w-full bg-[#0B0C0E] border border-[#232833] focus:border-[#E63946] rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none transition"
@@ -544,7 +544,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
             <div className="overflow-y-auto space-y-2 pr-1 flex-1 scrollbar-thin scrollbar-thumb-white/10">
               {filteredWatchlistForAdding.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-400">
-                  Eklenebilecek uygun içerik bulunamadı.
+                  Eklenebilecek uygun yapım bulunamadı.
                 </div>
               ) : (
                 filteredWatchlistForAdding.map((item) => (

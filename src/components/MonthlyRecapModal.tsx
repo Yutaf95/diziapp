@@ -91,9 +91,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
       year: curYear,
       month: curMonth,
       label: `${TURKISH_MONTH_NAMES[curMonth]} ${curYear}`,
-      badgeLabel: isCurrentMonthLocked ? '28\'inde Hazır' : 'Aktif Ay',
+      badgeLabel: isCurrentMonthLocked ? '28\'inde Erişilebilir' : 'Aktif Ay',
       isLocked: isCurrentMonthLocked,
-      lockReason: `${TURKISH_MONTH_NAMES[curMonth]} ayı henüz tamamlanmadı. Bu ayın özeti 28 ${TURKISH_MONTH_NAMES[curMonth]} tarihinde yayınlanacaktır.`
+      lockReason: `${TURKISH_MONTH_NAMES[curMonth]} ayı henüz tamamlanmadı. Bu ayın özeti 28 ${TURKISH_MONTH_NAMES[curMonth]} tarihinde erişime açılacaktır.`
     });
 
     // Previous completed months (past 5 completed months)
@@ -461,9 +461,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               poster,
               rating: localShow?.rating || (details.vote_average ? Math.round(details.vote_average * 10) / 10 : null),
               episodesWatched: topShow.count,
-              badge: `🔥 ${topShow.count} Bölüm İzledim`,
-              categoryLabel: 'ZİRVEDEKİ DİZİN',
-              subtitle: `${selectedPeriod.label} döneminde ekran başında en çok izlediğin dizi`
+              badge: `🔥 ${topShow.count} Bölüm İzlendi`,
+              categoryLabel: 'ZİRVEDEKİ DİZİNİZ',
+              subtitle: `${selectedPeriod.label} döneminde ekran başında en çok izlediğiniz dizi`
             });
 
             // Accumulate actor scores for Top Show (lead cast gets +topShow.count)
@@ -488,9 +488,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               poster,
               rating: localShow?.rating || null,
               episodesWatched: topShow.count,
-              badge: `🔥 ${topShow.count} Bölüm İzledim`,
-              categoryLabel: 'ZİRVEDEKİ DİZİN',
-              subtitle: `${selectedPeriod.label} döneminde ekran başında en çok izlediğin dizi`
+              badge: `🔥 ${topShow.count} Bölüm İzlendi`,
+              categoryLabel: 'ZİRVEDEKİ DİZİNİZ',
+              subtitle: `${selectedPeriod.label} döneminde ekran başında en çok izlediğiniz dizi`
             });
           }
         }
@@ -522,9 +522,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               title,
               poster,
               rating: topMovie.rating || (details.vote_average ? Math.round(details.vote_average * 10) / 10 : null),
-              badge: topMovie.rating ? `★ ${topMovie.rating}/10 Puanın` : 'Öne Çıkan Film',
-              categoryLabel: 'ZİRVE FİLMİN',
-              subtitle: `${selectedPeriod.label} döneminde tamamladığın yapım`
+              badge: topMovie.rating ? `★ ${topMovie.rating}/10 Puanınız` : 'Öne Çıkan Film',
+              categoryLabel: 'ZİRVE FİLMİNİZ',
+              subtitle: `${selectedPeriod.label} döneminde tamamladığınız yapım`
             });
 
             // Movie actors get +3 points each
@@ -548,9 +548,9 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
               title,
               poster,
               rating: topMovie.rating || null,
-              badge: topMovie.rating ? `★ ${topMovie.rating}/10 Puanın` : 'Öne Çıkan Film',
-              categoryLabel: 'ZİRVE FİLMİN',
-              subtitle: `${selectedPeriod.label} döneminde tamamladığın yapım`
+              badge: topMovie.rating ? `★ ${topMovie.rating}/10 Puanınız` : 'Öne Çıkan Film',
+              categoryLabel: 'ZİRVE FİLMİNİZ',
+              subtitle: `${selectedPeriod.label} döneminde tamamladığınız yapım`
             });
           }
         }
@@ -624,8 +624,8 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
             name: bestActor.name,
             role: bestActor.role,
             photo: bestActor.photo,
-            appearances: `Ekran Frekansı: Yüksek`,
-            description: `${selectedPeriod.label} döneminde izlediğin yapımlarda ekranını en çok dolduran oyuncu.`
+            appearances: `Ekran Süresi: Yüksek`,
+            description: `${selectedPeriod.label} döneminde izlediğiniz yapımlarda ekranınızı en çok dolduran oyuncu.`
           });
         } else {
           setTopActor(null);
@@ -644,7 +644,7 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
   const handleShareRecap = () => {
     const summaryText = `✨ ${user.full_name || user.username} - ${selectedPeriod.label} İzleme Özeti (Wrapped) ✨\n` +
       `⏱️ Toplam Ekran Süresi: ${totalHours} Saat\n` +
-      `📺 İzlenen Bölümler: ${episodeCount} Bölüm\n` +
+      `📺 İzlenen Bölüm Sayısı: ${episodeCount}\n` +
       `🍿 Tamamlanan Filmler: ${movieCount} Film\n` +
       (topSeriesDetails ? `🔥 Zirve Dizi: ${topSeriesDetails.title} (${topSeriesDetails.episodesWatched || 0} Bölüm)\n` : '') +
       (secondaryDetails ? `🌟 ${secondaryDetails.categoryLabel}: ${secondaryDetails.title}\n` : '') +
@@ -917,10 +917,10 @@ export const MonthlyRecapModal: React.FC<MonthlyRecapModalProps> = ({
                 </div>
                 <div className="text-sm sm:text-base italic text-slate-300 font-bold">
                   {totalHours >= 40 
-                    ? '"Resmen ekran başında maraton koştun! 🚀"' 
+                    ? '"Resmen ekran başında maraton koştunuz! 🚀"' 
                     : totalHours >= 15 
-                      ? '"Harika bir izleme temposu yakaladın! 🍿"' 
-                      : '"Kütüphaneni zenginleştirmeye devam ediyorsun! ✨"'}
+                      ? '"Harika bir izleme temposu yakaladınız! 🍿"' 
+                      : '"Kitaplığınızı zenginleştirmeye devam ediyorsunuz! ✨"'}
                 </div>
               </div>
 

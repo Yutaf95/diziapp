@@ -74,7 +74,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => 
             <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  TMDB v3 API Key
+                  TMDB v3 API Anahtarı
                 </label>
                 <input
                   type="text"
@@ -88,13 +88,13 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5">
                   <Bot className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Google Gemini API Key (İsteğe Bağlı)</span>
+                  <span>Google Gemini API Anahtarı (İsteğe Bağlı)</span>
                 </label>
                 <input
                   type="password"
                   value={geminiKeyInput}
                   onChange={(e) => setGeminiKeyInput(e.target.value)}
-                  placeholder="AI Studio Gemini Key (Örn: AIzaSy...)"
+                  placeholder="AI Studio Gemini Anahtarı (Örn: AIzaSy...)"
                   className="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">

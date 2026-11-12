@@ -16,7 +16,7 @@ export const SPOTLIGHT_SHOWS: SpotlightShowItem[] = [
     name: 'Severance',
     title: 'Severance',
     spotlightCategory: 'recommendation',
-    categoryLabel: 'İzlediklerine Göre Sevebileceklerin',
+    categoryLabel: 'İzlediklerinize Göre Sevebilecekleriniz',
     reasonBadge: '✨ Severance & Black Mirror Sevenlere',
     seasonsCount: '2 Sezon • 19 Bölüm',
     overview: 'Lumon Industries\'de çalışan Mark, anılarının iş ve özel hayatı arasında cerrahi olarak ayrıldığı gizemli bir ameliyat geçirmiştir. Ancak mesai arkadaşının ansızın kaybolmasıyla iş yerindeki ürkütücü gerçekler aralanır.',
@@ -38,7 +38,7 @@ export const SPOTLIGHT_SHOWS: SpotlightShowItem[] = [
     name: 'Arcane',
     title: 'Arcane',
     spotlightCategory: 'recommendation',
-    categoryLabel: 'İzlediklerine Göre Sevebileceklerin',
+    categoryLabel: 'İzlediklerinize Göre Sevebilecekleriniz',
     reasonBadge: '✨ Blue Eye Samurai & Animasyon Severlere',
     seasonsCount: '2 Sezon • 18 Bölüm',
     overview: 'Ütopik zengin Piltover şehri ile yeraltı şehri Zaun arasındaki derin uçurumda geçen iki ikonik şampiyon kardeş Vi ve Jinx\'in trajik ayrılığı ve teknoloji-büyü savaşı.',
@@ -60,7 +60,7 @@ export const SPOTLIGHT_SHOWS: SpotlightShowItem[] = [
     name: 'The Last of Us',
     title: 'The Last of Us',
     spotlightCategory: 'recommendation',
-    categoryLabel: 'İzlediklerine Göre Sevebileceklerin',
+    categoryLabel: 'İzlediklerinize Göre Sevebilecekleriniz',
     reasonBadge: '✨ Kıyamet Sonrası Dram & Macera',
     seasonsCount: '2 Sezon • 16 Bölüm',
     overview: 'Salgının çökerttiği kıyamet sonrası dünyada, sertleşmiş bir hayatta kalan olan Joel, insanlığın tek mantarlı bağışıklık umudu olabilecek 14 yaşındaki Ellie\'yi karantina bölgesinden kaçırır.',
@@ -153,7 +153,7 @@ export const SPOTLIGHT_MOVIES: SpotlightShowItem[] = [
     name: 'Dune: Part Two',
     title: 'Dune: Çöl Gezegeni Bölüm İki',
     spotlightCategory: 'recommendation',
-    categoryLabel: 'İzlediklerine Göre Sevebileceklerin',
+    categoryLabel: 'İzlediklerinize Göre Sevebilecekleriniz',
     reasonBadge: '✨ Sci-Fi & Sinematik Şaheser',
     seasonsCount: '2s 46dk • 2024',
     overview: 'Paul Atreides, Chani ve Fremenlerle birleşerek ailesini yok eden komplo kurucularına karşı intikam savaşı başlatır. Hayatının aşkı ile bilinen evrenin kaderi arasında seçim yapmak zorundadır.',
@@ -174,7 +174,7 @@ export const SPOTLIGHT_MOVIES: SpotlightShowItem[] = [
     name: 'Oppenheimer',
     title: 'Oppenheimer',
     spotlightCategory: 'recommendation',
-    categoryLabel: 'İzlediklerine Göre Sevebileceklerin',
+    categoryLabel: 'İzlediklerinize Göre Sevebilecekleriniz',
     reasonBadge: '✨ Christopher Nolan Sineması',
     seasonsCount: '3s 00dk • 2023',
     overview: 'Fizikçi J. Robert Oppenheimer\'ın Manhattan Projesi kapsamında ilk atom bombasını geliştirmesi ve dünyayı sonsuza dek değiştiren bilimsel ve ahlaki çatışması.',
@@ -195,7 +195,7 @@ export const SPOTLIGHT_MOVIES: SpotlightShowItem[] = [
     name: 'Interstellar',
     title: 'Yıldızlararası (Interstellar)',
     spotlightCategory: 'recommendation',
-    categoryLabel: 'İzlediklerine Göre Sevebileceklerin',
+    categoryLabel: 'İzlediklerinize Göre Sevebilecekleriniz',
     reasonBadge: '✨ Uzay & Zamanda Yolculuk',
     seasonsCount: '2s 49dk • 2014',
     overview: 'İnsanlığın sonunun yaklaştığı bir gelecekte, bir grup kaşif insan türünün devamını sağlayacak yeni bir yaşanabilir gezegen bulmak için bir solucan deliğinden geçer.',
@@ -318,7 +318,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
         </div>
         <h3 className="text-base font-bold text-white">Harika! Tüm Öneriler Listenizde</h3>
         <p className="text-xs text-slate-400 max-w-md mx-auto">
-          Önerilen tüm {mediaType === 'movie' ? 'filmleri' : mediaType === 'tv' ? 'dizileri' : 'yapımları'} izleme listenize eklediniz. Aşağıdaki kütüphanenizden tüm içerikleri takip edebilirsiniz.
+          Önerilen tüm {mediaType === 'movie' ? 'filmleri' : mediaType === 'tv' ? 'dizileri' : 'yapımları'} izleme listenize eklediniz. Aşağıdaki kitaplığınızdan tüm yapımları takip edebilirsiniz.
         </p>
       </div>
     );

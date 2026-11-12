@@ -17,8 +17,8 @@ interface EpisodeTrackerProps {
 
 const formatMissingEpisodesText = (items: Array<{ season_number: number; episode_number: number }>): string => {
   if (items.length === 0) return '';
-  if (items.length === 1) return `S${items[0].season_number}E${items[0].episode_number} bölümünü`;
-  return `önceki ${items.length} bölümü (tüm önceki sezonlar dahil)`;
+  if (items.length === 1) return `S${items[0].season_number}B${items[0].episode_number} bölümünü`;
+  return `önceki ${items.length} bölümün tümünü (önceki sezonlar dahil)`;
 };
 
 export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
@@ -321,12 +321,12 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
           <Tv className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-bold text-white mb-2">
-          {hasTvInWatching ? 'Tüm Sezonları İzledin! 🎉' : 'Takip Ettiğin Dizi Bulunmuyor'}
+          {hasTvInWatching ? 'Tüm Sezonları İzlediniz! 🎉' : 'Takip Ettiğiniz Dizi Bulunmuyor'}
         </h2>
         <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
           {hasTvInWatching
-            ? 'Takip ettiğin dizilerin mevcut tüm sezon ve bölümlerini bitirdin. Yeni bir sezon veya bölüm yayınlandığında dizi otomatik olarak buraya geri gelecektir.'
-            : 'Dizilerini "İzliyorum" listesine ekleyerek bölüm bölüm gelişimini takip edebilir ve izlediğin bölümleri tek tıkla işaretleyebilirsin.'}
+            ? 'Takip ettiğiniz dizilerin mevcut tüm sezon ve bölümlerini bitirdiniz. Yeni bir sezon veya bölüm yayınlandığında dizi otomatik olarak buraya geri gelecektir.'
+            : 'Dizilerinizi "İzliyorum" listesine ekleyerek bölüm bölüm gelişiminizi takip edebilir ve izlediğiniz bölümleri tek tıkla işaretleyebilirsiniz.'}
         </p>
       </div>
     );
@@ -443,15 +443,15 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                         className="mt-3 flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg text-xs text-slate-200 border border-slate-700/60 hover:border-amber-500/60 max-w-full min-w-0 cursor-pointer transition select-none group"
                         title={
                           smartLink
-                            ? `Sıradaki Bölümü Aç: S${nextEp.season_number}E${nextEp.episode_number} (${smartLink.site_name})`
+                            ? `Sıradaki Bölümü Aç: S${nextEp.season_number}B${nextEp.episode_number} (${smartLink.site_name})`
                             : generalLink
-                            ? `${generalLink.site_name}'ı Aç`
+                            ? `${generalLink.site_name} Sitesine Git`
                             : 'İzleme Linki Ekle ve Bölümü Aç'
                         }
                       >
                         <Play className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                         <span className="font-semibold text-amber-300 shrink-0">Sıradaki:</span>
-                        <span className="truncate min-w-0">S{nextEp.season_number}E{nextEp.episode_number} - {nextEp.name}</span>
+                        <span className="truncate min-w-0">S{nextEp.season_number}B{nextEp.episode_number} - {nextEp.name}</span>
                       </div>
                     )}
                   </div>
@@ -470,7 +470,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                     >
                       <Check className="w-4 h-4 stroke-[3] shrink-0" />
                       <span className="truncate">
-                        {isEpWatched(showId, nextEp.season_number, nextEp.episode_number) ? 'İzledim' : 'Sıradakini İzledim Yap'}
+                        {isEpWatched(showId, nextEp.season_number, nextEp.episode_number) ? 'İzlendi' : 'Sıradakini İzlendi İşaretle'}
                       </span>
                     </button>
                   )}
@@ -580,7 +580,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-mono font-bold text-amber-400">
-                                S{ep.season_number}E{ep.episode_number}
+                                S{ep.season_number}B{ep.episode_number}
                               </span>
                               <span className={`text-sm font-semibold truncate ${watched ? 'line-through text-slate-500' : 'text-slate-200'}`}>
                                 {ep.name}
@@ -641,7 +641,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
             </div>
 
             <div className="bg-[#0B0C0E] border border-[#2B313E] rounded-2xl p-4 text-slate-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-inner">
-              {formatMissingEpisodesText(batchModal.missingItems)} de izledim olarak işaretlemek ister misin?
+              {formatMissingEpisodesText(batchModal.missingItems)} de izlendi olarak işaretlemek ister misiniz?
             </div>
 
             <div className="pt-2 space-y-2.5">

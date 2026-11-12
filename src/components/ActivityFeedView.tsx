@@ -214,7 +214,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                   <Flame className="w-3 h-3 fill-current" /> Son 48 Saat
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">Arkadaşlarının ve topluluğun son 48 saatteki güncel aktiviteleri</p>
+              <p className="text-xs text-slate-400 mt-0.5">Arkadaşlarınızın ve topluluğun son 48 saatteki izleme hareketleri</p>
             </div>
           </div>
 
@@ -347,7 +347,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                         {isFollowing ? (
                           <>
                             <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Takipte</span>
+                            <span>Takip Ediliyor</span>
                           </>
                         ) : (
                           <>
@@ -375,9 +375,9 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                   <div className="w-12 h-12 rounded-2xl bg-[#0B0C0E] border border-[#232833] flex items-center justify-center text-slate-500 mx-auto">
                     <Clock className="w-6 h-6 stroke-[1.5] text-amber-400" />
                   </div>
-                  <h3 className="text-sm font-bold text-white">Takip Ettiğin Kişilerden Son 48 Saatte Aktivite Yok</h3>
+                  <h3 className="text-sm font-bold text-white">Takip Ettiğiniz Kişilerden Son 48 Saatte Aktivite Yok</h3>
                   <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    Takip ettiğin kullanıcıların son 48 saatte henüz bir aktivitesi bulunmuyor. Topluluk akışına göz atabilirsin:
+                    Takip ettiğiniz kullanıcıların son 48 saatte henüz bir aktivitesi bulunmuyor. Topluluk akışına göz atabilirsiniz:
                   </p>
                   <button
                     type="button"
@@ -385,7 +385,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E63946] hover:bg-[#d62839] text-white text-xs font-extrabold transition shadow-lg shadow-[#E63946]/20 cursor-pointer"
                   >
                     <Globe className="w-3.5 h-3.5" />
-                    <span>Tüm Topluluk Akışına Bak ({validAllActivities.length} Aktivite)</span>
+                    <span>Tüm Topluluk Akışını Gör ({validAllActivities.length} Aktivite)</span>
                   </button>
                 </div>
               );
@@ -522,7 +522,7 @@ export const ActivityFeedView: React.FC<ActivityFeedViewProps> = ({
                       >
                         <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-400">
                           <AlertTriangle className="w-4 h-4" />
-                          <span>SPOILER İÇERİR - Görmek İçin Tıkla</span>
+                          <span>⚠️ SPOILER İÇERİR - Görmek İçin Tıklayın</span>
                         </div>
                       </div>
                     ) : (

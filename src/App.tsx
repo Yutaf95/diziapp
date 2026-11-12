@@ -1685,7 +1685,6 @@ export default function App() {
       setSession(null);
     } else {
       setCurrentUser(CURRENT_USER);
-      alert('Yerel oturum kapatıldı. ttime hesabınızdan güvenle çıkış yaptınız.');
     }
   };
 
@@ -3072,9 +3071,9 @@ export default function App() {
                             {statusFilter === 'watching'
                               ? `İzliyorum (${gridDisplayMedia.length})`
                               : statusFilter === 'plan_to_watch'
-                              ? `İzlenecek (${gridDisplayMedia.length})`
+                              ? `İzlenecekler (${gridDisplayMedia.length})`
                               : statusFilter === 'watched'
-                              ? `İzledim (${gridDisplayMedia.length})`
+                              ? `İzlediklerim (${gridDisplayMedia.length})`
                               : 'Dizi & Film Önerileri'}
                           </h2>
                         </div>
@@ -3131,10 +3130,10 @@ export default function App() {
                           {statusFilter === 'watching'
                             ? `İzliyorum (${filteredGridMedia.length})`
                             : statusFilter === 'plan_to_watch'
-                            ? `İzlenecek (${filteredGridMedia.length})`
+                            ? `İzlenecekler (${filteredGridMedia.length})`
                             : statusFilter === 'watched'
-                            ? `İzledim (${filteredGridMedia.length})`
-                            : `Kitaplığım (${filteredGridMedia.length})`}
+                            ? `İzlediklerim (${filteredGridMedia.length})`
+                            : `Kitaplığınız (${filteredGridMedia.length})`}
                         </h2>
                       </div>
 

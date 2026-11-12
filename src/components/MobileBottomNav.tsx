@@ -61,7 +61,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         }`}
       >
         <Library className={`w-5 h-5 ${activeTab === 'watchlist' || activeTab === 'collections' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-        <span className="text-[10px] tracking-tight">Kitaplığım</span>
+        <span className="text-[10px] tracking-tight">Kitaplığınız</span>
       </button>
 
       {/* 📡 Akış (Feed) */}

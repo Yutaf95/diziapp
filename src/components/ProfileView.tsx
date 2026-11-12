@@ -693,7 +693,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     }`}
                   >
                     {isFollowing ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                    <span>{isFollowing ? 'Takiptesin' : 'Takip Et'}</span>
+                    <span>{isFollowing ? 'Takip Ediliyor' : 'Takip Et'}</span>
                   </button>
                 )}
               </div>
@@ -832,7 +832,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     {watchedEpsCount.toLocaleString('tr-TR')}
                   </div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-400">
-                    Bölüm izledim
+                    Bölüm izlendi
                   </div>
                 </div>
 
@@ -842,7 +842,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     {moviesWatchedCount.toLocaleString('tr-TR')}
                   </div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-400">
-                    Film izledim
+                    Film izlendi
                   </div>
                 </div>
 
@@ -1187,7 +1187,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           <p className="text-base sm:text-lg font-extrabold text-white">Henüz sabitlenmiş bir inceleme yok</p>
                           {isOwnProfile && (
                             <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
-                              Sol menüdeki <strong className="text-white font-bold">İncelemelerin</strong> sekmesine giderek dilediğiniz incelemenin altındaki <strong className="text-amber-400 font-bold">"Profile Sabitle"</strong> butonuna tıklayıp burada öne çıkarabilirsiniz.
+                              Sol menüdeki <strong className="text-white font-bold">İncelemeleriniz</strong> sekmesine giderek dilediğiniz incelemenin altındaki <strong className="text-amber-400 font-bold">"Profile Sabitle"</strong> butonuna tıklayıp burada öne çıkarabilirsiniz.
                             </p>
                           )}
                         </div>
@@ -1234,7 +1234,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 ))
               ) : (
                 <div className="col-span-5 py-12 text-center text-sm text-[#9ab] font-medium">
-                  Kütüphanenizde henüz izlenmiş film bulunmuyor.
+                  Kitaplığınızda henüz izlenmiş film bulunmuyor.
                 </div>
               )}
             </div>
@@ -1283,7 +1283,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <div className="space-y-1 min-w-0">
                         <h4 className="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-[#40bcf4] transition leading-snug">{item.title}</h4>
                         {epsWatched > 0 && (
-                          <p className="text-[11px] text-[#00e054] font-semibold leading-tight">{epsWatched} Bölüm İzledim</p>
+                          <p className="text-[11px] text-[#00e054] font-semibold leading-tight">
+                            {isOwnProfile ? `${epsWatched} Bölüm İzlediniz` : `${epsWatched} Bölüm İzlendi`}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1291,7 +1293,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 })
               ) : (
                 <div className="col-span-5 py-12 text-center text-sm text-[#9ab] font-medium">
-                  Kütüphanenizde henüz takip edilen dizi bulunmuyor.
+                  Kitaplığınızda henüz takip edilen dizi bulunmuyor.
                 </div>
               )}
             </div>
@@ -1302,8 +1304,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {activeSubTab === 'reviews' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="border-b border-[#2c3440]/60 pb-3 flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">Tüm İncelemelerin ({displayReviews.length})</h2>
-              <span className="text-xs sm:text-sm text-[#9ab] font-medium">Topluluğa kattığın tüm değerlendirmeler</span>
+              <h2 className="text-base sm:text-lg font-extrabold text-white uppercase tracking-wider">Tüm İncelemeleriniz ({displayReviews.length})</h2>
+              <span className="text-xs sm:text-sm text-[#9ab] font-medium">Topluluğa kattığınız tüm değerlendirmeler</span>
             </div>
 
             <div className="space-y-5">
@@ -1514,8 +1516,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <h3 className="text-base sm:text-xl font-black text-white tracking-tight">✨ {recapMonthInfo.name} Ayı İzleme Özeti (Wrapped)</h3>
                     <p className="text-xs text-slate-300 font-medium mt-0.5">
                       {recapMonthInfo.isPreviousMonth
-                        ? `${recapMonthInfo.name} ayındaki tüm izleme dakikaların, favori türlerin ve zirve yapımların hazır!`
-                        : 'Bu ayki tüm izleme dakikaların, favori türlerin ve zirve yapımların animasyonlu hikaye formatında hazır!'}
+                        ? `${recapMonthInfo.name} ayındaki tüm izleme dakikalarınız, favori türleriniz ve zirve yapımlarınız hazır!`
+                        : 'Bu ayki tüm izleme dakikalarınız, favori türleriniz ve zirve yapımlarınız animasyonlu hikaye formatında hazır!'}
                     </p>
                   </div>
                 </div>
@@ -1570,7 +1572,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">En Çok İzlenen Tür</div>
                 <div className="text-xl sm:text-2xl font-black text-amber-400">{topGenre.genre}</div>
-                <div className="text-[11px] text-slate-400 font-mono">%{topGenre.percent} Kütüphane Oranı</div>
+                <div className="text-[11px] text-slate-400 font-mono">%{topGenre.percent} Kitaplık Oranı</div>
               </div>
             </div>
 

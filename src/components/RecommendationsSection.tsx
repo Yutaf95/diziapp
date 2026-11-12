@@ -274,7 +274,7 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
           </div>
           <div>
             <h2 className="text-base font-black text-white tracking-tight flex items-center gap-2">
-              <span>Bunları da Beğenebilirsin</span>
+              <span>Bunları da Beğenebilirsiniz</span>
             </h2>
             <p className="text-[11px] text-slate-400">
               Sizin için özel seçilmiş popüler ve benzeri yapım önerileri

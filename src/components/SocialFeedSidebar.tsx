@@ -273,7 +273,7 @@ export const SocialFeedSidebar: React.FC<SocialFeedSidebarProps> = ({
                   className={`flex items-center gap-1 hover:text-[#E63946] transition ${isLiked ? 'text-[#E63946] font-bold' : ''}`}
                 >
                   <ThumbsUp className={`w-3 h-3 ${isLiked ? 'fill-[#E63946]' : ''}`} />
-                  <span>{isLiked ? 'Beğendin' : 'Beğen'}</span>
+                  <span>{isLiked ? 'Beğenildi' : 'Beğen'}</span>
                 </button>
 
                 <div className="flex items-center gap-1 hover:text-slate-200 transition">

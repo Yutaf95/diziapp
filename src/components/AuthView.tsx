@@ -434,7 +434,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
                   className="text-[11px] text-amber-400 hover:text-amber-300 hover:underline font-semibold flex items-center gap-1 transition cursor-pointer"
                 >
                   <KeyRound className="w-3 h-3" />
-                  <span>Zaten kodunuz var mı? Kodu girin →</span>
+                  <span>Zaten doğrulama kodunuz var mı? Kodu girin →</span>
                 </button>
               </div>
             </div>
@@ -510,7 +510,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
                     className="text-[11px] font-bold text-[#E63946] hover:underline disabled:text-slate-500 disabled:no-underline cursor-pointer transition flex items-center gap-1"
                   >
                     <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                    <span>{resendCooldown > 0 ? `Tekrar gönder (${resendCooldown}s)` : 'Kodu Tekrar Gönder'}</span>
+                    <span>{resendCooldown > 0 ? `Tekrar gönder (${resendCooldown} sn)` : 'Kodu Tekrar Gönder'}</span>
                   </button>
                 </div>
               </div>
@@ -572,7 +572,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
                     }}
                     className="text-[11px] font-semibold text-[#E63946] hover:underline cursor-pointer transition"
                   >
-                    Şifremi unuttum?
+                    Şifremi unuttum!
                   </button>
                 )}
               </div>
@@ -673,7 +673,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, initialMode =
                 className="flex items-center gap-1 font-bold text-slate-400 hover:text-white transition cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Farklı hesap dene</span>
+                <span>Farklı bir hesapla deneyin</span>
               </button>
               <button
                 type="button"

@@ -21,7 +21,7 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 
-  const title = media.title || media.name || 'İçerik';
+  const title = media.title || media.name || 'Yapım';
   const isTv = media.media_type === 'tv' || !!media.first_air_date;
   const mediaType = isTv ? 'tv' : 'movie';
 
@@ -103,7 +103,7 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
                     )}
                     <div className="min-w-0 flex-1">
                       <h4 className="text-xs truncate">{col.title}</h4>
-                      <p className="text-[10px] text-slate-400 font-medium">{col.items.length} içerik</p>
+                      <p className="text-[10px] text-slate-400 font-medium">{col.items.length} yapım</p>
                     </div>
                   </div>
 
@@ -124,7 +124,7 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
             <input
               type="text"
               required
-              placeholder="Yeni Liste İsmi..."
+              placeholder="Yeni liste adı..."
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
               className="w-full bg-[#0B0C0E] border border-[#232833] focus:border-[#E63946] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none"
@@ -136,7 +136,7 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
                 onClick={() => setShowQuickCreate(false)}
                 className="px-3 py-1.5 rounded-xl bg-white/5 text-slate-400 text-xs font-semibold"
               >
-                İptal
+                Vazgeç
               </button>
               <button
                 type="submit"
@@ -152,7 +152,7 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
             className="w-full py-2.5 px-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-dashed border-white/20 text-slate-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4 text-[#E63946]" />
-            <span>+ Yeni Liste Oluştur</span>
+            <span>Yeni Liste Oluştur</span>
           </button>
         )}
 

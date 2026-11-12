@@ -56,7 +56,7 @@ export const ConfirmRemoveModal: React.FC<ConfirmRemoveModalProps> = ({
         };
       default:
         return {
-          name: 'Kütüphaneniz',
+          name: 'Kitaplığınız',
           color: 'text-slate-300 bg-slate-800 border-slate-700',
           icon: AlertTriangle,
         };
@@ -83,7 +83,7 @@ export const ConfirmRemoveModal: React.FC<ConfirmRemoveModalProps> = ({
             </span>
             <div>
               <h3 className="text-base font-extrabold text-white">Listeden Kaldır</h3>
-              <p className="text-xs text-slate-400 font-medium">Kütüphane Onayı</p>
+              <p className="text-xs text-slate-400 font-medium">Kitaplık Onayı</p>
             </div>
           </div>
 
@@ -132,10 +132,10 @@ export const ConfirmRemoveModal: React.FC<ConfirmRemoveModalProps> = ({
         <div className="space-y-1.5 text-center sm:text-left">
           <p className="text-sm font-semibold text-slate-200 leading-relaxed">
             <strong className="text-white font-extrabold">"{title}"</strong> adlı yapımı{' '}
-            <strong className="text-amber-400 font-extrabold">"{statusInfo.name}"</strong> listesinden kaldırmak istediğinize emin misiniz?
+            <strong className="text-amber-400 font-extrabold">"{statusInfo.name}"</strong> listesinden kaldırmak istediğinizden emin misiniz?
           </p>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Bu işlem yapımı kütüphanenizden çıkaracaktır. Dilediğiniz zaman arama veya keşfet bölümünden tekrar ekleyebilirsiniz.
+            Bu işlem yapımı kitaplığınızdan çıkaracaktır. Dilediğiniz zaman arama veya keşfet bölümünden tekrar ekleyebilirsiniz.
           </p>
         </div>
 

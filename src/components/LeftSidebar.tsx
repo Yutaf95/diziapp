@@ -132,7 +132,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       {/* 4. Kütüphane Sayaçlı Filtre Menüsü */}
       <div className="bg-[#14171D] border border-[#232833] rounded-2xl p-3.5 space-y-1.5 shadow-lg">
         <div className="px-2 py-1 mb-1 text-xs uppercase font-extrabold tracking-wider text-slate-400 flex items-center justify-between">
-          <span>Kütüphane</span>
+          <span>Kitaplığınız</span>
           <span className="text-slate-400 font-mono text-xs font-bold">{totalCount} kayıt</span>
         </div>
 
@@ -173,7 +173,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         >
           <div className="flex items-center gap-3">
             <Clock className="w-4.5 h-4.5 text-amber-400" />
-            <span>İzlenecek</span>
+            <span>İzlenecekler</span>
           </div>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-extrabold bg-amber-400/20 text-amber-400">
             {planToWatchCount}
@@ -194,7 +194,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         >
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
-            <span>İzledim</span>
+            <span>İzlediklerim</span>
           </div>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-extrabold bg-emerald-400/20 text-emerald-400">
             {watchedCount}
@@ -242,7 +242,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         >
           <div className="flex items-center gap-3">
             <Layers className="w-4.5 h-4.5" />
-            <span>Listelerim</span>
+            <span>Listeleriniz</span>
           </div>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-white/10 text-slate-300">
             {collections.length}
@@ -259,7 +259,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         >
           <div className="flex items-center gap-3">
             <Heart className="w-4.5 h-4.5 text-rose-500" />
-            <span>Favorilerim</span>
+            <span>Favorileriniz</span>
           </div>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-white/10 text-slate-300">
             {favorites.length}
@@ -276,7 +276,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         >
           <div className="flex items-center gap-3">
             <MessageSquare className="w-4.5 h-4.5 text-amber-400" />
-            <span>İncelemelerin</span>
+            <span>İncelemeleriniz</span>
           </div>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-white/10 text-slate-300">
             {reviews.length}

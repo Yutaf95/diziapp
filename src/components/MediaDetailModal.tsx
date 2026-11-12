@@ -193,7 +193,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
         if (isTv) {
           setSelectedSeasonNum(1);
           setLoadingSeason(true);
-          const s1 = await getSeasonDetails(media.id, 1);
+          const s1 = await getSeasonDetails(media.id, 1, media.title || media.name);
           if (isMounted) setSeasonDetails(s1);
         }
       } catch (err) {
@@ -213,7 +213,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     setSelectedSeasonNum(seasonNum);
     setLoadingSeason(true);
     try {
-      const seasonData = await getSeasonDetails(media.id, seasonNum);
+      const seasonData = await getSeasonDetails(media.id, seasonNum, media.title || media.name);
       setSeasonDetails(seasonData);
     } catch (e) {
       console.error(e);

@@ -46,7 +46,7 @@ const safeParseDate = (d?: string | null): number => {
 import { sortFranchiseAlphabetical } from './lib/sorting';
 
 import { TMDBMedia, WatchStatus, WatchStatusType, EpisodeProgress, RatingReview, ActivityFeedItem, MediaType, CustomCollection, CollectionItem, Profile, AppNotification } from './types';
-import { getTrending, search, getDetails, getSeasonDetails } from './lib/tmdb';
+import { getTrending, search, getDetails, getSeasonDetails, preloadTvShowSeasons } from './lib/tmdb';
 import { DEFAULT_AVATAR_URL } from './lib/constants';
 import { Flame, Tv, Film, Bookmark, Eye, Clock, CheckCircle2, Heart, Plus, X, Search, Loader2, Sparkles, MessageSquare, Star, ThumbsUp, Pin, Pencil, Trash2, Check } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -1768,6 +1768,11 @@ export default function App() {
         created_at: new Date().toISOString()
       };
       setActivityFeed(prev => [newActivity, ...prev]);
+
+      // Automatically preload & translate all seasons and episode overviews when added to watching or plan_to_watch
+      if (isTv && (status === 'watching' || status === 'plan_to_watch')) {
+        preloadTvShowSeasons(media.id, title, media.number_of_seasons).catch(() => {});
+      }
 
       // If a TV show is marked as 'watched', automatically mark all episodes as watched (unless triggered by show completion)
       if (status === 'watched' && isTv && !skipEpisodeSync) {

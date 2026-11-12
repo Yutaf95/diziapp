@@ -67,9 +67,21 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
     const handleLinksUpdate = () => {
       setAllWatchLinks(getStoredWatchLinks());
     };
+    const handleSeasonsUpdated = () => {
+      try {
+        const saved = localStorage.getItem('diziapp_seasons_cache');
+        if (saved) {
+          const parsed: Record<string, TMDBSeasonDetails> = JSON.parse(saved);
+          setSeasonsData(prev => ({ ...prev, ...parsed }));
+        }
+      } catch {}
+    };
+
     window.addEventListener('diziapp_watch_links_updated', handleLinksUpdate);
+    window.addEventListener('diziapp_seasons_updated', handleSeasonsUpdated);
     return () => {
       window.removeEventListener('diziapp_watch_links_updated', handleLinksUpdate);
+      window.removeEventListener('diziapp_seasons_updated', handleSeasonsUpdated);
     };
   }, []);
 
@@ -178,7 +190,7 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
             const totalSeasons = details?.number_of_seasons || item.number_of_seasons || 25;
             for (let s = 1; s <= totalSeasons; s++) {
               try {
-                const sData = await getSeasonDetails(item.media_id, s);
+                const sData = await getSeasonDetails(item.media_id, s, details?.title || details?.name || item.title);
                 if (sData && sData.episodes && sData.episodes.length > 0) {
                   // Sadece yayınlanmış bölümleri dahil et
                   const airedEpisodes = sData.episodes.filter(ep => isEpisodeAired(ep.air_date, details?.status));
@@ -574,7 +586,10 @@ export const EpisodeTracker: React.FC<EpisodeTrackerProps> = ({
                                 {ep.name}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">
+                            <p 
+                              className="text-xs text-slate-400 line-clamp-2 mt-0.5 leading-relaxed"
+                              title={ep.overview || undefined}
+                            >
                               {ep.overview || 'Bölüm özeti bulunmuyor.'}
                             </p>
                           </div>

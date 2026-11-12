@@ -1,4 +1,6 @@
 import { TMDBMedia, TMDBSeasonDetails, TMDBEpisode, MediaType } from '../types';
+import { translateOverview, translateEpisodesBatch } from './translator';
+import { isEpisodeAired } from '../utils/dateUtils';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
@@ -284,11 +286,31 @@ export async function getDetails(
       profile_path: c.profile_path
     }));
 
+    // If overview is missing in Turkish, fallback to English and translate to fluent Turkish
+    let overview = data.overview;
+    if (!overview || overview.trim() === '') {
+      try {
+        const enRes = await fetch(`${TMDB_BASE_URL}/${type}/${id}?api_key=${apiKey}&language=en-US`);
+        if (enRes.ok) {
+          const enData = await enRes.json();
+          if (enData.overview && enData.overview.trim() !== '') {
+            overview = await translateOverview(enData.overview, {
+              showTitle: data.title || data.name,
+              showId: id
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Media detail en-US fallback failed:', e);
+      }
+    }
+
     return {
       ...data,
       media_type: type,
       title: data.title || data.name,
       name: data.name || data.title,
+      overview: overview || '',
       cast
     };
   } catch (error) {
@@ -300,10 +322,13 @@ export async function getDetails(
 
 /**
  * TMDB API Call: Get Season Details with Episodes
+ * If Turkish overviews or episode titles are missing, automatically falls back to English
+ * and translates the summaries into high-quality, contextual Turkish.
  */
 export async function getSeasonDetails(
   showId: number,
-  seasonNumber: number
+  seasonNumber: number,
+  showTitle?: string
 ): Promise<TMDBSeasonDetails> {
   const apiKey = getStoredTmdbApiKey();
   const mockKey = `${showId}-${seasonNumber}`;
@@ -320,6 +345,68 @@ export async function getSeasonDetails(
     const res = await fetch(`${TMDB_BASE_URL}/tv/${showId}/season/${seasonNumber}?api_key=${apiKey}&language=tr-TR`);
     if (!res.ok) throw new Error(`TMDB Season details failed for show ${showId} S${seasonNumber}`);
     const data = await res.json();
+
+    let rawEpisodes = (data.episodes || []).map((ep: any) => ({
+      id: ep.id,
+      episode_number: ep.episode_number,
+      season_number: ep.season_number,
+      name: ep.name,
+      overview: ep.overview || '',
+      still_path: ep.still_path,
+      air_date: ep.air_date,
+      vote_average: ep.vote_average,
+      runtime: ep.runtime || 45
+    }));
+
+    // Check if any episode lacks an overview or has generic name
+    const needsFallback = rawEpisodes.some(
+      ep => !ep.overview || ep.overview.trim() === '' || ep.overview === 'Bölüm özeti bulunmuyor.'
+    );
+
+    if (needsFallback) {
+      try {
+        const enRes = await fetch(`${TMDB_BASE_URL}/tv/${showId}/season/${seasonNumber}?api_key=${apiKey}&language=en-US`);
+        if (enRes.ok) {
+          const enData = await enRes.json();
+          const enMap = new Map<number, any>();
+          (enData.episodes || []).forEach((ep: any) => {
+            enMap.set(ep.episode_number, ep);
+          });
+
+          // Match English overviews and real titles
+          rawEpisodes = rawEpisodes.map(ep => {
+            const enEp = enMap.get(ep.episode_number);
+            let overview = ep.overview;
+            let name = ep.name;
+
+            if ((!overview || overview.trim() === '' || overview === 'Bölüm özeti bulunmuyor.') && enEp?.overview) {
+              overview = enEp.overview;
+            }
+
+            const isGenericTrName = !name || /^(\d+\.?\s*Bölüm|Bölüm\s*\d+)$/i.test(name.trim());
+            if (isGenericTrName && enEp?.name && !/^Episode\s*\d+$/i.test(enEp.name)) {
+              name = enEp.name;
+            }
+
+            return {
+              ...ep,
+              name,
+              overview
+            };
+          });
+
+          // Translate missing English overviews into fluent Turkish
+          rawEpisodes = await translateEpisodesBatch(rawEpisodes, {
+            showId,
+            showTitle,
+            seasonNum: seasonNumber
+          });
+        }
+      } catch (enErr) {
+        console.warn('English season details fallback fetch failed:', enErr);
+      }
+    }
+
     return {
       id: data.id,
       season_number: data.season_number || seasonNumber,
@@ -327,21 +414,68 @@ export async function getSeasonDetails(
       overview: data.overview || '',
       poster_path: data.poster_path,
       air_date: data.air_date || '',
-      episodes: (data.episodes || []).map((ep: any) => ({
-        id: ep.id,
-        episode_number: ep.episode_number,
-        season_number: ep.season_number,
-        name: ep.name,
-        overview: ep.overview,
-        still_path: ep.still_path,
-        air_date: ep.air_date,
-        vote_average: ep.vote_average,
-        runtime: ep.runtime || 45
-      }))
+      episodes: rawEpisodes
     };
   } catch (error) {
     console.warn('TMDB getSeasonDetails error, fallback mock season used.', error);
     return MOCK_SEASON_EPISODES[mockKey] || generateFallbackSeason(showId, seasonNumber);
+  }
+}
+
+/**
+ * Preloads all seasons and overviews for a TV show in the background.
+ * Automatically saves them into the local seasons cache and emits an event for instant UI updates.
+ */
+export async function preloadTvShowSeasons(
+  showId: number,
+  showTitle?: string,
+  totalSeasons?: number
+): Promise<void> {
+  try {
+    let seasonsCount = totalSeasons;
+    if (!seasonsCount) {
+      const details = await getDetails(showId, 'tv');
+      seasonsCount = details.number_of_seasons || 1;
+    }
+
+    let seasonsCache: Record<string, TMDBSeasonDetails> = {};
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('diziapp_seasons_cache');
+        if (saved) seasonsCache = JSON.parse(saved);
+      } catch {}
+    }
+
+    let isUpdated = false;
+
+    for (let s = 1; s <= seasonsCount; s++) {
+      const cacheKey = `${showId}-${s}`;
+      const existing = seasonsCache[cacheKey];
+
+      const needsFetch = !existing || !existing.episodes || existing.episodes.length === 0 || existing.episodes.some(
+        ep => !ep.overview || ep.overview.trim() === '' || ep.overview === 'Bölüm özeti bulunmuyor.'
+      );
+
+      if (needsFetch) {
+        const sData = await getSeasonDetails(showId, s, showTitle);
+        if (sData && sData.episodes && sData.episodes.length > 0) {
+          const aired = sData.episodes.filter(ep => isEpisodeAired(ep.air_date));
+          if (aired.length > 0) {
+            seasonsCache[cacheKey] = { ...sData, episodes: aired };
+            isUpdated = true;
+          }
+        }
+      }
+    }
+
+    if (isUpdated && typeof localStorage !== 'undefined') {
+      localStorage.setItem('diziapp_seasons_cache', JSON.stringify(seasonsCache));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('diziapp_seasons_updated', { detail: { showId } }));
+      }
+    }
+  } catch (err) {
+    console.warn('preloadTvShowSeasons failed for showId:', showId, err);
   }
 }
 

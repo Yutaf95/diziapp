@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Key, Sparkles, Check, Info } from 'lucide-react';
+import { X, Key, Sparkles, Check, Info, Bot } from 'lucide-react';
 import { getStoredTmdbApiKey, setTmdbApiKey } from '../lib/tmdb';
+import { getStoredGeminiApiKey, setStoredGeminiApiKey } from '../lib/translator';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
@@ -10,11 +11,13 @@ interface ApiKeyModalProps {
 
 export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
   const [keyInput, setKeyInput] = useState<string>(getStoredTmdbApiKey());
+  const [geminiKeyInput, setGeminiKeyInput] = useState<string>(getStoredGeminiApiKey());
   const [saved, setSaved] = useState<boolean>(false);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setTmdbApiKey(keyInput.trim());
+    setStoredGeminiApiKey(geminiKeyInput.trim());
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -53,18 +56,18 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => 
                 <Key className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-lg">TMDB API Anahtarı</h3>
-                <p className="text-xs text-slate-400">Canlı film ve dizi verileri için isteğe bağlı</p>
+                <h3 className="font-bold text-lg">API Anahtarları & Entegrasyon</h3>
+                <p className="text-xs text-slate-400">Canlı film/dizi verileri ve yapay zeka çevirisi</p>
               </div>
             </div>
 
             <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold text-amber-400">
                 <Info className="w-4 h-4 shrink-0" />
-                <span>Bilgilendirme</span>
+                <span>Akıllı Otomasyon</span>
               </div>
               <p className="leading-relaxed">
-                API anahtarı girmediğiniz takdirde uygulama otomatik olarak entegre edilmiş zengin demo veri setiyle kesintisiz çalışmaya devam eder.
+                Türkçe özeti bulunmayan dizilerde sistem otomatik olarak orijinal özetleri akıcı bir şekilde Türkçeye çevirir. Gemini anahtarınız yoksa bile dahili ücretsiz çeviri motoru devreye girer.
               </p>
             </div>
 
@@ -80,6 +83,23 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => 
                   placeholder="Örn: 1a2b3c4d5e6f7g8h9i0j..."
                   className="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5">
+                  <Bot className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Google Gemini API Key (İsteğe Bağlı)</span>
+                </label>
+                <input
+                  type="password"
+                  value={geminiKeyInput}
+                  onChange={(e) => setGeminiKeyInput(e.target.value)}
+                  placeholder="AI Studio Gemini Key (Örn: AIzaSy...)"
+                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Girildiğinde Gemini 2.5 Flash ile sinematik Türkçe çeviriler üretilir.
+                </p>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
